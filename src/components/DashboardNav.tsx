@@ -17,18 +17,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 
 const DashboardNav = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const handleLogout = () => {
+    // Clear auth data from storage
+    localStorage.removeItem("aiConditioner_user");
+    sessionStorage.removeItem("aiConditioner_user");
+    
     toast({
       title: "Logged out",
       description: "You have been logged out successfully.",
     });
-    // Would redirect to login page in a real app
+    
+    // Navigate to login page
+    navigate("/login");
   };
 
   return (

@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   Shield, 
   LayoutDashboard, 
@@ -20,29 +20,38 @@ import { useToast } from "@/components/ui/use-toast";
 const DashboardSidebar = () => {
   const [collapsed, setCollapsed] = React.useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
+    // Clear auth data from storage
+    localStorage.removeItem("aiConditioner_user");
+    sessionStorage.removeItem("aiConditioner_user");
+    
     toast({
       title: "Logged out",
       description: "You have been logged out successfully.",
     });
-    // Would redirect to login page in a real app
+    
+    // Navigate to login page
+    navigate("/login");
   };
 
   const NavItem = ({ 
     icon: Icon, 
     label, 
     active = false, 
-    alert = false 
+    alert = false,
+    to = "#" 
   }: { 
     icon: React.ElementType, 
     label: string, 
     active?: boolean,
-    alert?: boolean
+    alert?: boolean,
+    to?: string
   }) => {
     return (
       <Link 
-        to="#" 
+        to={to}
         className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
           active 
@@ -78,14 +87,14 @@ const DashboardSidebar = () => {
 
       {/* Navigation */}
       <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <NavItem icon={LayoutDashboard} label="Dashboard" active />
-        <NavItem icon={Network} label="Network" />
-        <NavItem icon={Brain} label="AI Training" />
-        <NavItem icon={Users} label="Users" />
-        <NavItem icon={BarChart3} label="Analytics" />
-        <NavItem icon={AlertCircle} label="Alerts" alert />
-        <NavItem icon={Settings} label="Settings" />
-        <NavItem icon={HelpCircle} label="Help & Support" />
+        <NavItem icon={LayoutDashboard} label="Dashboard" active to="/dashboard" />
+        <NavItem icon={Network} label="Network" to="/dashboard" />
+        <NavItem icon={Brain} label="AI Training" to="/ai-training" />
+        <NavItem icon={Users} label="Users" to="/dashboard" />
+        <NavItem icon={BarChart3} label="Analytics" to="/dashboard" />
+        <NavItem icon={AlertCircle} label="Alerts" alert to="/dashboard" />
+        <NavItem icon={Settings} label="Settings" to="/dashboard" />
+        <NavItem icon={HelpCircle} label="Help & Support" to="/dashboard" />
       </div>
 
       {/* Footer */}

@@ -1,6 +1,6 @@
 
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,17 +8,50 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Shield } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // For demo purposes - hardcoded credentials
+  // In a real app, this would be handled by a proper authentication system
+  const demoCredentials = {
+    email: "admin@example.com",
+    password: "password123"
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Login successful",
-      description: "Welcome back to AI Conditioner!",
-    });
-    // Would handle navigation in a real app
+    setError("");
+    setIsLoading(true);
+
+    // Simulate API call delay
+    setTimeout(() => {
+      if (email.trim() === demoCredentials.email && password === demoCredentials.password) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back to AI Conditioner!",
+        });
+        
+        // For demo, store in localStorage to maintain session
+        if (rememberMe) {
+          localStorage.setItem("aiConditioner_user", JSON.stringify({ email, role: "admin" }));
+        } else {
+          sessionStorage.setItem("aiConditioner_user", JSON.stringify({ email, role: "admin" }));
+        }
+        
+        navigate("/dashboard");
+      } else {
+        setError("Invalid email or password. Try admin@example.com / password123");
+      }
+      setIsLoading(false);
+    }, 800);
   };
 
   return (
@@ -45,10 +78,23 @@ const Login = () => {
             <CardDescription>Log in to your AI Conditioner account</CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="Enter your email" required />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email" 
+                  required 
+                />
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
@@ -57,15 +103,34 @@ const Login = () => {
                     Forgot password?
                   </Link>
                 </div>
-                <Input id="password" type="password" placeholder="Enter your password" required />
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password" 
+                  required 
+                />
               </div>
               <div className="flex items-center space-x-2">
-                <Checkbox id="remember" />
+                <Checkbox 
+                  id="remember" 
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                />
                 <Label htmlFor="remember" className="text-sm font-normal">Remember me for 30 days</Label>
               </div>
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                Log In
+              <Button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                disabled={isLoading}
+              >
+                {isLoading ? "Logging In..." : "Log In"}
               </Button>
+              
+              <div className="text-center text-sm text-slate-500">
+                <p>Demo credentials: admin@example.com / password123</p>
+              </div>
             </form>
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
