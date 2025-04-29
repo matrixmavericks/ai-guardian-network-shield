@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -13,15 +12,24 @@ import {
   Network, 
   AlertTriangle, 
   BarChart3,
-  ListFilter
+  ListFilter,
+  HelpCircle,
+  Bell
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import DashboardNav from "@/components/DashboardNav";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import NetworkStatus from "@/components/NetworkStatus";
 import RecentPrompts from "@/components/RecentPrompts";
+import NetworkSettings from "@/components/NetworkSettings";
+import UserManagement from "@/components/UserManagement";
+import AnalyticsDashboard from "@/components/AnalyticsDashboard";
+import AlertSettings from "@/components/AlertSettings";
+import HelpSupport from "@/components/HelpSupport";
 
 const Dashboard = () => {
+  const [activeTab, setActiveTab] = useState("overview");
+
   return (
     <div className="min-h-screen flex bg-slate-50">
       <DashboardSidebar />
@@ -84,12 +92,15 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            <Tabs defaultValue="overview" className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="network">Network</TabsTrigger>
                 <TabsTrigger value="users">Users</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                <TabsTrigger value="alerts">Alerts</TabsTrigger>
                 <TabsTrigger value="training">AI Training</TabsTrigger>
+                <TabsTrigger value="help">Help & Support</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
@@ -145,177 +156,19 @@ const Dashboard = () => {
               </TabsContent>
 
               <TabsContent value="network" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Network Configuration</CardTitle>
-                    <CardDescription>Manage how AI Conditioner integrates with your network</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <div className="flex flex-col space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Network Integration Type</label>
-                        <div className="flex items-center space-x-2 bg-slate-100 p-3 rounded-md">
-                          <Server className="h-5 w-5 text-slate-600" />
-                          <span>Network-Level Gateway (Active)</span>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex flex-col space-y-2">
-                          <label className="text-sm font-medium text-slate-700">Network Range</label>
-                          <div className="bg-slate-100 p-3 rounded-md">
-                            192.168.1.0/24
-                          </div>
-                        </div>
-                        <div className="flex flex-col space-y-2">
-                          <label className="text-sm font-medium text-slate-700">Gateway IP</label>
-                          <div className="bg-slate-100 p-3 rounded-md">
-                            192.168.1.1
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-lg font-medium mb-3">Security Measures</h3>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Shield className="h-5 w-5 mr-2 text-green-600" />
-                              <span>VPN Detection</span>
-                            </div>
-                            <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded">Active</div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Shield className="h-5 w-5 mr-2 text-green-600" />
-                              <span>DNS Override Protection</span>
-                            </div>
-                            <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded">Active</div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Shield className="h-5 w-5 mr-2 text-green-600" />
-                              <span>Proxy Detection</span>
-                            </div>
-                            <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded">Active</div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-lg font-medium mb-3">Supported AI Services</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div className="bg-blue-50 border border-blue-100 p-3 rounded-md text-center">
-                            <div className="font-medium">ChatGPT</div>
-                            <div className="text-xs text-green-600">Protected</div>
-                          </div>
-                          <div className="bg-blue-50 border border-blue-100 p-3 rounded-md text-center">
-                            <div className="font-medium">Bard</div>
-                            <div className="text-xs text-green-600">Protected</div>
-                          </div>
-                          <div className="bg-blue-50 border border-blue-100 p-3 rounded-md text-center">
-                            <div className="font-medium">Claude</div>
-                            <div className="text-xs text-green-600">Protected</div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-end space-x-3">
-                        <Button variant="outline">Add More Services</Button>
-                        <Button className="bg-blue-600 hover:bg-blue-700">Update Configuration</Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <NetworkSettings />
               </TabsContent>
 
               <TabsContent value="users" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>User Management</CardTitle>
-                        <CardDescription>Manage users and their permissions</CardDescription>
-                      </div>
-                      <Button>Add User</Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-slate-200">
-                            <th className="text-start p-3 text-sm font-medium text-slate-500">Name</th>
-                            <th className="text-start p-3 text-sm font-medium text-slate-500">Email</th>
-                            <th className="text-start p-3 text-sm font-medium text-slate-500">Role</th>
-                            <th className="text-start p-3 text-sm font-medium text-slate-500">Status</th>
-                            <th className="text-start p-3 text-sm font-medium text-slate-500">Last Active</th>
-                            <th className="text-end p-3 text-sm font-medium text-slate-500">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="border-b border-slate-100">
-                            <td className="p-3 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">JD</div>
-                                <span className="ml-2">John Doe</span>
-                              </div>
-                            </td>
-                            <td className="p-3 whitespace-nowrap">john.doe@example.com</td>
-                            <td className="p-3 whitespace-nowrap">
-                              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">Admin</span>
-                            </td>
-                            <td className="p-3 whitespace-nowrap">
-                              <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded">Active</span>
-                            </td>
-                            <td className="p-3 whitespace-nowrap text-slate-500 text-sm">5 minutes ago</td>
-                            <td className="p-3 whitespace-nowrap text-right">
-                              <Button variant="ghost" size="sm">Edit</Button>
-                            </td>
-                          </tr>
-                          <tr className="border-b border-slate-100">
-                            <td className="p-3 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-medium">JS</div>
-                                <span className="ml-2">Jane Smith</span>
-                              </div>
-                            </td>
-                            <td className="p-3 whitespace-nowrap">jane.smith@example.com</td>
-                            <td className="p-3 whitespace-nowrap">
-                              <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded">Teacher</span>
-                            </td>
-                            <td className="p-3 whitespace-nowrap">
-                              <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded">Active</span>
-                            </td>
-                            <td className="p-3 whitespace-nowrap text-slate-500 text-sm">1 hour ago</td>
-                            <td className="p-3 whitespace-nowrap text-right">
-                              <Button variant="ghost" size="sm">Edit</Button>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="p-3 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-medium">RJ</div>
-                                <span className="ml-2">Robert Johnson</span>
-                              </div>
-                            </td>
-                            <td className="p-3 whitespace-nowrap">robert@example.com</td>
-                            <td className="p-3 whitespace-nowrap">
-                              <span className="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded">IT Admin</span>
-                            </td>
-                            <td className="p-3 whitespace-nowrap">
-                              <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded">Inactive</span>
-                            </td>
-                            <td className="p-3 whitespace-nowrap text-slate-500 text-sm">3 days ago</td>
-                            <td className="p-3 whitespace-nowrap text-right">
-                              <Button variant="ghost" size="sm">Edit</Button>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
+                <UserManagement />
+              </TabsContent>
+              
+              <TabsContent value="analytics" className="space-y-6">
+                <AnalyticsDashboard />
+              </TabsContent>
+              
+              <TabsContent value="alerts" className="space-y-6">
+                <AlertSettings />
               </TabsContent>
 
               <TabsContent value="training" className="space-y-6">
@@ -451,6 +304,10 @@ const Dashboard = () => {
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
+              
+              <TabsContent value="help" className="space-y-6">
+                <HelpSupport />
               </TabsContent>
             </Tabs>
           </div>
