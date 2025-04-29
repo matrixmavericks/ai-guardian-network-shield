@@ -134,9 +134,9 @@ const Signup = () => {
                               <SelectValue placeholder="Select size" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="small">Small (< 500 users)</SelectItem>
+                              <SelectItem value="small">Small (less than 500 users)</SelectItem>
                               <SelectItem value="medium">Medium (500-2000 users)</SelectItem>
-                              <SelectItem value="large">Large (> 2000 users)</SelectItem>
+                              <SelectItem value="large">Large (more than 2000 users)</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
