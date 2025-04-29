@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import StudentDashboard from "./pages/StudentDashboard";
 import StudentInterface from "./components/StudentInterface";
 import AITrainingWizard from "./components/AITrainingWizard";
 
@@ -61,6 +62,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <StudentInterface />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/student-dashboard" 
+            element={
+              <ProtectedRoute>
+                <StudentDashboard />
               </ProtectedRoute>
             } 
           />

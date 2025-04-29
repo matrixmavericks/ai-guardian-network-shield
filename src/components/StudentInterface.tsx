@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { 
   Brain, 
   Send, 
@@ -16,7 +17,8 @@ import {
   Settings, 
   Info,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Compass
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { 
@@ -27,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const StudentInterface = () => {
   const [prompt, setPrompt] = useState("");
@@ -38,9 +41,11 @@ const StudentInterface = () => {
     service: string;
   }[]>([]);
   const [isProcessTeaching, setIsProcessTeaching] = useState(true);
-  const [activeService, setActiveService] = useState("default");
+  const [activeService, setActiveService] = useState("openai");
   const [isLoading, setIsLoading] = useState(false);
   const [activeSubject, setActiveSubject] = useState("general");
+  const [apiKey, setApiKey] = useState("");
+  const [showApiInput, setShowApiInput] = useState(false);
   const { toast } = useToast();
 
   const subjects = [
@@ -51,61 +56,144 @@ const StudentInterface = () => {
   ];
 
   const services = [
-    { id: "default", name: "OpenAI (ChatGPT)" },
-    { id: "gemini", name: "Google (Gemini)" },
-    { id: "claude", name: "Anthropic (Claude)" },
-    { id: "perplexity", name: "Perplexity AI" }
+    { id: "openai", name: "OpenAI (ChatGPT)", apiBase: "https://api.openai.com/v1/chat/completions", model: "gpt-3.5-turbo" },
+    { id: "gemini", name: "Google (Gemini)", apiBase: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent", model: "gemini-pro" },
+    { id: "anthropic", name: "Anthropic (Claude)", apiBase: "https://api.anthropic.com/v1/messages", model: "claude-instant-1.2" },
+    { id: "perplexity", name: "Perplexity AI", apiBase: "https://api.perplexity.ai/chat/completions", model: "llama-3.1-sonar-small-128k-online" }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) return;
     
-    setIsLoading(true);
-    
-    // Simulate API delay
-    setTimeout(() => {
-      processPrompt(prompt);
-      setIsLoading(false);
-    }, 1000);
-  };
-
-  const processPrompt = (userPrompt: string) => {
-    let response = "";
-    let isProcessTaught = false;
-    
-    // Process based on subject and content
-    if (activeSubject === "math" || userPrompt.match(/\d+\s*[+\-*/]\s*\d+/) || userPrompt.includes("=")) {
-      // Math problem detected
-      if (isProcessTeaching) {
-        response = generateMathProcessResponse(userPrompt);
-        isProcessTaught = true;
-      } else {
-        response = "I can solve this for you, but I'm configured to teach the process. Switch to Process Teaching Mode to learn how to solve this yourself.";
-      }
-    } else if (activeSubject === "writing" || userPrompt.toLowerCase().includes("write") && (
-      userPrompt.toLowerCase().includes("essay") || 
-      userPrompt.toLowerCase().includes("paper") || 
-      userPrompt.toLowerCase().includes("report"))) {
-      // Essay writing detected
-      response = generateWritingResponse(userPrompt);
-      isProcessTaught = true;
-    } else if (activeSubject === "languages" || userPrompt.toLowerCase().includes("translate") || 
-               userPrompt.toLowerCase().includes("conjugate")) {
-      // Language learning detected
-      response = generateLanguageResponse(userPrompt);
-      isProcessTaught = true;
-    } else {
-      // General response
-      response = generateGeneralResponse(userPrompt);
-      isProcessTaught = isProcessTeaching;
+    if (!apiKey && !localStorage.getItem(`${activeService}_api_key`)) {
+      setShowApiInput(true);
+      toast({
+        title: "API Key Required",
+        description: `Please enter your ${services.find(s => s.id === activeService)?.name} API key to continue.`,
+        variant: "destructive",
+      });
+      return;
     }
     
+    setIsLoading(true);
+    
+    try {
+      const response = await callExternalAI(prompt, activeService, activeSubject);
+      processResponse(prompt, response);
+    } catch (error) {
+      console.error("AI API error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to get a response from the AI service. Please check your API key and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const callExternalAI = async (userPrompt: string, service: string, subject: string): Promise<string> => {
+    const serviceInfo = services.find(s => s.id === service);
+    if (!serviceInfo) throw new Error("Invalid service selected");
+    
+    const storedApiKey = localStorage.getItem(`${service}_api_key`) || apiKey;
+    
+    // Prepare the system message based on subject and teaching mode
+    let systemMessage = "You are an educational AI assistant.";
+    
+    if (isProcessTeaching) {
+      systemMessage += " Your goal is to teach the process rather than just giving answers. Break down solutions into steps and explain concepts thoroughly.";
+    }
+    
+    switch (subject) {
+      case "math":
+        systemMessage += " Focus on mathematical problem-solving and showing steps clearly.";
+        break;
+      case "writing":
+        systemMessage += " Help with essay structure, writing techniques, and encourage original thought.";
+        break;
+      case "languages":
+        systemMessage += " Assist with language learning, translation, and grammatical understanding.";
+        break;
+      default:
+        systemMessage += " Provide helpful educational guidance on general topics.";
+    }
+    
+    try {
+      // For demonstration, we'll use a simplified call just for OpenAI
+      // In a real app, you would handle each API's specific requirements
+      
+      if (service === "openai") {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${storedApiKey}`
+          },
+          body: JSON.stringify({
+            model: serviceInfo.model,
+            messages: [
+              { role: "system", content: systemMessage },
+              { role: "user", content: userPrompt }
+            ],
+            temperature: 0.7
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("OpenAI API error:", errorData);
+          throw new Error(errorData.error?.message || "Failed to get response");
+        }
+        
+        const data = await response.json();
+        return data.choices[0].message.content;
+      } 
+      else if (service === "perplexity") {
+        const response = await fetch("https://api.perplexity.ai/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${storedApiKey}`
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-sonar-small-128k-online",
+            messages: [
+              { role: "system", content: systemMessage },
+              { role: "user", content: userPrompt }
+            ],
+            temperature: 0.2,
+            max_tokens: 1000
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Perplexity API error:", errorData);
+          throw new Error(errorData.error?.message || "Failed to get response");
+        }
+        
+        const data = await response.json();
+        return data.choices[0].message.content;
+      }
+      else {
+        // For other services, we'll use a fallback mechanism for demo
+        // This would be replaced with actual API calls in production
+        return generateFallbackResponse(userPrompt, subject);
+      }
+    } catch (error) {
+      console.error("API call error:", error);
+      throw error;
+    }
+  };
+
+  const processResponse = (userPrompt: string, aiResponse: string) => {
     const newResponse = {
       id: Date.now(),
       prompt: userPrompt,
-      response,
-      isProcessTaught,
+      response: aiResponse,
+      isProcessTaught: isProcessTeaching,
       service: activeService
     };
     
@@ -113,66 +201,36 @@ const StudentInterface = () => {
     setPrompt("");
     
     toast({
-      title: isProcessTaught ? "Process-Focused Response" : "Direct Response",
-      description: isProcessTaught 
+      title: isProcessTeaching ? "Process-Focused Response" : "Direct Response",
+      description: isProcessTeaching 
         ? "You received a process-teaching response to help you learn." 
         : "You received a direct response to your question.",
-      variant: isProcessTaught ? "default" : "destructive",
+      variant: isProcessTeaching ? "default" : "destructive",
     });
   };
   
-  const generateMathProcessResponse = (mathPrompt: string): string => {
-    const examples = {
-      "7x + 39x": `Let me guide you through solving 7x + 39x:
-      
-1. Identify like terms: Both 7x and 39x are like terms with variable x
-2. Apply distributive property: (7+39)x
-3. Add the coefficients: 46x
+  const generateFallbackResponse = (promptText: string, subject: string): string => {
+    // This is a fallback when external APIs fail or for demo purposes
+    if (subject === "math" || promptText.match(/\d+\s*[+\-*/]\s*\d+/) || promptText.includes("=")) {
+      // Math problem detected
+      if (isProcessTeaching) {
+        return `Let me walk you through solving this problem step by step:
 
-This approach teaches algebraic simplification by combining like terms. Try applying this method to similar problems!`,
-      "5 + 3": `Let's solve 5 + 3 step-by-step:
+1. First, I'll identify the type of mathematical problem we're working with
+2. Next, I'll apply the relevant mathematical rules and principles
+3. I'll solve each step carefully, explaining the process
+4. Finally, I'll verify the answer by checking our work
 
-1. We have two integers: 5 and 3
-2. Addition means we combine these values
-3. 5 + 3 = 8
-
-Learning this process helps with mental math. Can you try a different addition problem?`,
-      "12 - 7": `Let me show you how to solve 12 - 7:
-
-1. Start with 12
-2. Subtraction means removing 7 from this value
-3. 12 - 7 = 5
-
-This process works for any subtraction problem. Try applying it to a different example!`,
-      "6 * 8": `I'll walk you through multiplying 6 * 8:
-
-1. Multiplication is repeated addition: 6 added 8 times (or vice versa)
-2. You can break this down: 6 * 8 = 6 * 4 * 2 = 24 * 2 = 48
-3. The answer is 48
-
-Understanding multiplication as repeated addition helps build your mathematical intuition.`
-    };
-
-    // Check if we have a direct match in our examples
-    for (const [key, value] of Object.entries(examples)) {
-      if (mathPrompt.includes(key)) {
-        return value;
+Would you like me to go through any specific step in more detail?`;
+      } else {
+        return "I can solve this for you, but I'm configured to teach the process. Switch to Process Teaching Mode to learn how to solve this yourself.";
       }
-    }
-    
-    // Default math response
-    return `Let me walk you through solving this step by step:
-
-1. First, identify the type of problem we're solving (algebra, arithmetic, calculus, etc.)
-2. Break it down into manageable parts using appropriate mathematical rules
-3. Apply the rules systematically, showing work at each step
-4. Verify your answer by checking if it satisfies the original problem
-
-Would you like me to explain any specific step of this process in more detail?`;
-  };
-
-  const generateWritingResponse = (prompt: string): string => {
-    return `Instead of writing the content for you, let me help you develop your writing skills:
+    } else if (subject === "writing" || promptText.toLowerCase().includes("write") && (
+      promptText.toLowerCase().includes("essay") || 
+      promptText.toLowerCase().includes("paper") || 
+      promptText.toLowerCase().includes("report"))) {
+      // Essay writing detected
+      return `Instead of writing the content for you, let me help you develop your writing skills:
 
 1. Start with brainstorming: What are the main points you want to cover?
 2. Organize your thoughts into an outline with:
@@ -183,10 +241,9 @@ Would you like me to explain any specific step of this process in more detail?`;
 4. After writing, review for clarity, coherence, and grammar
 
 Which part of this writing process would you like me to help you with specifically?`;
-  };
-
-  const generateLanguageResponse = (prompt: string): string => {
-    if (prompt.toLowerCase().includes("translate")) {
+    } else if (subject === "languages" || promptText.toLowerCase().includes("translate") || 
+               promptText.toLowerCase().includes("conjugate")) {
+      // Language learning detected
       return `I can help you learn how to translate effectively:
 
 1. First, understand the context of what you're translating
@@ -196,20 +253,9 @@ Which part of this writing process would you like me to help you with specifical
 
 Would you like to practice with some vocabulary or specific phrases?`;
     } else {
-      return `Here's how to approach language learning systematically:
-
-1. Start with core vocabulary and basic grammar rules
-2. Practice with simple sentences using patterns
-3. Gradually increase complexity as you get comfortable
-4. Use spaced repetition for vocabulary retention
-
-What specific aspect of language learning are you working on?`;
-    }
-  };
-
-  const generateGeneralResponse = (prompt: string): string => {
-    if (isProcessTeaching) {
-      return `I'll help you understand this topic by breaking it down:
+      // General response
+      if (isProcessTeaching) {
+        return `I'll help you understand this topic by breaking it down:
 
 1. Let's start with the fundamental concepts
 2. Then explore how these concepts relate to each other
@@ -217,22 +263,23 @@ What specific aspect of language learning are you working on?`;
 4. Connect these ideas to practical applications
 
 What specific aspect would you like me to elaborate on first?`;
-    } else {
-      return `Here's a direct answer to your question:
+      } else {
+        return `Here's a direct answer to your question:
 
-${prompt.includes("?") ? "Based on your question, " : ""}I'd recommend researching this topic further by examining credible sources and considering multiple perspectives. The key concepts to understand are the underlying principles, practical applications, and broader implications.
+${promptText.includes("?") ? "Based on your question, " : ""}I'd recommend researching this topic further by examining credible sources and considering multiple perspectives. The key concepts to understand are the underlying principles, practical applications, and broader implications.
 
 Would you like me to suggest specific resources for this topic?`;
+      }
     }
   };
 
   const getServiceIcon = (serviceId: string) => {
     switch (serviceId) {
-      case "default":
+      case "openai":
         return <Brain className="h-4 w-4 text-emerald-500" />;
       case "gemini":
         return <Brain className="h-4 w-4 text-blue-500" />;
-      case "claude":
+      case "anthropic":
         return <Brain className="h-4 w-4 text-purple-500" />;
       case "perplexity":
         return <Brain className="h-4 w-4 text-amber-500" />;
@@ -248,6 +295,28 @@ Would you like me to suggest specific resources for this topic?`;
         ? "Thank you for your positive feedback!" 
         : "Thanks for helping us improve our responses.",
     });
+  };
+  
+  const handleApiKeySave = () => {
+    if (apiKey) {
+      localStorage.setItem(`${activeService}_api_key`, apiKey);
+      setShowApiInput(false);
+      toast({
+        title: "API Key Saved",
+        description: `Your ${services.find(s => s.id === activeService)?.name} API key has been saved for this session.`,
+      });
+    }
+  };
+  
+  const handleServiceChange = (newService: string) => {
+    setActiveService(newService);
+    // Check if we already have an API key for this service
+    const storedKey = localStorage.getItem(`${newService}_api_key`);
+    if (!storedKey) {
+      setShowApiInput(true);
+    } else {
+      setShowApiInput(false);
+    }
   };
 
   return (
@@ -268,7 +337,7 @@ Would you like me to suggest specific resources for this topic?`;
                 />
                 <Label htmlFor="process-mode">Process Teaching Mode</Label>
               </div>
-              <Select value={activeService} onValueChange={setActiveService}>
+              <Select value={activeService} onValueChange={handleServiceChange}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select AI Service" />
                 </SelectTrigger>
@@ -289,6 +358,31 @@ Would you like me to suggest specific resources for this topic?`;
             Ask questions and receive guidance that helps you understand the process.
           </p>
         </header>
+        
+        {showApiInput && (
+          <div className="mb-6">
+            <Alert className="bg-blue-50 border-blue-200">
+              <div className="space-y-4 py-2">
+                <AlertDescription>
+                  To use {services.find(s => s.id === activeService)?.name}, you need to provide an API key.
+                </AlertDescription>
+                <div className="flex gap-2">
+                  <Input 
+                    type="password"
+                    placeholder={`Enter your ${services.find(s => s.id === activeService)?.name} API key`}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button onClick={handleApiKeySave}>Save Key</Button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Your API key is stored locally in your browser and never sent to our servers.
+                </p>
+              </div>
+            </Alert>
+          </div>
+        )}
         
         <div className="mb-6">
           <Card className="border-blue-200">
@@ -379,9 +473,14 @@ Would you like me to suggest specific resources for this topic?`;
                   }
                 </span>
               </div>
-              <Button variant="ghost" size="sm" className="h-8 text-xs">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 text-xs"
+                onClick={() => setShowApiInput(true)}
+              >
                 <Settings className="h-3 w-3 mr-1" />
-                Configure
+                Configure API
               </Button>
             </div>
           </form>
@@ -391,7 +490,7 @@ Would you like me to suggest specific resources for this topic?`;
           <h2 className="text-lg font-medium text-slate-800 mb-4">Conversation History</h2>
           {responses.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
-              <Brain className="h-12 w-12 mx-auto text-slate-300 mb-2" />
+              <Compass className="h-12 w-12 mx-auto text-slate-300 mb-2" />
               <h3 className="text-lg font-medium text-slate-700">No conversations yet</h3>
               <p className="text-slate-500">Ask a question to get started!</p>
             </div>

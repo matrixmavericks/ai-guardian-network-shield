@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { 
   Shield, 
   LayoutDashboard, 
@@ -11,7 +11,9 @@ import {
   BarChart3, 
   AlertCircle,
   LogOut,
-  HelpCircle
+  HelpCircle,
+  GraduationCap,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,7 @@ const DashboardSidebar = () => {
   const [collapsed, setCollapsed] = React.useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     // Clear auth data from storage
@@ -49,18 +52,20 @@ const DashboardSidebar = () => {
     alert?: boolean,
     to?: string
   }) => {
+    const isActive = active || location.pathname === to;
+    
     return (
       <Link 
         to={to}
         className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
-          active 
+          isActive 
             ? "bg-blue-100 text-blue-700" 
             : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
         )}
       >
         <div className="relative">
-          <Icon className={cn("h-5 w-5", active ? "text-blue-600" : "text-slate-500")} />
+          <Icon className={cn("h-5 w-5", isActive ? "text-blue-600" : "text-slate-500")} />
           {alert && (
             <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
           )}
@@ -87,14 +92,28 @@ const DashboardSidebar = () => {
 
       {/* Navigation */}
       <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <NavItem icon={LayoutDashboard} label="Dashboard" active to="/dashboard" />
-        <NavItem icon={Network} label="Network" to="/dashboard" />
+        <NavItem icon={LayoutDashboard} label="Admin Dashboard" to="/dashboard" />
+        <NavItem icon={Network} label="Network" to="/dashboard?tab=network" />
         <NavItem icon={Brain} label="AI Training" to="/ai-training" />
-        <NavItem icon={Users} label="Users" to="/dashboard" />
-        <NavItem icon={BarChart3} label="Analytics" to="/dashboard" />
-        <NavItem icon={AlertCircle} label="Alerts" alert to="/dashboard" />
-        <NavItem icon={Settings} label="Settings" to="/dashboard" />
-        <NavItem icon={HelpCircle} label="Help & Support" to="/dashboard" />
+        <NavItem icon={Users} label="Users" to="/dashboard?tab=users" />
+        <NavItem icon={BarChart3} label="Analytics" to="/dashboard?tab=analytics" />
+        <NavItem icon={AlertCircle} label="Alerts" alert to="/dashboard?tab=alerts" />
+        
+        <div className="pt-4 mt-4 border-t border-slate-200">
+          <p className={cn("text-xs font-medium text-slate-500 mb-2", collapsed && "sr-only")}>
+            Student Area
+          </p>
+          <NavItem icon={GraduationCap} label="Student Dashboard" to="/student-dashboard" />
+          <NavItem icon={BookOpen} label="AI Learning Assistant" to="/student" />
+        </div>
+        
+        <div className="pt-4 mt-4 border-t border-slate-200">
+          <p className={cn("text-xs font-medium text-slate-500 mb-2", collapsed && "sr-only")}>
+            System
+          </p>
+          <NavItem icon={Settings} label="Settings" to="/dashboard?tab=settings" />
+          <NavItem icon={HelpCircle} label="Help & Support" to="/dashboard?tab=help" />
+        </div>
       </div>
 
       {/* Footer */}
