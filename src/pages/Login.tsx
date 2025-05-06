@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Shield } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { login, getCurrentUser } from "@/services/localStorageService";
 
 const Login = () => {
   const { toast } = useToast();
@@ -19,12 +19,20 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // For demo purposes - hardcoded credentials
-  // In a real app, this would be handled by a proper authentication system
-  const demoCredentials = {
-    email: "admin@example.com",
-    password: "password123"
-  };
+  // Check if already logged in
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      // Redirect based on role
+      if (user.role === 'admin') {
+        navigate("/dashboard");
+      } else if (user.role === 'teacher') {
+        navigate("/dashboard?tab=assignments");
+      } else if (user.role === 'student') {
+        navigate("/student-dashboard");
+      }
+    }
+  }, [navigate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,22 +41,24 @@ const Login = () => {
 
     // Simulate API call delay
     setTimeout(() => {
-      if (email.trim() === demoCredentials.email && password === demoCredentials.password) {
+      const user = login(email, password, rememberMe);
+      
+      if (user) {
         toast({
           title: "Login successful",
-          description: "Welcome back to AI Conditioner!",
+          description: `Welcome back, ${user.name}!`,
         });
         
-        // For demo, store in localStorage to maintain session
-        if (rememberMe) {
-          localStorage.setItem("aiConditioner_user", JSON.stringify({ email, role: "admin" }));
-        } else {
-          sessionStorage.setItem("aiConditioner_user", JSON.stringify({ email, role: "admin" }));
+        // Redirect based on role
+        if (user.role === 'admin') {
+          navigate("/dashboard");
+        } else if (user.role === 'teacher') {
+          navigate("/dashboard?tab=assignments");
+        } else if (user.role === 'student') {
+          navigate("/student-dashboard");
         }
-        
-        navigate("/dashboard");
       } else {
-        setError("Invalid email or password. Try admin@example.com / password123");
+        setError("Invalid email or password. Try admin@example.com / password123, teacher@example.com / password123, or student@example.com / password123");
       }
       setIsLoading(false);
     }, 800);
@@ -129,7 +139,11 @@ const Login = () => {
               </Button>
               
               <div className="text-center text-sm text-slate-500">
-                <p>Demo credentials: admin@example.com / password123</p>
+                <p>Demo credentials:<br />
+                   admin@example.com / password123<br />
+                   teacher@example.com / password123<br />
+                   student@example.com / password123
+                </p>
               </div>
             </form>
             <div className="relative my-6">
