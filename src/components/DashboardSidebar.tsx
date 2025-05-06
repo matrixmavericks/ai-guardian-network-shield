@@ -2,7 +2,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, FileText, Settings, UserPlus, LayersDifference, Brain, MessageSquare, Book } from 'lucide-react';
+import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, FileText, Settings, UserPlus, Layers, Brain, MessageSquare, Book } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCurrentUser } from '@/services/localStorageService';
 
@@ -61,7 +61,7 @@ const DashboardSidebar = () => {
         {
           title: "Teaching Plans",
           href: "/teacher-plan-generator",
-          icon: <LayersDifference className="h-5 w-5" />
+          icon: <Layers className="h-5 w-5" />
         },
         {
           title: "Messages",
