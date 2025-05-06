@@ -1,135 +1,145 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { AuthProvider } from "@/contexts/AuthContext";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Signup from "./pages/Signup";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import StudentDashboard from "./pages/StudentDashboard";
-import StudentInterface from "./components/StudentInterface";
-import AITrainingWizard from "./components/AITrainingWizard";
-import AssignmentsPage from "./pages/AssignmentsPage";
-import GradesPage from "./pages/GradesPage";
-import SecurityKeysPage from "./pages/SecurityKeysPage";
-import { useAuth } from "./contexts/AuthContext";
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Dashboard from './pages/Dashboard';
+import StudentDashboard from './pages/StudentDashboard';
+import StudentInterface from './components/StudentInterface';
+import GradesPage from './pages/GradesPage';
+import AssignmentsPage from './pages/AssignmentsPage';
+import SecurityKeysPage from './pages/SecurityKeysPage';
+import Login from './pages/Login';
+import Index from './pages/Index';
+import NotFound from './pages/NotFound';
+import Signup from './pages/Signup';
+import Register from './pages/Register';
+import LearningPathsPage from './pages/LearningPathsPage';
+import LearningPathDetail from './pages/LearningPathDetail';
+import TeacherPlanGenerator from './components/TeacherPlanGenerator';
 
-const queryClient = new QueryClient();
-
-// Protected route component that checks role
+// Protected route component
 const ProtectedRoute = ({ 
   children, 
-  allowedRoles = ["admin", "teacher", "student"] 
-}: { 
+  allowedRoles = ['admin', 'teacher', 'student'],
+  redirectTo = '/login' 
+}: {
   children: React.ReactNode;
   allowedRoles?: string[];
+  redirectTo?: string;
 }) => {
   const { user, isLoading } = useAuth();
   
+  // Show loading
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-  
-  if (!allowedRoles.includes(user.role)) {
-    // Redirect to appropriate dashboard based on role
-    if (user.role === 'admin' || user.role === 'teacher') {
-      return <Navigate to="/dashboard" />;
-    } else if (user.role === 'student') {
-      return <Navigate to="/student-dashboard" />;
-    }
-    return <Navigate to="/" />;
+  // Check if user exists and has allowed role
+  if (!user || !allowedRoles.includes(user.role)) {
+    return <Navigate to={redirectTo} replace />;
   }
   
   return <>{children}</>;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
-            
-            {/* Admin and Teacher Routes */}
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute allowedRoles={["admin", "teacher"]}>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/assignments" 
-              element={
-                <ProtectedRoute allowedRoles={["admin", "teacher"]}>
-                  <AssignmentsPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/security-keys" 
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <SecurityKeysPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/ai-training" 
-              element={
-                <ProtectedRoute allowedRoles={["admin", "teacher"]}>
-                  <AITrainingWizard />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Student Routes */}
-            <Route 
-              path="/student-dashboard" 
-              element={
-                <ProtectedRoute allowedRoles={["student"]}>
-                  <StudentDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/student" 
-              element={
-                <ProtectedRoute allowedRoles={["student"]}>
-                  <StudentInterface />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/grades" 
-              element={
-                <ProtectedRoute allowedRoles={["student"]}>
-                  <GradesPage />
-                </ProtectedRoute>
-              } 
-            />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* Admin & Teacher Routes */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/assignments" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+                <AssignmentsPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/security-keys" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <SecurityKeysPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/teacher-plan-generator" 
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <TeacherPlanGenerator />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Student Routes */}
+          <Route 
+            path="/student-dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/ai-learning-assistant" 
+            element={
+              <ProtectedRoute allowedRoles={['student', 'teacher']}>
+                <StudentInterface />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/grades" 
+            element={
+              <ProtectedRoute>
+                <GradesPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/learning-paths" 
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <LearningPathsPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/learning-path/:id" 
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <LearningPathDetail />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
 
 export default App;

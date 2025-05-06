@@ -1,186 +1,158 @@
 
-import React from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { 
-  Shield, 
-  LayoutDashboard, 
-  Network, 
-  Users, 
-  Brain, 
-  Settings, 
-  BarChart3, 
-  AlertCircle,
-  LogOut,
-  HelpCircle,
-  GraduationCap,
-  BookOpen,
-  FileText,
-  Key,
-  PenTool
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import React from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, FileText, Settings, UserPlus, LayersDifference, Brain, MessageSquare, Book } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getCurrentUser } from '@/services/localStorageService';
 
 const DashboardSidebar = () => {
-  const [collapsed, setCollapsed] = React.useState(false);
-  const { toast } = useToast();
+  const { logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, logout } = useAuth();
+  const user = getCurrentUser();
 
   const handleLogout = () => {
-    // Use the context logout function
     logout();
-    
-    toast({
-      title: "Logged out",
-      description: "You have been logged out successfully.",
-    });
-    
-    // Navigate to login page
-    navigate("/login");
+    navigate('/login');
   };
 
-  const NavItem = ({ 
-    icon: Icon, 
-    label, 
-    active = false, 
-    alert = false,
-    to = "#",
-    onClick
-  }: { 
-    icon: React.ElementType, 
-    label: string, 
-    active?: boolean,
-    alert?: boolean,
-    to?: string,
-    onClick?: () => void
-  }) => {
-    const isActive = active || location.pathname === to;
-    
-    const content = (
-      <div className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
-        isActive 
-          ? "bg-blue-100 text-blue-700" 
-          : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-      )}>
-        <div className="relative">
-          <Icon className={cn("h-5 w-5", isActive ? "text-blue-600" : "text-slate-500")} />
-          {alert && (
-            <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-          )}
-        </div>
-        {!collapsed && <span>{label}</span>}
-      </div>
-    );
-    
-    if (onClick) {
-      return (
-        <button onClick={onClick} className="w-full text-left">
-          {content}
-        </button>
-      );
+  const getNavItems = () => {
+    const baseItems = [
+      {
+        title: "Overview",
+        href: user?.role === 'student' ? "/student-dashboard" : "/dashboard",
+        icon: <TrendingUp className="h-5 w-5" />
+      },
+      {
+        title: "Assignments",
+        href: "/assignments",
+        icon: <FileText className="h-5 w-5" />
+      }
+    ];
+
+    // Items based on role
+    if (user?.role === 'admin') {
+      return [
+        ...baseItems,
+        {
+          title: "User Management",
+          href: "/users",
+          icon: <UserPlus className="h-5 w-5" />
+        },
+        {
+          title: "Security Keys",
+          href: "/security-keys",
+          icon: <Shield className="h-5 w-5" />
+        },
+        {
+          title: "Settings",
+          href: "/settings",
+          icon: <Settings className="h-5 w-5" />
+        }
+      ];
+    } else if (user?.role === 'teacher') {
+      return [
+        ...baseItems,
+        {
+          title: "Grades",
+          href: "/grades",
+          icon: <GraduationCap className="h-5 w-5" />
+        },
+        {
+          title: "Teaching Plans",
+          href: "/teacher-plan-generator",
+          icon: <LayersDifference className="h-5 w-5" />
+        },
+        {
+          title: "Messages",
+          href: "/messages",
+          icon: <MessageSquare className="h-5 w-5" />
+        },
+        {
+          title: "AI Assistant",
+          href: "/ai-learning-assistant",
+          icon: <Brain className="h-5 w-5" />
+        }
+      ];
+    } else {
+      // Student role
+      return [
+        ...baseItems,
+        {
+          title: "Grades",
+          href: "/grades",
+          icon: <GraduationCap className="h-5 w-5" />
+        },
+        {
+          title: "Learning Paths",
+          href: "/learning-paths",
+          icon: <Book className="h-5 w-5" />
+        },
+        {
+          title: "AI Assistant",
+          href: "/ai-learning-assistant",
+          icon: <Brain className="h-5 w-5" />
+        },
+        {
+          title: "Messages",
+          href: "/messages",
+          icon: <MessageSquare className="h-5 w-5" />
+        }
+      ];
     }
-    
-    return (
-      <Link to={to}>
-        {content}
-      </Link>
-    );
   };
 
   return (
-    <div 
-      className={cn(
-        "bg-white border-r border-slate-200 flex flex-col h-screen transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
-      )}
-    >
-      {/* Header */}
-      <div className="p-4 border-b border-slate-200">
-        <Link to="/" className="flex items-center gap-2">
-          <Shield className="h-6 w-6 text-blue-600 flex-shrink-0" />
-          {!collapsed && <span className="font-bold text-slate-900">AI Conditioner</span>}
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {/* Show different navigation based on user role */}
-        {user?.role === 'admin' && (
-          <>
-            <NavItem icon={LayoutDashboard} label="Admin Dashboard" to="/dashboard" />
-            <NavItem icon={Network} label="Network Settings" to="/dashboard?tab=network" />
-            <NavItem icon={Users} label="Users" to="/dashboard?tab=users" />
-            <NavItem icon={Brain} label="AI Training" to="/ai-training" />
-            <NavItem icon={PenTool} label="Assignments" to="/assignments" />
-            <NavItem icon={BarChart3} label="Analytics" to="/dashboard?tab=analytics" />
-            <NavItem icon={AlertCircle} label="Alerts" alert to="/dashboard?tab=alerts" />
-            <NavItem icon={Key} label="Security Keys" to="/security-keys" />
-          </>
-        )}
-
-        {user?.role === 'teacher' && (
-          <>
-            <NavItem icon={LayoutDashboard} label="Teacher Dashboard" to="/dashboard" />
-            <NavItem icon={PenTool} label="Assignments" to="/assignments" />
-            <NavItem icon={FileText} label="Grade Submissions" to="/dashboard?tab=grades" />
-            <NavItem icon={Brain} label="AI Training" to="/ai-training" />
-            <NavItem icon={BarChart3} label="Student Analytics" to="/dashboard?tab=analytics" />
-          </>
-        )}
-
-        {user?.role === 'student' && (
-          <>
-            <NavItem icon={LayoutDashboard} label="Student Dashboard" to="/student-dashboard" />
-            <NavItem icon={FileText} label="Assignments" to="/student-dashboard?tab=assignments" />
-            <NavItem icon={BarChart3} label="Grades & Progress" to="/grades" />
-            <NavItem icon={BookOpen} label="AI Learning Assistant" to="/student" />
-          </>
-        )}
-        
-        <div className="pt-4 mt-4 border-t border-slate-200">
-          <p className={cn("text-xs font-medium text-slate-500 mb-2", collapsed && "sr-only")}>
-            System
-          </p>
-          <NavItem icon={Settings} label="Settings" to="/dashboard?tab=settings" />
-          <NavItem icon={HelpCircle} label="Help & Support" to="/dashboard?tab=help" />
+    <div className="bg-white border-r border-slate-200 w-64 min-h-screen flex flex-col">
+      <div className="p-6 border-b">
+        <div className="flex items-center">
+          <Shield className="h-8 w-8 text-blue-600 mr-2" />
+          <span className="font-bold text-xl text-slate-900">AI Conditioner</span>
         </div>
       </div>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-slate-200">
-        {user && !collapsed && (
-          <div className="mb-3 flex items-center">
-            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium mr-2">
-              {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </div>
-            <div className="text-sm">
-              <div className="font-medium">{user.name}</div>
-              <div className="text-xs text-slate-500 capitalize">{user.role}</div>
-            </div>
+      
+      <div className="p-4 border-b">
+        <div className="flex items-center">
+          <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold">
+            {user?.name.charAt(0)}
           </div>
-        )}
+          <div className="ml-3">
+            <div className="font-medium">{user?.name}</div>
+            <div className="text-xs text-slate-500 capitalize">{user?.role}</div>
+          </div>
+        </div>
+      </div>
+      
+      <nav className="flex-1 p-4">
+        <ul className="space-y-1">
+          {getNavItems().map((item, index) => (
+            <li key={index}>
+              <NavLink
+                to={item.href}
+                className={({ isActive }) => 
+                  `flex items-center px-4 py-2 rounded-md text-sm ${
+                    isActive 
+                      ? "bg-blue-100 text-blue-700 font-medium" 
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`
+                }
+              >
+                <span className="mr-3">{item.icon}</span>
+                {item.title}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      
+      <div className="p-4 border-t mt-auto">
         <Button 
           variant="ghost" 
-          size="sm" 
-          className="w-full justify-start"
+          className="w-full justify-start text-slate-600 hover:text-red-600 hover:bg-red-50"
           onClick={handleLogout}
         >
-          <LogOut className="h-4 w-4 mr-2" />
-          {!collapsed && <span>Log out</span>}
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-2 w-full justify-center"
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? ">" : "<"}
+          <LogOut className="mr-3 h-5 w-5" />
+          Logout
         </Button>
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 // A service to manage data persistence in localStorage
 // This handles users, assignments, grades, and settings
 
@@ -14,6 +13,7 @@ export interface User {
   lastActive: string;
   active: boolean;
   securityKeys?: string[];
+  password?: string; // Added for authentication
 }
 
 export interface Assignment {
@@ -26,6 +26,12 @@ export interface Assignment {
   createdAt: string;
   attachments?: string[];
   points: number;
+  gradeBoundaries?: GradeBoundary[]; // Added for grade boundaries
+}
+
+export interface GradeBoundary {
+  grade: string; // A, B, C, etc.
+  minPercentage: number;
 }
 
 export interface Grade {
@@ -50,6 +56,45 @@ export interface SecurityKey {
   lastUsed?: string;
 }
 
+export interface LearningPath {
+  id: string;
+  title: string;
+  description: string;
+  subject: string;
+  modules: LearningModule[];
+  createdBy: string; // teacher id
+  createdAt: string;
+}
+
+export interface LearningModule {
+  id: string;
+  title: string;
+  description: string;
+  resources: string[];
+  quizzes: string[];
+  order: number;
+}
+
+export interface TeacherPlan {
+  id: string;
+  title: string;
+  subject: string;
+  description: string;
+  content: string;
+  createdBy: string; // teacher id
+  createdAt: string;
+  targetClass?: string;
+}
+
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  timestamp: string;
+  read: boolean;
+}
+
 // Storage keys
 const STORAGE_KEYS = {
   USERS: 'aiConditioner_users',
@@ -57,6 +102,9 @@ const STORAGE_KEYS = {
   ASSIGNMENTS: 'aiConditioner_assignments',
   GRADES: 'aiConditioner_grades',
   SECURITY_KEYS: 'aiConditioner_security_keys',
+  LEARNING_PATHS: 'aiConditioner_learning_paths',
+  TEACHER_PLANS: 'aiConditioner_teacher_plans',
+  MESSAGES: 'aiConditioner_messages',
 };
 
 // Initialize storage with demo data if it doesn't exist
@@ -73,6 +121,7 @@ const initializeStorage = () => {
         department: 'Administration',
         lastActive: new Date().toISOString(),
         active: true,
+        password: 'password123', // Demo password
       },
       {
         id: '2',
@@ -82,6 +131,7 @@ const initializeStorage = () => {
         department: 'Science',
         lastActive: new Date().toISOString(),
         active: true,
+        password: 'password123', // Demo password
       },
       {
         id: '3',
@@ -91,6 +141,7 @@ const initializeStorage = () => {
         class: 'Grade 11A',
         lastActive: new Date().toISOString(),
         active: true,
+        password: 'password123', // Demo password
       }
     ];
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(demoUsers));
@@ -147,6 +198,65 @@ const initializeStorage = () => {
       }
     ];
     localStorage.setItem(STORAGE_KEYS.SECURITY_KEYS, JSON.stringify(demoSecurityKeys));
+    
+    // Create demo learning paths
+    const demoLearningPaths: LearningPath[] = [
+      {
+        id: '1',
+        title: 'Introduction to Physics',
+        description: 'A comprehensive introduction to basic physics concepts',
+        subject: 'Physics',
+        modules: [
+          {
+            id: '1',
+            title: 'Newton\'s Laws of Motion',
+            description: 'Understanding the fundamental laws of motion',
+            resources: ['Newton\'s Laws Explained', 'Motion in Daily Life'],
+            quizzes: ['Basic Motion Quiz', 'Applied Forces Test'],
+            order: 1
+          },
+          {
+            id: '2',
+            title: 'Energy and Work',
+            description: 'Exploring the relationship between energy and work',
+            resources: ['Types of Energy', 'Conservation of Energy'],
+            quizzes: ['Energy Conversion Quiz', 'Work Calculations'],
+            order: 2
+          }
+        ],
+        createdBy: '2',
+        createdAt: new Date().toISOString()
+      }
+    ];
+    localStorage.setItem(STORAGE_KEYS.LEARNING_PATHS, JSON.stringify(demoLearningPaths));
+    
+    // Create demo teacher plans
+    const demoTeacherPlans: TeacherPlan[] = [
+      {
+        id: '1',
+        title: 'Physics Weekly Plan',
+        subject: 'Physics',
+        description: 'Weekly teaching plan for Grade 11 Physics',
+        content: 'Monday: Newton\'s First Law\nTuesday: Newton\'s Second Law\nWednesday: Newton\'s Third Law\nThursday: Laboratory Experiment\nFriday: Quiz',
+        createdBy: '2',
+        createdAt: new Date().toISOString(),
+        targetClass: 'Grade 11A'
+      }
+    ];
+    localStorage.setItem(STORAGE_KEYS.TEACHER_PLANS, JSON.stringify(demoTeacherPlans));
+    
+    // Create demo messages
+    const demoMessages: Message[] = [
+      {
+        id: '1',
+        senderId: '2', // teacher
+        receiverId: '3', // student
+        content: 'Don\'t forget to submit your physics assignment by Friday!',
+        timestamp: new Date().toISOString(),
+        read: false
+      }
+    ];
+    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(demoMessages));
   }
 };
 
@@ -207,9 +317,13 @@ export const getCurrentUser = (): User | null => {
 
 export const login = (email: string, password: string, remember: boolean = false): User | null => {
   // In a real app, we'd check the password hash against the stored password
-  // For this demo, we'll just check if the email exists
+  // For this demo, we'll just check if the email and password match
   const users = getUsers();
-  const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.active);
+  const user = users.find(u => 
+    u.email.toLowerCase() === email.toLowerCase() && 
+    u.password === password && 
+    u.active
+  );
   
   if (user) {
     // Update last active
@@ -228,6 +342,29 @@ export const login = (email: string, password: string, remember: boolean = false
 export const logout = (): void => {
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   sessionStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+};
+
+// Registration method
+export const registerUser = (user: Omit<User, 'id' | 'lastActive'>): User | null => {
+  const users = getUsers();
+  
+  // Check if email already exists
+  const existingUser = users.find(u => u.email.toLowerCase() === user.email.toLowerCase());
+  if (existingUser) {
+    return null;
+  }
+  
+  const newUser: User = {
+    ...user,
+    id: generateId(),
+    lastActive: new Date().toISOString(),
+    active: true
+  };
+  
+  users.push(newUser);
+  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+  
+  return newUser;
 };
 
 // Assignment methods
@@ -340,6 +477,121 @@ export const deleteSecurityKey = (id: string): void => {
   localStorage.setItem(STORAGE_KEYS.SECURITY_KEYS, JSON.stringify(keys));
 };
 
+// Learning path methods
+export const getLearningPaths = (): LearningPath[] => {
+  initializeStorage();
+  const paths = localStorage.getItem(STORAGE_KEYS.LEARNING_PATHS);
+  return paths ? JSON.parse(paths) : [];
+};
+
+export const getLearningPathById = (id: string): LearningPath | undefined => {
+  const paths = getLearningPaths();
+  return paths.find(path => path.id === id);
+};
+
+export const getLearningPathsBySubject = (subject: string): LearningPath[] => {
+  const paths = getLearningPaths();
+  return paths.filter(path => path.subject === subject);
+};
+
+export const saveLearningPath = (path: LearningPath): void => {
+  const paths = getLearningPaths();
+  const existingPathIndex = paths.findIndex(p => p.id === path.id);
+  
+  if (existingPathIndex >= 0) {
+    paths[existingPathIndex] = path;
+  } else {
+    paths.push(path);
+  }
+  
+  localStorage.setItem(STORAGE_KEYS.LEARNING_PATHS, JSON.stringify(paths));
+};
+
+export const deleteLearningPath = (id: string): void => {
+  const paths = getLearningPaths().filter(path => path.id !== id);
+  localStorage.setItem(STORAGE_KEYS.LEARNING_PATHS, JSON.stringify(paths));
+};
+
+// Teacher plan methods
+export const getTeacherPlans = (): TeacherPlan[] => {
+  initializeStorage();
+  const plans = localStorage.getItem(STORAGE_KEYS.TEACHER_PLANS);
+  return plans ? JSON.parse(plans) : [];
+};
+
+export const getTeacherPlanById = (id: string): TeacherPlan | undefined => {
+  const plans = getTeacherPlans();
+  return plans.find(plan => plan.id === id);
+};
+
+export const getTeacherPlansByTeacher = (teacherId: string): TeacherPlan[] => {
+  const plans = getTeacherPlans();
+  return plans.filter(plan => plan.createdBy === teacherId);
+};
+
+export const saveTeacherPlan = (plan: TeacherPlan): void => {
+  const plans = getTeacherPlans();
+  const existingPlanIndex = plans.findIndex(p => p.id === plan.id);
+  
+  if (existingPlanIndex >= 0) {
+    plans[existingPlanIndex] = plan;
+  } else {
+    plans.push(plan);
+  }
+  
+  localStorage.setItem(STORAGE_KEYS.TEACHER_PLANS, JSON.stringify(plans));
+};
+
+export const deleteTeacherPlan = (id: string): void => {
+  const plans = getTeacherPlans().filter(plan => plan.id !== id);
+  localStorage.setItem(STORAGE_KEYS.TEACHER_PLANS, JSON.stringify(plans));
+};
+
+// Message methods
+export const getMessages = (): Message[] => {
+  initializeStorage();
+  const messages = localStorage.getItem(STORAGE_KEYS.MESSAGES);
+  return messages ? JSON.parse(messages) : [];
+};
+
+export const getMessagesByUser = (userId: string): Message[] => {
+  const messages = getMessages();
+  return messages.filter(msg => msg.senderId === userId || msg.receiverId === userId);
+};
+
+export const getConversation = (user1Id: string, user2Id: string): Message[] => {
+  const messages = getMessages();
+  return messages.filter(
+    msg => (msg.senderId === user1Id && msg.receiverId === user2Id) ||
+           (msg.senderId === user2Id && msg.receiverId === user1Id)
+  ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+};
+
+export const saveMessage = (message: Omit<Message, 'id' | 'timestamp'>): Message => {
+  const messages = getMessages();
+  
+  const newMessage: Message = {
+    ...message,
+    id: generateId(),
+    timestamp: new Date().toISOString(),
+  };
+  
+  messages.push(newMessage);
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages));
+  
+  return newMessage;
+};
+
+export const markMessageAsRead = (messageId: string): void => {
+  const messages = getMessages();
+  const messageIndex = messages.findIndex(msg => msg.id === messageId);
+  
+  if (messageIndex >= 0) {
+    messages[messageIndex].read = true;
+    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages));
+  }
+};
+
 // Utility function to generate a new ID
 export const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
@@ -356,6 +608,7 @@ export default {
   getCurrentUser,
   login,
   logout,
+  registerUser,
   getAssignments,
   getAssignmentById,
   getAssignmentsByTeacher,
@@ -372,5 +625,20 @@ export default {
   getSecurityKeyByService,
   saveSecurityKey,
   deleteSecurityKey,
+  getLearningPaths,
+  getLearningPathById,
+  getLearningPathsBySubject,
+  saveLearningPath,
+  deleteLearningPath,
+  getTeacherPlans,
+  getTeacherPlanById,
+  getTeacherPlansByTeacher,
+  saveTeacherPlan,
+  deleteTeacherPlan,
+  getMessages,
+  getMessagesByUser,
+  getConversation,
+  saveMessage,
+  markMessageAsRead,
   generateId,
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +17,8 @@ import {
   Info,
   ThumbsUp,
   ThumbsDown,
-  Compass
+  Compass,
+  Loader
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { 
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getCurrentUser } from "@/services/localStorageService";
 
 const StudentInterface = () => {
   const [prompt, setPrompt] = useState("");
@@ -319,6 +320,9 @@ Would you like me to suggest specific resources for this topic?`;
     }
   };
 
+  // Add a function to get the current user
+  const currentUser = getCurrentUser();
+
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-4xl mx-auto">
@@ -356,6 +360,7 @@ Would you like me to suggest specific resources for this topic?`;
           </div>
           <p className="text-slate-600 mt-2">
             Ask questions and receive guidance that helps you understand the process.
+            {currentUser && <span className="ml-1">Welcome, {currentUser.name}!</span>}
           </p>
         </header>
         
