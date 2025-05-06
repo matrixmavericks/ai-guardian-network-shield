@@ -36,7 +36,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (e.key === 'aiConditioner_user' && e.newValue === null) {
         setUser(null);
       } else if (e.key === 'aiConditioner_user' && e.newValue) {
-        setUser(JSON.parse(e.newValue));
+        try {
+          setUser(JSON.parse(e.newValue));
+        } catch (error) {
+          console.error("Failed to parse user data:", error);
+        }
       }
     };
     

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -39,8 +40,7 @@ const Login = () => {
     setError("");
     setIsLoading(true);
 
-    // Simulate API call delay
-    setTimeout(() => {
+    try {
       const loggedInUser = login(email, password, rememberMe);
       
       if (loggedInUser) {
@@ -60,8 +60,12 @@ const Login = () => {
       } else {
         setError("Invalid email or password. Try admin@example.com / password123, teacher@example.com / password123, or student@example.com / password123");
       }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("An error occurred during login. Please try again.");
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   return (
