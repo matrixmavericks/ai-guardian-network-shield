@@ -388,7 +388,7 @@ const AssignmentsPage = () => {
                       <SelectValue placeholder="Filter by subject" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Subjects</SelectItem>
+                      <SelectItem value="all_subjects">All Subjects</SelectItem>
                       {subjects.map(subject => (
                         <SelectItem key={subject} value={subject}>{subject}</SelectItem>
                       ))}
