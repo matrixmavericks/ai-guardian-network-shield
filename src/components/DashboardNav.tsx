@@ -19,15 +19,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const DashboardNav = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
   
   const handleLogout = () => {
-    // Clear auth data from storage
-    localStorage.removeItem("aiConditioner_user");
-    sessionStorage.removeItem("aiConditioner_user");
+    logout();
     
     toast({
       title: "Logged out",
@@ -36,6 +36,17 @@ const DashboardNav = () => {
     
     // Navigate to login page
     navigate("/login");
+  };
+
+  // Get initials for avatar
+  const getInitials = () => {
+    if (!user || !user.name) return "U";
+    return user.name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
   };
 
   return (
@@ -92,11 +103,11 @@ const DashboardNav = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative flex items-center gap-2">
                 <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
-                  JD
+                  {getInitials()}
                 </div>
                 <div className="hidden md:block text-left">
-                  <div className="text-sm font-medium">John Doe</div>
-                  <div className="text-xs text-slate-500">Administrator</div>
+                  <div className="text-sm font-medium">{user?.name || "Guest"}</div>
+                  <div className="text-xs text-slate-500">{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Not logged in"}</div>
                 </div>
               </Button>
             </DropdownMenuTrigger>

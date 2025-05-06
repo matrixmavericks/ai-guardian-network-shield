@@ -1,17 +1,19 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { getCurrentUser, logout, User } from '@/services/localStorageService';
+import { getCurrentUser, logout as logoutService, login as loginService, User } from '@/services/localStorageService';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   logout: () => void;
+  login: (email: string, password: string, rememberMe: boolean) => User | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null, 
   isLoading: true,
-  logout: () => {}
+  logout: () => {},
+  login: () => null
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -43,12 +45,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const handleLogout = () => {
-    logout();
+    logoutService();
     setUser(null);
   };
 
+  const handleLogin = (email: string, password: string, rememberMe: boolean) => {
+    const loggedInUser = loginService(email, password, rememberMe);
+    if (loggedInUser) {
+      setUser(loggedInUser);
+    }
+    return loggedInUser;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, logout: handleLogout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      logout: handleLogout,
+      login: handleLogin
+    }}>
       {children}
     </AuthContext.Provider>
   );

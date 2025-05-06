@@ -8,11 +8,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Shield } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { login, getCurrentUser } from "@/services/localStorageService";
+import { useAuth } from '@/contexts/AuthContext';
 
 const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -21,7 +22,6 @@ const Login = () => {
 
   // Check if already logged in
   useEffect(() => {
-    const user = getCurrentUser();
     if (user) {
       // Redirect based on role
       if (user.role === 'admin') {
@@ -32,7 +32,7 @@ const Login = () => {
         navigate("/student-dashboard");
       }
     }
-  }, [navigate]);
+  }, [navigate, user]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,20 +41,20 @@ const Login = () => {
 
     // Simulate API call delay
     setTimeout(() => {
-      const user = login(email, password, rememberMe);
+      const loggedInUser = login(email, password, rememberMe);
       
-      if (user) {
+      if (loggedInUser) {
         toast({
           title: "Login successful",
-          description: `Welcome back, ${user.name}!`,
+          description: `Welcome back, ${loggedInUser.name}!`,
         });
         
         // Redirect based on role
-        if (user.role === 'admin') {
+        if (loggedInUser.role === 'admin') {
           navigate("/dashboard");
-        } else if (user.role === 'teacher') {
+        } else if (loggedInUser.role === 'teacher') {
           navigate("/dashboard?tab=assignments");
-        } else if (user.role === 'student') {
+        } else if (loggedInUser.role === 'student') {
           navigate("/student-dashboard");
         }
       } else {
