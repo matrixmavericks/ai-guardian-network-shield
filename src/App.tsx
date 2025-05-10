@@ -16,6 +16,10 @@ import Register from './pages/Register';
 import LearningPathsPage from './pages/LearningPathsPage';
 import LearningPathDetail from './pages/LearningPathDetail';
 import TeacherPlanGenerator from './components/TeacherPlanGenerator';
+import UserManagement from './components/UserManagement';
+import MessagesPage from './pages/MessagesPage';
+import SettingsPage from './pages/SettingsPage';
+import CreateLearningPathPage from './pages/CreateLearningPathPage';
 
 // Protected route component
 const ProtectedRoute = ({ 
@@ -65,7 +69,7 @@ function App() {
           <Route 
             path="/assignments" 
             element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+              <ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}>
                 <AssignmentsPage />
               </ProtectedRoute>
             } 
@@ -85,6 +89,36 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['teacher']}>
                 <TeacherPlanGenerator />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* User Management */}
+          <Route 
+            path="/users" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <UserManagement />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Settings */}
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Messages */}
+          <Route 
+            path="/messages" 
+            element={
+              <ProtectedRoute>
+                <MessagesPage />
               </ProtectedRoute>
             } 
           />
@@ -131,6 +165,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['student']}>
                 <LearningPathDetail />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Create custom learning path */}
+          <Route 
+            path="/create-learning-path" 
+            element={
+              <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+                <CreateLearningPathPage />
               </ProtectedRoute>
             } 
           />
