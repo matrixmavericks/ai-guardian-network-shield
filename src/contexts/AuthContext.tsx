@@ -23,10 +23,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadUser = () => {
-      const currentUser = getCurrentUser();
-      setUser(currentUser);
-      setIsLoading(false);
+    const loadUser = async () => {
+      try {
+        const currentUser = getCurrentUser();
+        console.log("Initial user load:", currentUser);
+        setUser(currentUser);
+      } catch (error) {
+        console.error("Error loading user:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadUser();
@@ -55,19 +61,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const handleLogin = (email: string, password: string, rememberMe: boolean) => {
     try {
-      console.log("Login attempt:", { email, password, rememberMe });
+      console.log("Login attempt in auth context:", { email, password, rememberMe });
       const loggedInUser = loginService(email, password, rememberMe);
-      console.log("Login result:", loggedInUser);
+      console.log("Login service result:", loggedInUser);
       
       if (loggedInUser) {
         setUser(loggedInUser);
+        return loggedInUser;
       }
-      return loggedInUser;
+      return null;
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Login error in auth context:", error);
       return null;
     }
   };
+
+  // For debugging purposes
+  console.log("Auth context current state - user:", user, "isLoading:", isLoading);
 
   return (
     <AuthContext.Provider value={{ 

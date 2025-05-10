@@ -21,9 +21,12 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  console.log("Login page rendering, current user:", user);
+
   // Check if already logged in
   useEffect(() => {
     if (user) {
+      console.log("User already logged in, redirecting based on role:", user.role);
       // Redirect based on role
       if (user.role === 'admin') {
         navigate("/dashboard");
@@ -41,14 +44,17 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log("Attempting login with:", email, password, rememberMe);
+      console.log("Login page: Attempting login with:", email, password, rememberMe);
       const loggedInUser = login(email, password, rememberMe);
+      console.log("Login page: Login result:", loggedInUser);
       
       if (loggedInUser) {
         toast({
           title: "Login successful",
           description: `Welcome back, ${loggedInUser.name}!`,
         });
+        
+        console.log("Login successful, redirecting based on role:", loggedInUser.role);
         
         // Redirect based on role
         if (loggedInUser.role === 'admin') {
@@ -59,7 +65,8 @@ const Login = () => {
           navigate("/student-dashboard");
         }
       } else {
-        setError("Invalid email or password. Please try these demo credentials: admin@example.com / password123, teacher@example.com / password123, or student@example.com / password123");
+        console.error("Login failed: Invalid credentials");
+        setError("Invalid email or password. Please try again with the demo credentials.");
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -80,6 +87,52 @@ const Login = () => {
     } else if (type === 'student') {
       setEmail("student@example.com");
       setPassword("password123");
+    }
+  };
+
+  // Direct login for demo accounts
+  const directLogin = (type: string) => {
+    let demoEmail = "";
+    let demoPassword = "password123";
+    
+    if (type === 'admin') {
+      demoEmail = "admin@example.com";
+    } else if (type === 'teacher') {
+      demoEmail = "teacher@example.com";
+    } else if (type === 'student') {
+      demoEmail = "student@example.com";
+    }
+    
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    
+    console.log(`Direct login with ${type} credentials:`, demoEmail, demoPassword);
+    
+    try {
+      const loggedInUser = login(demoEmail, demoPassword, false);
+      console.log("Direct login result:", loggedInUser);
+      
+      if (loggedInUser) {
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${loggedInUser.name}!`,
+        });
+        
+        // Redirect based on role
+        if (loggedInUser.role === 'admin') {
+          navigate("/dashboard");
+        } else if (loggedInUser.role === 'teacher') {
+          navigate("/dashboard?tab=assignments");
+        } else if (loggedInUser.role === 'student') {
+          navigate("/student-dashboard");
+        }
+      } else {
+        console.error("Direct login failed");
+        setError(`Could not log in with ${type} demo account. Please try manually.`);
+      }
+    } catch (err) {
+      console.error("Direct login error:", err);
+      setError("An error occurred during login. Please try again.");
     }
   };
 
@@ -164,7 +217,7 @@ const Login = () => {
                     type="button" 
                     variant="outline" 
                     size="sm"
-                    onClick={() => fillDemoCredentials('admin')}
+                    onClick={() => directLogin('admin')}
                     className="text-xs"
                   >
                     Admin
@@ -173,7 +226,7 @@ const Login = () => {
                     type="button" 
                     variant="outline" 
                     size="sm"
-                    onClick={() => fillDemoCredentials('teacher')}
+                    onClick={() => directLogin('teacher')}
                     className="text-xs"
                   >
                     Teacher
@@ -182,7 +235,7 @@ const Login = () => {
                     type="button" 
                     variant="outline" 
                     size="sm"
-                    onClick={() => fillDemoCredentials('student')}
+                    onClick={() => directLogin('student')}
                     className="text-xs"
                   >
                     Student

@@ -109,8 +109,10 @@ const STORAGE_KEYS = {
 
 // Initialize storage with demo data if it doesn't exist
 const initializeStorage = () => {
+  console.log("Initializing storage...");
   // Check if users already exist
   if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
+    console.log("Creating demo data...");
     // Create demo users
     const demoUsers: User[] = [
       {
@@ -145,6 +147,7 @@ const initializeStorage = () => {
       }
     ];
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(demoUsers));
+    console.log("Demo users created:", demoUsers);
     
     // Create demo assignments
     const demoAssignments: Assignment[] = [
@@ -301,18 +304,25 @@ export const getCurrentUser = (): User | null => {
   const userJson = localStorage.getItem(STORAGE_KEYS.CURRENT_USER) || 
                    sessionStorage.getItem(STORAGE_KEYS.CURRENT_USER);
   
-  if (!userJson) return null;
+  if (!userJson) {
+    console.log("No current user found");
+    return null;
+  }
   
   try {
     const userData = JSON.parse(userJson);
+    console.log("Current user data from storage:", userData);
+    
     // Verify the user still exists in the database
     const user = getUserById(userData.id);
     
     if (!user || !user.active) {
+      console.log("User no longer exists or is inactive");
       logout();
       return null;
     }
     
+    console.log("Current user validated:", user);
     return user;
   } catch (error) {
     console.error("Error parsing user data:", error);
@@ -327,6 +337,7 @@ export const login = (email: string, password: string, remember: boolean = false
   // In a real app, we'd check the password hash against the stored password
   // For this demo, we'll just check if the email and password match
   const users = getUsers();
+  console.log("Login attempt with:", email, password);
   console.log("Available users:", users);
   
   const user = users.find(u => 
@@ -345,13 +356,16 @@ export const login = (email: string, password: string, remember: boolean = false
     // Store in the appropriate storage
     const storage = remember ? localStorage : sessionStorage;
     storage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    console.log("User logged in successfully:", user);
     return user;
   }
   
+  console.log("Login failed: no matching user found");
   return null;
 };
 
 export const logout = (): void => {
+  console.log("Logging out user");
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   sessionStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
 };
