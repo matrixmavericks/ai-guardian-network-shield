@@ -54,11 +54,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const handleLogin = (email: string, password: string, rememberMe: boolean) => {
-    const loggedInUser = loginService(email, password, rememberMe);
-    if (loggedInUser) {
-      setUser(loggedInUser);
+    try {
+      console.log("Login attempt:", { email, password, rememberMe });
+      const loggedInUser = loginService(email, password, rememberMe);
+      console.log("Login result:", loggedInUser);
+      
+      if (loggedInUser) {
+        setUser(loggedInUser);
+      }
+      return loggedInUser;
+    } catch (error) {
+      console.error("Login error:", error);
+      return null;
     }
-    return loggedInUser;
   };
 
   return (

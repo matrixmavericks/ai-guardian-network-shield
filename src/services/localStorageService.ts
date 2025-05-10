@@ -303,27 +303,39 @@ export const getCurrentUser = (): User | null => {
   
   if (!userJson) return null;
   
-  const userData = JSON.parse(userJson);
-  // Verify the user still exists in the database
-  const user = getUserById(userData.id);
-  
-  if (!user || !user.active) {
+  try {
+    const userData = JSON.parse(userJson);
+    // Verify the user still exists in the database
+    const user = getUserById(userData.id);
+    
+    if (!user || !user.active) {
+      logout();
+      return null;
+    }
+    
+    return user;
+  } catch (error) {
+    console.error("Error parsing user data:", error);
     logout();
     return null;
   }
-  
-  return user;
 };
 
 export const login = (email: string, password: string, remember: boolean = false): User | null => {
+  initializeStorage();
+  
   // In a real app, we'd check the password hash against the stored password
   // For this demo, we'll just check if the email and password match
   const users = getUsers();
+  console.log("Available users:", users);
+  
   const user = users.find(u => 
     u.email.toLowerCase() === email.toLowerCase() && 
     u.password === password && 
     u.active
   );
+  
+  console.log("Found user:", user);
   
   if (user) {
     // Update last active

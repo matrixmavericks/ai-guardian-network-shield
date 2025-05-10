@@ -41,6 +41,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      console.log("Attempting login with:", email, password, rememberMe);
       const loggedInUser = login(email, password, rememberMe);
       
       if (loggedInUser) {
@@ -58,13 +59,27 @@ const Login = () => {
           navigate("/student-dashboard");
         }
       } else {
-        setError("Invalid email or password. Try admin@example.com / password123, teacher@example.com / password123, or student@example.com / password123");
+        setError("Invalid email or password. Please try these demo credentials: admin@example.com / password123, teacher@example.com / password123, or student@example.com / password123");
       }
     } catch (err) {
       console.error("Login error:", err);
       setError("An error occurred during login. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Auto-fill demo credentials for easier testing
+  const fillDemoCredentials = (type: string) => {
+    if (type === 'admin') {
+      setEmail("admin@example.com");
+      setPassword("password123");
+    } else if (type === 'teacher') {
+      setEmail("teacher@example.com");
+      setPassword("password123");
+    } else if (type === 'student') {
+      setEmail("student@example.com");
+      setPassword("password123");
     }
   };
 
@@ -142,12 +157,37 @@ const Login = () => {
                 {isLoading ? "Logging In..." : "Log In"}
               </Button>
               
-              <div className="text-center text-sm text-slate-500">
-                <p>Demo credentials:<br />
-                   admin@example.com / password123<br />
-                   teacher@example.com / password123<br />
-                   student@example.com / password123
-                </p>
+              <div className="text-center mt-4">
+                <p className="text-sm text-slate-500 mb-2">Quick Login with Demo Accounts:</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => fillDemoCredentials('admin')}
+                    className="text-xs"
+                  >
+                    Admin
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => fillDemoCredentials('teacher')}
+                    className="text-xs"
+                  >
+                    Teacher
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => fillDemoCredentials('student')}
+                    className="text-xs"
+                  >
+                    Student
+                  </Button>
+                </div>
               </div>
             </form>
             <div className="relative my-6">
