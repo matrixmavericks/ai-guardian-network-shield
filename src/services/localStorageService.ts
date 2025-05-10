@@ -110,6 +110,10 @@ const STORAGE_KEYS = {
 // Initialize storage with demo data if it doesn't exist
 const initializeStorage = () => {
   console.log("Initializing storage...");
+  
+  // Force clear any existing storage to ensure we have fresh demo data with passwords
+  localStorage.removeItem(STORAGE_KEYS.USERS);
+  
   // Check if users already exist
   if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
     console.log("Creating demo data...");
@@ -332,13 +336,18 @@ export const getCurrentUser = (): User | null => {
 };
 
 export const login = (email: string, password: string, remember: boolean = false): User | null => {
+  // Force initialize storage to make sure we have the demo users with passwords
   initializeStorage();
   
   // In a real app, we'd check the password hash against the stored password
   // For this demo, we'll just check if the email and password match
   const users = getUsers();
-  console.log("Login attempt with:", email, password);
-  console.log("Available users:", users);
+  console.log("Login attempt with:", { email, password });
+  
+  // Log all users in storage for debugging
+  users.forEach(u => {
+    console.log(`User in storage: ${u.email}, has password: ${u.password !== undefined}`);
+  });
   
   const user = users.find(u => 
     u.email.toLowerCase() === email.toLowerCase() && 

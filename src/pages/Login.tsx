@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Shield } from "lucide-react";
+import { Shield, LogIn } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +44,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log("Login page: Attempting login with:", email, password, rememberMe);
+      console.log("Login page: Attempting login with:", { email, password, rememberMe });
       const loggedInUser = login(email, password, rememberMe);
       console.log("Login page: Login result:", loggedInUser);
       
@@ -66,27 +66,13 @@ const Login = () => {
         }
       } else {
         console.error("Login failed: Invalid credentials");
-        setError("Invalid email or password. Please try again with the demo credentials.");
+        setError("Invalid email or password. Try admin@example.com / password123, teacher@example.com / password123, or student@example.com / password123");
       }
     } catch (err) {
       console.error("Login error:", err);
       setError("An error occurred during login. Please try again.");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Auto-fill demo credentials for easier testing
-  const fillDemoCredentials = (type: string) => {
-    if (type === 'admin') {
-      setEmail("admin@example.com");
-      setPassword("password123");
-    } else if (type === 'teacher') {
-      setEmail("teacher@example.com");
-      setPassword("password123");
-    } else if (type === 'student') {
-      setEmail("student@example.com");
-      setPassword("password123");
     }
   };
 
@@ -105,8 +91,9 @@ const Login = () => {
     
     setEmail(demoEmail);
     setPassword(demoPassword);
+    setIsLoading(true);
     
-    console.log(`Direct login with ${type} credentials:`, demoEmail, demoPassword);
+    console.log(`Direct login with ${type} credentials:`, { demoEmail, demoPassword });
     
     try {
       const loggedInUser = login(demoEmail, demoPassword, false);
@@ -128,11 +115,13 @@ const Login = () => {
         }
       } else {
         console.error("Direct login failed");
-        setError(`Could not log in with ${type} demo account. Please try manually.`);
+        setError(`Could not log in with ${type} demo account. Please try manually with ${demoEmail} / password123`);
       }
     } catch (err) {
       console.error("Direct login error:", err);
       setError("An error occurred during login. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -208,6 +197,7 @@ const Login = () => {
                 disabled={isLoading}
               >
                 {isLoading ? "Logging In..." : "Log In"}
+                <LogIn className="ml-2 h-4 w-4" />
               </Button>
               
               <div className="text-center mt-4">
@@ -219,6 +209,7 @@ const Login = () => {
                     size="sm"
                     onClick={() => directLogin('admin')}
                     className="text-xs"
+                    disabled={isLoading}
                   >
                     Admin
                   </Button>
@@ -228,6 +219,7 @@ const Login = () => {
                     size="sm"
                     onClick={() => directLogin('teacher')}
                     className="text-xs"
+                    disabled={isLoading}
                   >
                     Teacher
                   </Button>
@@ -237,12 +229,14 @@ const Login = () => {
                     size="sm"
                     onClick={() => directLogin('student')}
                     className="text-xs"
+                    disabled={isLoading}
                   >
                     Student
                   </Button>
                 </div>
               </div>
             </form>
+            
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-200"></div>
