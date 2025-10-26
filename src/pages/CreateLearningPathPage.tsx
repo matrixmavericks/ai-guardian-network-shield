@@ -219,6 +219,10 @@ const CreateLearningPathPage = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('');
+  const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
+  const [estimatedHours, setEstimatedHours] = useState(10);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [isPublic, setIsPublic] = useState(true);
   const [modules, setModules] = useState<LearningModule[]>([]);
   
@@ -339,6 +343,11 @@ const CreateLearningPathPage = () => {
       title,
       description,
       subject,
+      difficulty,
+      estimatedHours,
+      tags,
+      rating: 0,
+      enrolledCount: 0,
       modules,
       createdBy: user.id,
       createdAt: new Date().toISOString()
@@ -410,33 +419,101 @@ const CreateLearningPathPage = () => {
                         <SelectValue placeholder="Select subject" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="mathematics">Mathematics</SelectItem>
-                        <SelectItem value="science">Science</SelectItem>
-                        <SelectItem value="physics">Physics</SelectItem>
-                        <SelectItem value="chemistry">Chemistry</SelectItem>
-                        <SelectItem value="biology">Biology</SelectItem>
-                        <SelectItem value="computer-science">Computer Science</SelectItem>
-                        <SelectItem value="history">History</SelectItem>
-                        <SelectItem value="literature">Literature</SelectItem>
-                        <SelectItem value="language">Language</SelectItem>
-                        <SelectItem value="arts">Arts</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="Mathematics">Mathematics</SelectItem>
+                        <SelectItem value="Science">Science</SelectItem>
+                        <SelectItem value="Physics">Physics</SelectItem>
+                        <SelectItem value="Chemistry">Chemistry</SelectItem>
+                        <SelectItem value="Biology">Biology</SelectItem>
+                        <SelectItem value="Computer Science">Computer Science</SelectItem>
+                        <SelectItem value="History">History</SelectItem>
+                        <SelectItem value="English">English</SelectItem>
+                        <SelectItem value="Language">Language</SelectItem>
+                        <SelectItem value="Arts">Arts</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   
-                  <div className="flex items-center justify-between space-x-2 pt-8">
-                    <Label htmlFor="public-path" className="cursor-pointer">Public Learning Path</Label>
-                    <div className="flex items-center space-x-2">
-                      <Switch 
-                        id="public-path" 
-                        checked={isPublic}
-                        onCheckedChange={setIsPublic}
+                  <div className="space-y-2">
+                    <Label htmlFor="difficulty">Difficulty Level</Label>
+                    <Select 
+                      value={difficulty} 
+                      onValueChange={(value: any) => setDifficulty(value)}
+                    >
+                      <SelectTrigger id="difficulty">
+                        <SelectValue placeholder="Select difficulty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="intermediate">Intermediate</SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="estimatedHours">Estimated Hours</Label>
+                    <Input
+                      id="estimatedHours"
+                      type="number"
+                      min="1"
+                      max="200"
+                      value={estimatedHours}
+                      onChange={(e) => setEstimatedHours(parseInt(e.target.value) || 10)}
+                      placeholder="e.g., 20"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="tags">Tags</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="tags"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        placeholder="Add tag and press Enter"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && tagInput.trim()) {
+                            e.preventDefault();
+                            if (!tags.includes(tagInput.trim())) {
+                              setTags([...tags, tagInput.trim()]);
+                            }
+                            setTagInput('');
+                          }
+                        }}
                       />
-                      <span className="text-sm text-slate-500">
-                        {isPublic ? 'Available to all students' : 'Private'}
-                      </span>
                     </div>
+                    {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {tags.map((tag) => (
+                          <span key={tag} className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded text-sm">
+                            {tag}
+                            <button
+                              onClick={() => setTags(tags.filter(t => t !== tag))}
+                              className="hover:text-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between space-x-2">
+                  <Label htmlFor="public-path" className="cursor-pointer">Public Learning Path</Label>
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="public-path" 
+                      checked={isPublic}
+                      onCheckedChange={setIsPublic}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {isPublic ? 'Available to all students' : 'Private'}
+                    </span>
                   </div>
                 </div>
               </CardContent>

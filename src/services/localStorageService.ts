@@ -61,9 +61,15 @@ export interface LearningPath {
   title: string;
   description: string;
   subject: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  estimatedHours: number;
+  tags: string[];
+  rating: number;
+  enrolledCount: number;
   modules: LearningModule[];
   createdBy: string; // teacher id
   createdAt: string;
+  featured?: boolean;
 }
 
 export interface LearningModule {
@@ -211,8 +217,14 @@ const initializeStorage = () => {
       {
         id: '1',
         title: 'Introduction to Physics',
-        description: 'A comprehensive introduction to basic physics concepts',
+        description: 'A comprehensive introduction to basic physics concepts covering Newton\'s laws, energy, and motion',
         subject: 'Physics',
+        difficulty: 'beginner',
+        estimatedHours: 20,
+        tags: ['mechanics', 'motion', 'energy'],
+        rating: 4.8,
+        enrolledCount: 234,
+        featured: true,
         modules: [
           {
             id: '1',
@@ -229,6 +241,76 @@ const initializeStorage = () => {
             resources: ['Types of Energy', 'Conservation of Energy'],
             quizzes: ['Energy Conversion Quiz', 'Work Calculations'],
             order: 2
+          }
+        ],
+        createdBy: '2',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '2',
+        title: 'Advanced Calculus',
+        description: 'Master complex calculus concepts including differential equations and multivariable calculus',
+        subject: 'Mathematics',
+        difficulty: 'advanced',
+        estimatedHours: 40,
+        tags: ['calculus', 'differential equations', 'multivariable'],
+        rating: 4.6,
+        enrolledCount: 156,
+        modules: [
+          {
+            id: '1',
+            title: 'Differential Equations',
+            description: 'Solving complex differential equations',
+            resources: ['DE Tutorial', 'Practice Problems'],
+            quizzes: ['DE Quiz'],
+            order: 1
+          }
+        ],
+        createdBy: '2',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '3',
+        title: 'English Literature Basics',
+        description: 'Explore classic literature and develop critical analysis skills',
+        subject: 'English',
+        difficulty: 'intermediate',
+        estimatedHours: 25,
+        tags: ['literature', 'analysis', 'writing'],
+        rating: 4.9,
+        enrolledCount: 189,
+        featured: true,
+        modules: [
+          {
+            id: '1',
+            title: 'Literary Analysis',
+            description: 'Learn to analyze themes and characters',
+            resources: ['Analysis Guide', 'Classic Works'],
+            quizzes: ['Analysis Quiz'],
+            order: 1
+          }
+        ],
+        createdBy: '2',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '4',
+        title: 'Chemistry Fundamentals',
+        description: 'Build a strong foundation in chemistry from atoms to reactions',
+        subject: 'Chemistry',
+        difficulty: 'beginner',
+        estimatedHours: 30,
+        tags: ['atoms', 'molecules', 'reactions'],
+        rating: 4.7,
+        enrolledCount: 201,
+        modules: [
+          {
+            id: '1',
+            title: 'Atomic Structure',
+            description: 'Understanding atoms and the periodic table',
+            resources: ['Atomic Theory', 'Periodic Table Guide'],
+            quizzes: ['Atomic Quiz'],
+            order: 1
           }
         ],
         createdBy: '2',
