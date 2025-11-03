@@ -14,16 +14,318 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_configurations: {
+        Row: {
+          ai_engine: Database["public"]["Enums"]["ai_engine"]
+          blocked_keywords: string[] | null
+          created_at: string | null
+          enabled: boolean | null
+          endpoint_url: string | null
+          grade_level_rules: Json | null
+          id: string
+          organization_id: string | null
+          process_mode_enabled: boolean | null
+          subject_filters: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_engine: Database["public"]["Enums"]["ai_engine"]
+          blocked_keywords?: string[] | null
+          created_at?: string | null
+          enabled?: boolean | null
+          endpoint_url?: string | null
+          grade_level_rules?: Json | null
+          id?: string
+          organization_id?: string | null
+          process_mode_enabled?: boolean | null
+          subject_filters?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_engine?: Database["public"]["Enums"]["ai_engine"]
+          blocked_keywords?: string[] | null
+          created_at?: string | null
+          enabled?: boolean | null
+          endpoint_url?: string | null
+          grade_level_rules?: Json | null
+          id?: string
+          organization_id?: string | null
+          process_mode_enabled?: boolean | null
+          subject_filters?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      bypass_attempts: {
+        Row: {
+          attempt_type: string
+          blocked: boolean | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: unknown
+          severity: Database["public"]["Enums"]["severity_level"] | null
+          user_id: string | null
+        }
+        Insert: {
+          attempt_type: string
+          blocked?: boolean | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: unknown
+          severity?: Database["public"]["Enums"]["severity_level"] | null
+          user_id?: string | null
+        }
+        Update: {
+          attempt_type?: string
+          blocked?: boolean | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: unknown
+          severity?: Database["public"]["Enums"]["severity_level"] | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      curriculum_links: {
+        Row: {
+          assignment_name: string
+          created_at: string | null
+          external_id: string | null
+          id: string
+          linked_prompts: string[] | null
+          lms_integration: string | null
+          subject: string
+          teacher_id: string
+        }
+        Insert: {
+          assignment_name: string
+          created_at?: string | null
+          external_id?: string | null
+          id?: string
+          linked_prompts?: string[] | null
+          lms_integration?: string | null
+          subject: string
+          teacher_id: string
+        }
+        Update: {
+          assignment_name?: string
+          created_at?: string | null
+          external_id?: string | null
+          id?: string
+          linked_prompts?: string[] | null
+          lms_integration?: string | null
+          subject?: string
+          teacher_id?: string
+        }
+        Relationships: []
+      }
+      ethical_badges: {
+        Row: {
+          badge_description: string | null
+          badge_name: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_description?: string | null
+          badge_name: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_description?: string | null
+          badge_name?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      model_training_data: {
+        Row: {
+          approved: boolean | null
+          created_at: string | null
+          created_by: string
+          grade_level: string | null
+          id: string
+          ideal_response: string
+          input_prompt: string
+          subject: string
+        }
+        Insert: {
+          approved?: boolean | null
+          created_at?: string | null
+          created_by: string
+          grade_level?: string | null
+          id?: string
+          ideal_response: string
+          input_prompt: string
+          subject: string
+        }
+        Update: {
+          approved?: boolean | null
+          created_at?: string | null
+          created_by?: string
+          grade_level?: string | null
+          id?: string
+          ideal_response?: string
+          input_prompt?: string
+          subject?: string
+        }
+        Relationships: []
+      }
+      parent_child_links: {
+        Row: {
+          child_id: string
+          created_at: string | null
+          id: string
+          parent_id: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string | null
+          id?: string
+          parent_id: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string | null
+          id?: string
+          parent_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          department: string | null
+          full_name: string
+          grade_level: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          department?: string | null
+          full_name: string
+          grade_level?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          department?: string | null
+          full_name?: string
+          grade_level?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_logs: {
+        Row: {
+          ai_engine: Database["public"]["Enums"]["ai_engine"] | null
+          created_at: string | null
+          flagged_keywords: string[] | null
+          grade_level: string | null
+          id: string
+          modified_prompt: string | null
+          original_prompt: string
+          process_mode_enabled: boolean | null
+          response: string | null
+          severity: Database["public"]["Enums"]["severity_level"] | null
+          status: Database["public"]["Enums"]["prompt_status"]
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_engine?: Database["public"]["Enums"]["ai_engine"] | null
+          created_at?: string | null
+          flagged_keywords?: string[] | null
+          grade_level?: string | null
+          id?: string
+          modified_prompt?: string | null
+          original_prompt: string
+          process_mode_enabled?: boolean | null
+          response?: string | null
+          severity?: Database["public"]["Enums"]["severity_level"] | null
+          status: Database["public"]["Enums"]["prompt_status"]
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_engine?: Database["public"]["Enums"]["ai_engine"] | null
+          created_at?: string | null
+          flagged_keywords?: string[] | null
+          grade_level?: string | null
+          id?: string
+          modified_prompt?: string | null
+          original_prompt?: string
+          process_mode_enabled?: boolean | null
+          response?: string | null
+          severity?: Database["public"]["Enums"]["severity_level"] | null
+          status?: Database["public"]["Enums"]["prompt_status"]
+          subject?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_roles: {
+        Args: { _user_id: string }
+        Returns: {
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      ai_engine: "openai" | "anthropic" | "google" | "other"
+      app_role: "admin" | "teacher" | "student" | "parent"
+      prompt_status: "approved" | "blocked" | "rewritten" | "flagged"
+      severity_level: "low" | "medium" | "high" | "critical"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +452,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      ai_engine: ["openai", "anthropic", "google", "other"],
+      app_role: ["admin", "teacher", "student", "parent"],
+      prompt_status: ["approved", "blocked", "rewritten", "flagged"],
+      severity_level: ["low", "medium", "high", "critical"],
+    },
   },
 } as const
