@@ -1,1 +1,4 @@
 project_id = "kvblawqwgjoibzkunhqv"
+
+[functions.moderate-prompt]
+verify_jwt = false

@@ -2,6 +2,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useUserRole } from './hooks/useUserRole';
 import Dashboard from './pages/Dashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentInterface from './components/StudentInterface';
@@ -20,27 +21,38 @@ import UserManagement from './components/UserManagement';
 import MessagesPage from './pages/MessagesPage';
 import SettingsPage from './pages/SettingsPage';
 import CreateLearningPathPage from './pages/CreateLearningPathPage';
+import ParentDashboard from './pages/ParentDashboard';
+import AdminMonitoring from './pages/AdminMonitoring';
+import AIConfigurationPage from './pages/AIConfigurationPage';
+import ModelTrainingPage from './pages/ModelTrainingPage';
 
 // Protected route component
 const ProtectedRoute = ({ 
   children, 
-  allowedRoles = ['admin', 'teacher', 'student'],
+  allowedRoles = ['admin', 'teacher', 'student', 'parent'],
   redirectTo = '/login' 
 }: {
   children: React.ReactNode;
   allowedRoles?: string[];
   redirectTo?: string;
 }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const { roles, isLoading: rolesLoading } = useUserRole();
   
   // Show loading
-  if (isLoading) {
+  if (authLoading || rolesLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
-  // Check if user exists and has allowed role
-  if (!user || !allowedRoles.includes(user.role)) {
+  // Check if user exists
+  if (!user) {
     return <Navigate to={redirectTo} replace />;
+  }
+  
+  // Check if user has any of the allowed roles
+  const hasRequiredRole = allowedRoles.some(role => roles.includes(role as any));
+  if (!hasRequiredRole) {
+    return <Navigate to="/login" replace />;
   }
   
   return <>{children}</>;
@@ -175,6 +187,44 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['teacher', 'admin']}>
                 <CreateLearningPathPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Parent Routes */}
+          <Route 
+            path="/parent-dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['parent']}>
+                <ParentDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Admin Monitoring & Configuration */}
+          <Route 
+            path="/admin-monitoring" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminMonitoring />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/ai-configuration" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AIConfigurationPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/model-training" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+                <ModelTrainingPage />
               </ProtectedRoute>
             } 
           />
