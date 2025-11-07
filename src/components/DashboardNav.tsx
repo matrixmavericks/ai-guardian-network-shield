@@ -9,6 +9,7 @@ import {
   HelpCircle, 
   User
 } from "lucide-react";
+import DemoRoleSwitcher from "./DemoRoleSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +62,8 @@ const DashboardNav = () => {
           />
         </div>
         <div className="flex items-center space-x-4">
+          <DemoRoleSwitcher />
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
