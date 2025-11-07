@@ -34,6 +34,8 @@ const Login = () => {
         navigate("/dashboard?tab=assignments");
       } else if (user.role === 'student') {
         navigate("/student-dashboard");
+      } else if (user.role === 'parent') {
+        navigate("/parent-dashboard");
       }
     }
   }, [navigate, user]);
@@ -63,10 +65,12 @@ const Login = () => {
           navigate("/dashboard?tab=assignments");
         } else if (loggedInUser.role === 'student') {
           navigate("/student-dashboard");
+        } else if (loggedInUser.role === 'parent') {
+          navigate("/parent-dashboard");
         }
       } else {
         console.error("Login failed: Invalid credentials");
-        setError("Invalid email or password. Try admin@example.com / password123, teacher@example.com / password123, or student@example.com / password123");
+        setError("Invalid email or password. Try admin@example.com / password123, teacher@example.com / password123, student@example.com / password123, or parent@example.com / password123");
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -87,6 +91,8 @@ const Login = () => {
       demoEmail = "teacher@example.com";
     } else if (type === 'student') {
       demoEmail = "student@example.com";
+    } else if (type === 'parent') {
+      demoEmail = "parent@example.com";
     }
     
     setEmail(demoEmail);
@@ -112,6 +118,8 @@ const Login = () => {
           navigate("/dashboard?tab=assignments");
         } else if (loggedInUser.role === 'student') {
           navigate("/student-dashboard");
+        } else if (loggedInUser.role === 'parent') {
+          navigate("/parent-dashboard");
         }
       } else {
         console.error("Direct login failed");
@@ -202,7 +210,7 @@ const Login = () => {
               
               <div className="text-center mt-4">
                 <p className="text-sm text-slate-500 mb-2">Quick Login with Demo Accounts:</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <Button 
                     type="button" 
                     variant="outline" 
@@ -232,6 +240,18 @@ const Login = () => {
                     disabled={isLoading}
                   >
                     Student
+                  </Button>
+                </div>
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => directLogin('parent')}
+                    className="text-xs"
+                    disabled={isLoading}
+                  >
+                    Parent
                   </Button>
                 </div>
               </div>

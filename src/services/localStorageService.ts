@@ -1,7 +1,7 @@
 // A service to manage data persistence in localStorage
 // This handles users, assignments, grades, and settings
 
-type UserRole = 'admin' | 'teacher' | 'student';
+type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
 
 export interface User {
   id: string;
@@ -151,6 +151,15 @@ const initializeStorage = () => {
         name: 'Michael Brown',
         role: 'student',
         class: 'Grade 11A',
+        lastActive: new Date().toISOString(),
+        active: true,
+        password: 'password123', // Demo password
+      },
+      {
+        id: '4',
+        email: 'parent@example.com',
+        name: 'Patricia Green',
+        role: 'parent',
         lastActive: new Date().toISOString(),
         active: true,
         password: 'password123', // Demo password
