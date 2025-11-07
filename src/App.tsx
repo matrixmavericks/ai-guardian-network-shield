@@ -2,7 +2,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { useUserRole } from './hooks/useUserRole';
 import Dashboard from './pages/Dashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentInterface from './components/StudentInterface';
@@ -36,11 +35,10 @@ const ProtectedRoute = ({
   allowedRoles?: string[];
   redirectTo?: string;
 }) => {
-  const { user, isLoading: authLoading } = useAuth();
-  const { roles, isLoading: rolesLoading } = useUserRole();
+  const { user, isLoading } = useAuth();
   
   // Show loading
-  if (authLoading || rolesLoading) {
+  if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
@@ -50,7 +48,7 @@ const ProtectedRoute = ({
   }
   
   // Check if user has any of the allowed roles
-  const hasRequiredRole = allowedRoles.some(role => roles.includes(role as any));
+  const hasRequiredRole = allowedRoles.includes(user.role);
   if (!hasRequiredRole) {
     return <Navigate to="/login" replace />;
   }
