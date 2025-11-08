@@ -4,8 +4,12 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, CheckCircle2, Clock, TrendingUp, BookOpen, Award } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, TrendingUp, BookOpen, Award, Filter } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ParentSidebar from '@/components/ParentSidebar';
 import DashboardNav from '@/components/DashboardNav';
 import { useSearchParams } from 'react-router-dom';
@@ -17,6 +21,12 @@ export default function ParentDashboard() {
   const [promptLogs, setPromptLogs] = useState<any[]>([]);
   const [badges, setBadges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Activity Log Filters
+  const [selectedChild, setSelectedChild] = useState<string>('all');
+  const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   
   const activeTab = searchParams.get('tab') || 'children';
 
@@ -108,12 +118,29 @@ export default function ParentDashboard() {
   const rewrittenLogs = promptLogs.filter(log => log.status === 'rewritten');
   const totalUsageTime = promptLogs.length; // Simplified metric
 
+  // Apply filters to activity log
+  const filteredLogs = promptLogs.filter(log => {
+    if (selectedChild !== 'all' && log.user_id !== selectedChild) return false;
+    if (selectedSeverity !== 'all' && log.severity !== selectedSeverity) return false;
+    if (startDate && new Date(log.created_at) < new Date(startDate)) return false;
+    if (endDate && new Date(log.created_at) > new Date(endDate + 'T23:59:59')) return false;
+    return true;
+  });
+
+  const resetFilters = () => {
+    setSelectedChild('all');
+    setSelectedSeverity('all');
+    setStartDate('');
+    setEndDate('');
+  };
+
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <ParentSidebar />
-      
-      <div className="flex-1 flex flex-col">
-        <DashboardNav />
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-slate-50">
+        <ParentSidebar />
+        
+        <SidebarInset className="flex-1 flex flex-col">
+          <DashboardNav />
         
         <div className="flex-1 p-6 space-y-6">
           <div>
@@ -228,11 +255,80 @@ export default function ParentDashboard() {
                   <CardDescription>All AI interactions from your children</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Filters */}
+                  <div className="mb-6 p-4 bg-muted/50 rounded-lg space-y-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Filter className="h-4 w-4" />
+                      <span className="font-medium">Filters</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Child</label>
+                        <Select value={selectedChild} onValueChange={setSelectedChild}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="All children" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All children</SelectItem>
+                            {children.map((child) => (
+                              <SelectItem key={child.user_id} value={child.user_id}>
+                                {child.full_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Severity</label>
+                        <Select value={selectedSeverity} onValueChange={setSelectedSeverity}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="All severities" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All severities</SelectItem>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="critical">Critical</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Start Date</label>
+                        <Input 
+                          type="date" 
+                          value={startDate} 
+                          onChange={(e) => setStartDate(e.target.value)}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">End Date</label>
+                        <Input 
+                          type="date" 
+                          value={endDate} 
+                          onChange={(e) => setEndDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center pt-2">
+                      <span className="text-sm text-muted-foreground">
+                        Showing {filteredLogs.length} of {promptLogs.length} activities
+                      </span>
+                      <Button variant="outline" size="sm" onClick={resetFilters}>
+                        Reset Filters
+                      </Button>
+                    </div>
+                  </div>
+                  
                   <div className="space-y-4">
-                    {promptLogs.length === 0 ? (
-                      <p className="text-muted-foreground">No activity yet.</p>
+                    {filteredLogs.length === 0 ? (
+                      <p className="text-muted-foreground">No activity matches your filters.</p>
                     ) : (
-                      promptLogs.map((log) => (
+                      filteredLogs.map((log) => (
                         <div key={log.id} className="border-b pb-4 last:border-0">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
@@ -315,7 +411,8 @@ export default function ParentDashboard() {
             </TabsContent>
           </Tabs>
         </div>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
