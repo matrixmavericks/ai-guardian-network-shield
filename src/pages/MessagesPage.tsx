@@ -80,7 +80,7 @@ const MessagesPage = () => {
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('messages')
-        .select('*, sender_profile:profiles!messages_sender_id_fkey(full_name)')
+        .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${activeContact.user_id}),and(sender_id.eq.${activeContact.user_id},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
 
