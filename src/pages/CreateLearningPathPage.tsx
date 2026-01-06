@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,13 +6,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, X, ChevronUp, ChevronDown, Save, Trash2, FileText, Video, Link as LinkIcon, BookOpen } from "lucide-react";
+import { PlusCircle, X, ChevronUp, ChevronDown, Save, Trash2, BookOpen, Sparkles, Loader, Wand2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
 import DashboardNav from '@/components/DashboardNav';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { saveLearningPath, LearningModule, generateId } from '@/services/localStorageService';
+import { supabase } from '@/integrations/supabase/client';
 
 const ResourceForm = ({ 
   value, 
@@ -225,6 +225,7 @@ const CreateLearningPathPage = () => {
   const [tagInput, setTagInput] = useState('');
   const [isPublic, setIsPublic] = useState(true);
   const [modules, setModules] = useState<LearningModule[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   // Add a new module
   const addModule = () => {
@@ -296,6 +297,66 @@ const CreateLearningPathPage = () => {
     }));
     
     setModules(reorderedModules);
+  };
+
+  // Generate modules with AI
+  const handleGenerateWithAI = async () => {
+    if (!title.trim()) {
+      toast({
+        title: "Title required",
+        description: "Please provide a title for your learning path first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-learning-path', {
+        body: { 
+          title, 
+          description, 
+          subject, 
+          difficulty, 
+          estimatedHours 
+        }
+      });
+
+      if (error) throw new Error(error.message);
+      if (data.error) throw new Error(data.error);
+
+      // Convert AI-generated modules to our format
+      const generatedModules: LearningModule[] = data.modules.map((mod: any, index: number) => ({
+        id: generateId(),
+        title: mod.title,
+        description: mod.description,
+        resources: mod.resources || [],
+        quizzes: mod.quizzes || [],
+        order: index + 1
+      }));
+
+      setModules(generatedModules);
+
+      // Set suggested tags if provided
+      if (data.suggestedTags && data.suggestedTags.length > 0) {
+        setTags(data.suggestedTags);
+      }
+
+      toast({
+        title: "Modules generated",
+        description: `AI created ${generatedModules.length} learning modules. You can edit them as needed.`,
+      });
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      toast({
+        title: "Generation failed",
+        description: error.message || "Failed to generate learning path. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
   
   // Save learning path
@@ -371,11 +432,33 @@ const CreateLearningPathPage = () => {
         <main className="flex-1 p-6">
           <div className="max-w-5xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-slate-800">Create Learning Path</h1>
-              <Button onClick={handleSave}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Learning Path
-              </Button>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-6 w-6 text-primary" />
+                <h1 className="text-2xl font-bold text-foreground">Create Learning Path</h1>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleGenerateWithAI}
+                  disabled={isGenerating || !title.trim()}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Generate with AI
+                    </>
+                  )}
+                </Button>
+                <Button onClick={handleSave}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Learning Path
+                </Button>
+              </div>
             </div>
             
             <Card>
