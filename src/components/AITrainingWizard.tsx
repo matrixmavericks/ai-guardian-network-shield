@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,13 +11,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Brain, Plus, Trash2, Save } from "lucide-react";
+import { Brain, Plus, Trash2, Save, Sparkles, Loader, Wand2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TrainingExample {
   id: string;
   inputPrompt: string;
   idealResponse: string;
+  isGenerating?: boolean;
 }
 
 const AITrainingWizard = () => {
@@ -29,15 +31,17 @@ const AITrainingWizard = () => {
     {
       id: "1",
       inputPrompt: "What is 7x + 39x?",
-      idealResponse: "Let me guide you through solving this step by step:\n\n1. First, identify the like terms: 7x and 39x both have the variable x.\n2. Since they have the same variable, we can add their coefficients: 7 + 39 = 46\n3. Combine the like terms: 7x + 39x = 46x\n\nThe answer is 46x, but more importantly, do you understand how we combined like terms?"
+      idealResponse: ""
     },
     {
       id: "2",
       inputPrompt: "Solve x^2 - 9 = 0",
-      idealResponse: "I'll walk you through solving this quadratic equation:\n\n1. First, let's rearrange to standard form: x^2 - 9 = 0\n2. This is a difference of squares: x^2 - 9 = (x+3)(x-3) = 0\n3. Using the zero product property, either x+3=0 or x-3=0\n4. Solving these: x = -3 or x = 3\n\nThe solution set is {-3, 3}. Can you verify these answers by substituting them back into the original equation?"
+      idealResponse: ""
     }
   ]);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleAddExample = () => {
     setExamples([
@@ -60,7 +64,56 @@ const AITrainingWizard = () => {
     ));
   };
 
-  const handleSaveModel = () => {
+  const handleGenerateResponse = async (exampleId: string) => {
+    const example = examples.find(e => e.id === exampleId);
+    if (!example || !example.inputPrompt.trim()) {
+      toast({
+        title: "Input required",
+        description: "Please enter a student input prompt first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Set generating state for this example
+    setExamples(examples.map(e => 
+      e.id === exampleId ? { ...e, isGenerating: true } : e
+    ));
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-training-response', {
+        body: { 
+          inputPrompt: example.inputPrompt, 
+          subject: subject || 'general',
+          action: 'generate-response'
+        }
+      });
+
+      if (error) throw new Error(error.message);
+      if (data.error) throw new Error(data.error);
+
+      setExamples(examples.map(e => 
+        e.id === exampleId ? { ...e, idealResponse: data.result, isGenerating: false } : e
+      ));
+
+      toast({
+        title: "Response generated",
+        description: "AI has created an ideal process-teaching response.",
+      });
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      toast({
+        title: "Generation failed",
+        description: error.message || "Failed to generate response. Please try again.",
+        variant: "destructive"
+      });
+      setExamples(examples.map(e => 
+        e.id === exampleId ? { ...e, isGenerating: false } : e
+      ));
+    }
+  };
+
+  const handleSaveModel = async () => {
     if (!modelName.trim()) {
       toast({
         title: "Model name required",
@@ -79,25 +132,57 @@ const AITrainingWizard = () => {
       return;
     }
 
-    toast({
-      title: "AI Model Saved",
-      description: `Your "${modelName}" model has been saved with ${examples.length} training examples.`,
-    });
+    setIsSaving(true);
+
+    try {
+      // Save each training example to the database
+      for (const example of examples) {
+        const { error } = await supabase.from('model_training_data').insert({
+          subject: subject || 'general',
+          input_prompt: example.inputPrompt,
+          ideal_response: example.idealResponse,
+          created_by: user?.id || 'anonymous',
+          approved: false
+        });
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Training Data Saved",
+        description: `Your "${modelName}" model data has been saved with ${examples.length} training examples.`,
+      });
+
+      // Reset form
+      setModelName("");
+      setModelDescription("");
+      setSubject("");
+      setExamples([{ id: Date.now().toString(), inputPrompt: "", idealResponse: "" }]);
+    } catch (error: any) {
+      console.error('Save error:', error);
+      toast({
+        title: "Save failed",
+        description: error.message || "Failed to save training data.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex items-center mb-6">
-        <Brain className="h-8 w-8 text-blue-600 mr-2" />
-        <h1 className="text-2xl font-bold text-slate-800">AI Model Training Wizard</h1>
+        <Sparkles className="h-8 w-8 text-primary mr-2" />
+        <h1 className="text-2xl font-bold text-foreground">AI Model Training Wizard</h1>
       </div>
       
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-        <h2 className="font-medium text-blue-800 mb-2">How the AI Model Training Works</h2>
-        <p className="text-blue-700 text-sm">
-          This wizard allows you to create custom AI models that transform straightforward answer requests into 
-          process-oriented learning experiences. Provide examples of unethical prompts and your preferred educational 
-          responses to train the AI to encourage proper learning methods.
+      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-8">
+        <h2 className="font-medium text-foreground mb-2">How the AI Model Training Works</h2>
+        <p className="text-muted-foreground text-sm">
+          This wizard uses Lovable AI to generate ideal process-teaching responses. Enter student prompts and click 
+          "Generate" to create educational responses that encourage learning rather than just giving answers. 
+          You can then review, edit, and save these examples to train the AI moderation system.
         </p>
       </div>
       
@@ -151,7 +236,7 @@ const AITrainingWizard = () => {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Training Examples</CardTitle>
-            <CardDescription>Add examples of prompts and your desired process-oriented responses</CardDescription>
+            <CardDescription>Add examples and use AI to generate ideal process-oriented responses</CardDescription>
           </div>
           <Button variant="outline" onClick={handleAddExample}>
             <Plus className="h-4 w-4 mr-2" />
@@ -160,13 +245,13 @@ const AITrainingWizard = () => {
         </CardHeader>
         <CardContent className="space-y-6">
           {examples.map((example, index) => (
-            <div key={example.id} className="border rounded-lg p-4 bg-slate-50">
+            <div key={example.id} className="border rounded-lg p-4 bg-muted/50">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-slate-700">Example {index + 1}</h3>
+                <h3 className="font-medium text-foreground">Example {index + 1}</h3>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-8 w-8 p-0 text-slate-500"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                   onClick={() => handleRemoveExample(example.id)}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -183,20 +268,40 @@ const AITrainingWizard = () => {
                     value={example.inputPrompt}
                     onChange={(e) => handleExampleChange(example.id, 'inputPrompt', e.target.value)}
                     placeholder="e.g., Solve x + 5 = 10"
-                    className="bg-white"
+                    className="bg-background"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor={`response-${example.id}`}>
-                    Ideal Process-Teaching Response
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={`response-${example.id}`}>
+                      Ideal Process-Teaching Response
+                    </Label>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleGenerateResponse(example.id)}
+                      disabled={example.isGenerating || !example.inputPrompt.trim()}
+                    >
+                      {example.isGenerating ? (
+                        <>
+                          <Loader className="h-4 w-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="h-4 w-4 mr-2" />
+                          Generate with AI
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <Textarea 
                     id={`response-${example.id}`}
                     value={example.idealResponse}
                     onChange={(e) => handleExampleChange(example.id, 'idealResponse', e.target.value)}
-                    placeholder="e.g., Let's solve this equation step by step..."
-                    className="bg-white min-h-[150px]"
+                    placeholder="Click 'Generate with AI' or write your own process-teaching response..."
+                    className="bg-background min-h-[150px]"
                   />
                 </div>
               </div>
@@ -204,16 +309,25 @@ const AITrainingWizard = () => {
           ))}
           
           {examples.length === 0 && (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-muted-foreground">
               No examples added yet. Click "Add Example" to get started.
             </div>
           )}
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button variant="outline">Cancel</Button>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveModel}>
-            <Save className="h-4 w-4 mr-2" />
-            Save Model
+          <Button onClick={handleSaveModel} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save Training Data
+              </>
+            )}
           </Button>
         </CardFooter>
       </Card>
