@@ -1,9 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -12,82 +11,78 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, subject, gradeLevel, userId, processTeaching } = await req.json();
-    console.log('AI Chat request:', { prompt, subject, gradeLevel, userId, processTeaching });
+    const { prompt, subject, gradeLevel, processTeaching } = await req.json();
+    console.log('AI Chat request:', { prompt, subject, gradeLevel, processTeaching });
 
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!lovableApiKey) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Blocked keywords check (inline, no external call needed for basic check)
+    const blockedKeywords = [
+      'write my essay', 'do my homework', 'give me the answer',
+      'solve this for me', 'cheat', 'plagiarize', 'copy paste'
+    ];
 
-    // First, moderate the prompt
-    const moderateResponse = await fetch(`${supabaseUrl}/functions/v1/moderate-prompt`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
-      },
-      body: JSON.stringify({ prompt, subject, gradeLevel, userId }),
-    });
+    const lowerPrompt = prompt.toLowerCase();
+    const flaggedKeywords = blockedKeywords.filter(kw => lowerPrompt.includes(kw));
 
-    const moderationResult = await moderateResponse.json();
-    console.log('Moderation result:', moderationResult);
-
-    // If blocked, return the moderation result
-    if (moderationResult.blocked) {
+    if (flaggedKeywords.length > 0) {
       return new Response(
-        JSON.stringify({ 
-          blocked: true, 
-          reason: moderationResult.reason,
-          flaggedKeywords: moderationResult.flaggedKeywords 
+        JSON.stringify({
+          blocked: true,
+          reason: 'This prompt appears to request direct answers or academic dishonesty. Please rephrase to focus on learning the concept.',
+          flaggedKeywords,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Use the (potentially rewritten) prompt
-    const finalPrompt = moderationResult.modifiedPrompt || prompt;
-
     // Build system message based on subject and teaching mode
-    let systemMessage = `You are an educational AI assistant helping students learn. Current subject: ${subject || 'general'}. Grade level: ${gradeLevel || 'not specified'}.`;
-    
+    let systemMessage = `You are an educational AI assistant helping students learn. Current subject: ${subject || 'general'}. Grade level: ${gradeLevel || 'not specified'}.
+
+Important formatting rules:
+- Use markdown formatting in your responses
+- Use **bold** for key terms
+- Use bullet points and numbered lists for steps
+- Use code blocks for math expressions when appropriate
+- Keep explanations clear and age-appropriate`;
+
     if (processTeaching) {
       systemMessage += `
-      
+
 IMPORTANT: You are in Process Teaching Mode. Follow these rules:
 1. NEVER give direct answers to questions
 2. Break down problems into step-by-step learning opportunities
 3. Ask guiding questions to help the student think through the problem
 4. Explain the underlying concepts and principles
 5. Encourage the student to discover the answer themselves
-6. If they ask for a direct answer, redirect them to think about the process`;
+6. Use the Socratic method - ask questions that lead to understanding`;
     } else {
       systemMessage += `
-      
-Provide helpful, educational responses. While you can give direct answers, still try to explain concepts and help the student understand the reasoning.`;
+
+Provide helpful, educational responses. You can give direct answers but always explain the reasoning and concepts behind them.`;
     }
 
     // Add subject-specific instructions
     switch (subject) {
       case 'math':
-        systemMessage += '\n\nFor math problems: Show steps clearly, explain mathematical reasoning, and help students understand the "why" behind each step.';
+        systemMessage += '\n\nFor math: Show steps clearly, explain mathematical reasoning, and use proper notation.';
         break;
       case 'writing':
-        systemMessage += '\n\nFor writing: Focus on essay structure, thesis development, and original thought. Never write content for them - guide their writing process.';
+        systemMessage += '\n\nFor writing: Focus on structure, thesis development, and original thought. Guide their writing process.';
         break;
       case 'languages':
-        systemMessage += '\n\nFor languages: Help with translation concepts, grammar rules, and cultural context. Encourage practice and repetition.';
+        systemMessage += '\n\nFor languages: Help with translation concepts, grammar rules, and cultural context.';
+        break;
+      case 'science':
+        systemMessage += '\n\nFor science: Explain phenomena with evidence-based reasoning, encourage hypothesis formation.';
         break;
     }
 
-    console.log('Calling Lovable AI with system message');
+    console.log('Calling Lovable AI');
 
-    // Call Lovable AI for the response
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -98,15 +93,16 @@ Provide helpful, educational responses. While you can give direct answers, still
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemMessage },
-          { role: 'user', content: finalPrompt }
+          { role: 'user', content: prompt }
         ],
+        stream: true,
       }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       console.error('AI gateway error:', aiResponse.status, errorText);
-      
+
       if (aiResponse.status === 429) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
@@ -119,35 +115,14 @@ Provide helpful, educational responses. While you can give direct answers, still
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       throw new Error(`AI gateway error: ${aiResponse.status}`);
     }
 
-    const aiData = await aiResponse.json();
-    const aiResponseText = aiData.choices[0].message.content;
-
-    console.log('AI response received, updating prompt log');
-
-    // Update the prompt log with the response
-    if (userId) {
-      await supabase
-        .from('prompt_logs')
-        .update({ response: aiResponseText })
-        .eq('user_id', userId)
-        .eq('original_prompt', prompt)
-        .order('created_at', { ascending: false })
-        .limit(1);
-    }
-
-    return new Response(
-      JSON.stringify({ 
-        response: aiResponseText,
-        wasRewritten: moderationResult.wasRewritten,
-        originalPrompt: moderationResult.wasRewritten ? prompt : undefined,
-        modifiedPrompt: moderationResult.wasRewritten ? finalPrompt : undefined,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    // Stream the response back
+    return new Response(aiResponse.body, {
+      headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
+    });
 
   } catch (error) {
     console.error('Error in ai-chat:', error);
