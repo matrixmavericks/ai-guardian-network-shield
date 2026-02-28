@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Brain,
   Send,
@@ -24,6 +22,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import ReactMarkdown from "react-markdown";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ChatMessage {
   id: string;
@@ -40,8 +39,6 @@ const SUBJECTS = [
   { id: "science", name: "Science", icon: Beaker },
 ];
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
-
 const StudentInterface = () => {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -51,7 +48,6 @@ const StudentInterface = () => {
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,143 +65,45 @@ const StudentInterface = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const sentPrompt = prompt.trim();
     setPrompt("");
     setIsLoading(true);
     setBlockedMessage(null);
 
-    let assistantContent = "";
-
     try {
-      const resp = await fetch(CHAT_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          prompt: userMessage.content,
+      const { data, error } = await supabase.functions.invoke("ai-chat", {
+        body: {
+          prompt: sentPrompt,
           subject: activeSubject,
           gradeLevel: "high-school",
           processTeaching: isProcessTeaching,
-        }),
+        },
       });
 
-      if (!resp.ok) {
-        const errorData = await resp.json().catch(() => null);
-
-        if (errorData?.blocked) {
-          setBlockedMessage(errorData.reason);
-          setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
-          toast({ title: "Prompt Blocked", description: errorData.reason, variant: "destructive" });
-          return;
-        }
-
-        if (resp.status === 429) {
-          toast({ title: "Rate Limited", description: "Too many requests. Please wait a moment.", variant: "destructive" });
-          return;
-        }
-        if (resp.status === 402) {
-          toast({ title: "Credits Required", description: "AI credits needed. Please add funds.", variant: "destructive" });
-          return;
-        }
-
-        throw new Error(errorData?.error || "Failed to get AI response");
+      if (error) {
+        throw new Error(error.message || "Failed to get AI response");
       }
 
-      // Check if response is JSON (blocked) or SSE stream
-      const contentType = resp.headers.get("content-type") || "";
-
-      if (contentType.includes("application/json")) {
-        const data = await resp.json();
-        if (data.blocked) {
-          setBlockedMessage(data.reason);
-          setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
-          toast({ title: "Prompt Blocked", description: data.reason, variant: "destructive" });
-          return;
-        }
-        // Non-streaming fallback
-        assistantContent = data.response || data.choices?.[0]?.message?.content || "";
-        setMessages((prev) => [
-          ...prev,
-          { id: crypto.randomUUID(), role: "assistant", content: assistantContent, timestamp: new Date() },
-        ]);
+      if (data?.blocked) {
+        setBlockedMessage(data.reason);
+        setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+        toast({ title: "Prompt Blocked", description: data.reason, variant: "destructive" });
         return;
       }
 
-      // SSE streaming
-      if (!resp.body) throw new Error("No response body");
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-      let streamDone = false;
-      const assistantId = crypto.randomUUID();
-
-      // Add empty assistant message
-      setMessages((prev) => [
-        ...prev,
-        { id: assistantId, role: "assistant", content: "", timestamp: new Date() },
-      ]);
-
-      while (!streamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
-
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") {
-            streamDone = true;
-            break;
-          }
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) {
-              assistantContent += content;
-              const snapshot = assistantContent;
-              setMessages((prev) =>
-                prev.map((m) => (m.id === assistantId ? { ...m, content: snapshot } : m))
-              );
-            }
-          } catch {
-            textBuffer = line + "\n" + textBuffer;
-            break;
-          }
-        }
+      if (data?.error) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+        return;
       }
 
-      // Final flush
-      if (textBuffer.trim()) {
-        for (let raw of textBuffer.split("\n")) {
-          if (!raw) continue;
-          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-          if (raw.startsWith(":") || raw.trim() === "") continue;
-          if (!raw.startsWith("data: ")) continue;
-          const jsonStr = raw.slice(6).trim();
-          if (jsonStr === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) {
-              assistantContent += content;
-              const snapshot = assistantContent;
-              setMessages((prev) =>
-                prev.map((m) => (m.id === assistantId ? { ...m, content: snapshot } : m))
-              );
-            }
-          } catch { /* ignore */ }
-        }
-      }
+      const assistantMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: data.response,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
       console.error("AI Chat error:", error);
       toast({
@@ -213,10 +111,6 @@ const StudentInterface = () => {
         description: error.message || "Failed to get AI response. Please try again.",
         variant: "destructive",
       });
-      // Remove the user message if no assistant response was generated
-      if (!assistantContent) {
-        setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
-      }
     } finally {
       setIsLoading(false);
     }
@@ -355,7 +249,7 @@ const StudentInterface = () => {
               {messages.map((msg) => (
                 <MessageBubble key={msg.id} message={msg} />
               ))}
-              {isLoading && messages[messages.length - 1]?.role === "user" && (
+              {isLoading && (
                 <div className="flex gap-3">
                   <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <Bot className="h-4 w-4 text-primary" />
@@ -375,14 +269,13 @@ const StudentInterface = () => {
         <div className="border-t border-border px-6 py-4 bg-card shrink-0">
           <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
             <div className="flex gap-2 items-end">
-              <div className="flex-1 relative">
+              <div className="flex-1">
                 <Textarea
-                  ref={textareaRef}
                   placeholder={`Ask about ${activeSubjectData.name.toLowerCase()}...`}
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="min-h-[44px] max-h-[160px] resize-none pr-4"
+                  className="min-h-[44px] max-h-[160px] resize-none"
                   rows={1}
                 />
               </div>
@@ -428,9 +321,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       </div>
       <div
         className={`rounded-2xl px-4 py-3 max-w-[85%] ${
-          isUser
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted text-foreground"
+          isUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
         }`}
       >
         {isUser ? (

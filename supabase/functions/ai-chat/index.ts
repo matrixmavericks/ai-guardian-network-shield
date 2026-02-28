@@ -95,7 +95,6 @@ Provide helpful, educational responses. You can give direct answers but always e
           { role: 'system', content: systemMessage },
           { role: 'user', content: prompt }
         ],
-        stream: true,
       }),
     });
 
@@ -119,10 +118,13 @@ Provide helpful, educational responses. You can give direct answers but always e
       throw new Error(`AI gateway error: ${aiResponse.status}`);
     }
 
-    // Stream the response back
-    return new Response(aiResponse.body, {
-      headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
-    });
+    const aiData = await aiResponse.json();
+    const responseText = aiData.choices[0].message.content;
+
+    return new Response(
+      JSON.stringify({ response: responseText }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     console.error('Error in ai-chat:', error);
