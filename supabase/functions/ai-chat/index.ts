@@ -95,7 +95,7 @@ Provide helpful, educational responses. While you can give direct answers, still
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemMessage },
           { role: 'user', content: finalPrompt }
