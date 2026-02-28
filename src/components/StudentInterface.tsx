@@ -1,332 +1,448 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { 
-  Brain, 
-  Send, 
-  BookOpen, 
-  Calculator, 
-  PenTool, 
-  Languages, 
-  ThumbsUp,
-  ThumbsDown,
+import { Badge } from "@/components/ui/badge";
+import {
+  Brain,
+  Send,
+  BookOpen,
+  Calculator,
+  PenTool,
+  Languages,
   Loader,
   AlertTriangle,
-  RefreshCw
+  Beaker,
+  Sparkles,
+  User,
+  Bot,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getCurrentUser } from "@/services/localStorageService";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import DashboardSidebar from "@/components/DashboardSidebar";
+import ReactMarkdown from "react-markdown";
 
-interface AIResponse {
-  id: number;
-  prompt: string;
-  response: string;
-  isProcessTaught: boolean;
-  wasRewritten?: boolean;
-  originalPrompt?: string;
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
 }
+
+const SUBJECTS = [
+  { id: "general", name: "General", icon: BookOpen },
+  { id: "math", name: "Math", icon: Calculator },
+  { id: "writing", name: "Writing", icon: PenTool },
+  { id: "languages", name: "Languages", icon: Languages },
+  { id: "science", name: "Science", icon: Beaker },
+];
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 
 const StudentInterface = () => {
   const [prompt, setPrompt] = useState("");
-  const [responses, setResponses] = useState<AIResponse[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isProcessTeaching, setIsProcessTeaching] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [activeSubject, setActiveSubject] = useState("general");
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const subjects = [
-    { id: "general", name: "General", icon: <BookOpen className="h-4 w-4" /> },
-    { id: "math", name: "Mathematics", icon: <Calculator className="h-4 w-4" /> },
-    { id: "writing", name: "Writing", icon: <PenTool className="h-4 w-4" /> },
-    { id: "languages", name: "Languages", icon: <Languages className="h-4 w-4" /> }
-  ];
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim()) return;
-    
+    if (!prompt.trim() || isLoading) return;
+
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: prompt.trim(),
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setPrompt("");
     setIsLoading(true);
     setBlockedMessage(null);
-    
+
+    let assistantContent = "";
+
     try {
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: { 
-          prompt, 
-          subject: activeSubject, 
-          gradeLevel: 'high-school',
-          userId: user?.id || 'anonymous',
-          processTeaching: isProcessTeaching
-        }
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          prompt: userMessage.content,
+          subject: activeSubject,
+          gradeLevel: "high-school",
+          processTeaching: isProcessTeaching,
+        }),
       });
 
-      if (error) {
-        console.error("AI API error:", error);
-        toast({
-          title: "Error",
-          description: "Failed to get a response. Please try again.",
-          variant: "destructive",
-        });
+      if (!resp.ok) {
+        const errorData = await resp.json().catch(() => null);
+
+        if (errorData?.blocked) {
+          setBlockedMessage(errorData.reason);
+          setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+          toast({ title: "Prompt Blocked", description: errorData.reason, variant: "destructive" });
+          return;
+        }
+
+        if (resp.status === 429) {
+          toast({ title: "Rate Limited", description: "Too many requests. Please wait a moment.", variant: "destructive" });
+          return;
+        }
+        if (resp.status === 402) {
+          toast({ title: "Credits Required", description: "AI credits needed. Please add funds.", variant: "destructive" });
+          return;
+        }
+
+        throw new Error(errorData?.error || "Failed to get AI response");
+      }
+
+      // Check if response is JSON (blocked) or SSE stream
+      const contentType = resp.headers.get("content-type") || "";
+
+      if (contentType.includes("application/json")) {
+        const data = await resp.json();
+        if (data.blocked) {
+          setBlockedMessage(data.reason);
+          setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+          toast({ title: "Prompt Blocked", description: data.reason, variant: "destructive" });
+          return;
+        }
+        // Non-streaming fallback
+        assistantContent = data.response || data.choices?.[0]?.message?.content || "";
+        setMessages((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), role: "assistant", content: assistantContent, timestamp: new Date() },
+        ]);
         return;
       }
 
-      // Check if prompt was blocked
-      if (data.blocked) {
-        setBlockedMessage(data.reason);
-        toast({
-          title: "Prompt Blocked",
-          description: data.reason,
-          variant: "destructive",
-        });
-        return;
+      // SSE streaming
+      if (!resp.body) throw new Error("No response body");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let streamDone = false;
+      const assistantId = crypto.randomUUID();
+
+      // Add empty assistant message
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantId, role: "assistant", content: "", timestamp: new Date() },
+      ]);
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              const snapshot = assistantContent;
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantId ? { ...m, content: snapshot } : m))
+              );
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
       }
 
-      // Check for rate limiting errors
-      if (data.error) {
-        toast({
-          title: "Error",
-          description: data.error,
-          variant: "destructive",
-        });
-        return;
+      // Final flush
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split("\n")) {
+          if (!raw) continue;
+          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+          if (raw.startsWith(":") || raw.trim() === "") continue;
+          if (!raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              const snapshot = assistantContent;
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantId ? { ...m, content: snapshot } : m))
+              );
+            }
+          } catch { /* ignore */ }
+        }
       }
-
-      // Add the response
-      const newResponse: AIResponse = {
-        id: Date.now(),
-        prompt: data.wasRewritten ? data.modifiedPrompt : prompt,
-        response: data.response,
-        isProcessTaught: isProcessTeaching,
-        wasRewritten: data.wasRewritten,
-        originalPrompt: data.wasRewritten ? prompt : undefined
-      };
-      
-      setResponses([newResponse, ...responses]);
-      setPrompt("");
-
-      if (data.wasRewritten) {
-        toast({
-          title: "Prompt Rewritten",
-          description: "Your question was transformed into a learning-focused prompt.",
-        });
-      } else {
-        toast({
-          title: isProcessTeaching ? "Process-Focused Response" : "Direct Response",
-          description: isProcessTeaching 
-            ? "You received a process-teaching response to help you learn." 
-            : "You received a direct response to your question.",
-        });
-      }
-    } catch (error) {
-      console.error("AI API error:", error);
+    } catch (error: any) {
+      console.error("AI Chat error:", error);
       toast({
         title: "Error",
-        description: "Failed to get a response from the AI service. Please try again.",
+        description: error.message || "Failed to get AI response. Please try again.",
         variant: "destructive",
       });
+      // Remove the user message if no assistant response was generated
+      if (!assistantContent) {
+        setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleFeedback = (responseId: number, isPositive: boolean) => {
-    toast({
-      title: isPositive ? "Feedback Recorded" : "We'll Improve",
-      description: isPositive 
-        ? "Thank you for your positive feedback!" 
-        : "Thanks for helping us improve our responses.",
-    });
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
   };
 
-  const currentUser = getCurrentUser();
+  const clearChat = () => {
+    setMessages([]);
+    setBlockedMessage(null);
+  };
+
+  const activeSubjectData = SUBJECTS.find((s) => s.id === activeSubject)!;
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center">
-              <Brain className="h-8 w-8 text-primary mr-2" />
-              <h1 className="text-2xl font-bold text-foreground">AI Learning Assistant</h1>
+    <div className="flex h-screen bg-background">
+      <DashboardSidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="border-b border-border px-6 py-3 flex items-center justify-between shrink-0 bg-card">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Brain className="h-5 w-5 text-primary" />
             </div>
-            <div className="flex items-center space-x-2">
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">AI Learning Assistant</h1>
+              <p className="text-xs text-muted-foreground">
+                {isProcessTeaching ? "Process Teaching Mode" : "Direct Answer Mode"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Switch
                 id="process-mode"
                 checked={isProcessTeaching}
                 onCheckedChange={setIsProcessTeaching}
               />
-              <Label htmlFor="process-mode">Process Teaching Mode</Label>
+              <Label htmlFor="process-mode" className="text-sm cursor-pointer">
+                Process Teaching
+              </Label>
             </div>
+            {messages.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearChat}>
+                <Trash2 className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            )}
           </div>
-          <p className="text-muted-foreground mt-2">
-            Ask questions and receive guidance that helps you understand the process.
-            {currentUser && <span className="ml-1">Welcome, {currentUser.name}!</span>}
-          </p>
         </header>
-        
-        <div className="mb-6">
-          <Card className="border-primary/20">
-            <CardHeader className="pb-2">
-              <CardTitle>How to Use This Assistant</CardTitle>
-              <CardDescription>Powered by AI with ethical prompt detection</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
-                <li><span className="font-medium text-foreground">Process Teaching Mode</span>: When enabled, you'll receive step-by-step explanations instead of just answers.</li>
-                <li><span className="font-medium text-foreground">Ethical AI</span>: Prompts requesting direct answers or cheating are automatically detected and blocked.</li>
-                <li><span className="font-medium text-foreground">Prompt Rewriting</span>: Direct-answer questions are transformed into learning-focused prompts.</li>
-                <li><span className="font-medium text-foreground">Ask "How" Questions</span>: Questions like "How do I solve this?" give better learning outcomes.</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="mb-6">
-          <Tabs value={activeSubject} onValueChange={setActiveSubject}>
-            <TabsList className="mb-4">
-              {subjects.map(subject => (
-                <TabsTrigger key={subject.id} value={subject.id} className="flex items-center gap-2">
-                  {subject.icon}
-                  {subject.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            
-            {subjects.map(subject => (
-              <TabsContent key={subject.id} value={subject.id}>
-                <Card className="border-primary/10 bg-primary/5">
-                  <CardContent className="pt-4">
-                    {subject.id === "general" && (
-                      <p className="text-sm text-foreground">Ask any question and I'll help guide your learning process.</p>
-                    )}
-                    {subject.id === "math" && (
-                      <p className="text-sm text-foreground">Get step-by-step guidance for solving equations, problems, and understanding concepts.</p>
-                    )}
-                    {subject.id === "writing" && (
-                      <p className="text-sm text-foreground">Learn to plan, structure, and refine your essays and written assignments.</p>
-                    )}
-                    {subject.id === "languages" && (
-                      <p className="text-sm text-foreground">Practice translation, grammar, and language comprehension with guided learning.</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            ))}
-          </Tabs>
+
+        {/* Subject tabs */}
+        <div className="border-b border-border px-6 py-2 flex gap-2 shrink-0 bg-card overflow-x-auto">
+          {SUBJECTS.map((subject) => {
+            const Icon = subject.icon;
+            const isActive = activeSubject === subject.id;
+            return (
+              <button
+                key={subject.id}
+                onClick={() => setActiveSubject(subject.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {subject.name}
+              </button>
+            );
+          })}
         </div>
 
-        {blockedMessage && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>{blockedMessage}</AlertDescription>
-          </Alert>
-        )}
-        
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit}>
-              <Textarea 
-                placeholder="Ask a question... (e.g., 'How do I solve quadratic equations?')"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="min-h-[100px] mb-4"
-              />
-              <div className="flex justify-between items-center">
-                <p className="text-xs text-muted-foreground">
-                  {isProcessTeaching 
-                    ? "Process Teaching Mode is ON - You'll receive step-by-step guidance" 
-                    : "Direct answers mode - Switch to Process Teaching for better learning"}
-                </p>
-                <Button type="submit" disabled={isLoading || !prompt.trim()}>
-                  {isLoading ? (
-                    <>
-                      <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      Thinking...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Ask Question
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-        
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Conversation History</h2>
-          
-          {responses.length === 0 ? (
-            <Card className="bg-muted/50">
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Brain className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No conversations yet. Ask your first question above!</p>
-              </CardContent>
-            </Card>
-          ) : (
-            responses.map((response) => (
-              <Card key={response.id} className={response.isProcessTaught ? "border-l-4 border-l-primary" : "border-l-4 border-l-orange-400"}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">
-                      {response.wasRewritten && (
-                        <span className="inline-flex items-center text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded mr-2">
-                          <RefreshCw className="h-3 w-3 mr-1" />
-                          Rewritten
-                        </span>
-                      )}
-                      {response.isProcessTaught ? "📚 Process Teaching" : "💡 Direct Response"}
-                    </CardTitle>
-                    <div className="flex items-center space-x-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleFeedback(response.id, true)}
-                      >
-                        <ThumbsUp className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleFeedback(response.id, false)}
-                      >
-                        <ThumbsDown className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  {response.wasRewritten && response.originalPrompt && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Original: <span className="italic">"{response.originalPrompt}"</span>
-                    </p>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-muted p-3 rounded-md mb-3">
-                    <p className="text-sm font-medium text-foreground">Your question:</p>
-                    <p className="text-sm text-muted-foreground">{response.prompt}</p>
-                  </div>
-                  <div className="p-3 bg-primary/5 rounded-md">
-                    <p className="text-sm font-medium text-foreground mb-2">AI Response:</p>
-                    <div className="text-sm text-foreground whitespace-pre-wrap">{response.response}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+        {/* Messages area */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {blockedMessage && (
+            <Alert variant="destructive" className="mb-4 max-w-2xl mx-auto">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{blockedMessage}</AlertDescription>
+            </Alert>
           )}
+
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center max-w-lg mx-auto">
+              <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                <Sparkles className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">Start Learning</h2>
+              <p className="text-muted-foreground text-sm mb-6">
+                Ask any question about{" "}
+                <span className="font-medium text-foreground">{activeSubjectData.name}</span>.
+                {isProcessTeaching
+                  ? " I'll guide you through the thinking process step by step."
+                  : " I'll give you clear, detailed explanations."}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                {activeSubject === "math" && (
+                  <>
+                    <SuggestionChip onClick={(t) => setPrompt(t)} text="How do I solve quadratic equations?" />
+                    <SuggestionChip onClick={(t) => setPrompt(t)} text="Explain the Pythagorean theorem" />
+                  </>
+                )}
+                {activeSubject === "writing" && (
+                  <>
+                    <SuggestionChip onClick={(t) => setPrompt(t)} text="How do I write a strong thesis statement?" />
+                    <SuggestionChip onClick={(t) => setPrompt(t)} text="Tips for structuring a persuasive essay" />
+                  </>
+                )}
+                {activeSubject === "languages" && (
+                  <>
+                    <SuggestionChip onClick={(t) => setPrompt(t)} text="How do verb conjugations work in Spanish?" />
+                    <SuggestionChip onClick={(t) => setPrompt(t)} text="Tips for learning vocabulary faster" />
+                  </>
+                )}
+                {activeSubject === "science" && (
+                  <>
+                    <SuggestionChip onClick={(t) => setPrompt(t)} text="Explain photosynthesis step by step" />
+                    <SuggestionChip onClick={(t) => setPrompt(t)} text="How does Newton's second law work?" />
+                  </>
+                )}
+                {activeSubject === "general" && (
+                  <>
+                    <SuggestionChip onClick={(t) => setPrompt(t)} text="How can I study more effectively?" />
+                    <SuggestionChip onClick={(t) => setPrompt(t)} text="Explain critical thinking skills" />
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto space-y-4">
+              {messages.map((msg) => (
+                <MessageBubble key={msg.id} message={msg} />
+              ))}
+              {isLoading && messages[messages.length - 1]?.role === "user" && (
+                <div className="flex gap-3">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
+                    <Loader className="h-4 w-4 animate-spin" />
+                    Thinking...
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input area */}
+        <div className="border-t border-border px-6 py-4 bg-card shrink-0">
+          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+            <div className="flex gap-2 items-end">
+              <div className="flex-1 relative">
+                <Textarea
+                  ref={textareaRef}
+                  placeholder={`Ask about ${activeSubjectData.name.toLowerCase()}...`}
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="min-h-[44px] max-h-[160px] resize-none pr-4"
+                  rows={1}
+                />
+              </div>
+              <Button type="submit" disabled={isLoading || !prompt.trim()} size="icon" className="h-11 w-11 shrink-0">
+                {isLoading ? <Loader className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              {isProcessTeaching
+                ? "📚 Process Teaching ON — guiding you to discover answers"
+                : "💡 Direct mode — clear explanations with answers"}
+              {" · "}Press Enter to send, Shift+Enter for new line
+            </p>
+          </form>
         </div>
       </div>
     </div>
   );
 };
+
+function SuggestionChip({ text, onClick }: { text: string; onClick: (text: string) => void }) {
+  return (
+    <button
+      onClick={() => onClick(text)}
+      className="text-left text-sm px-3 py-2 rounded-lg border border-border bg-card hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground"
+    >
+      {text}
+    </button>
+  );
+}
+
+function MessageBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+
+  return (
+    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
+      <div
+        className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+          isUser ? "bg-primary text-primary-foreground" : "bg-primary/10"
+        }`}
+      >
+        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 text-primary" />}
+      </div>
+      <div
+        className={`rounded-2xl px-4 py-3 max-w-[85%] ${
+          isUser
+            ? "bg-primary text-primary-foreground"
+            : "bg-muted text-foreground"
+        }`}
+      >
+        {isUser ? (
+          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+        ) : (
+          <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-li:my-0.5 prose-headings:my-2">
+            <ReactMarkdown>{message.content}</ReactMarkdown>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default StudentInterface;
