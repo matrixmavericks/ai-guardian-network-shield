@@ -4,31 +4,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
-  Brain,
-  Send,
-  BookOpen,
-  Calculator,
-  PenTool,
-  Languages,
-  Loader,
-  AlertTriangle,
-  Beaker,
-  Sparkles,
-  User,
-  Bot,
-  Trash2,
+  Brain, Send, BookOpen, Calculator, PenTool, Languages, Loader,
+  AlertTriangle, Beaker, Sparkles, User, Bot, Trash2, History,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+}
+
+interface ChatSession {
+  id: string;
+  title: string;
+  subject: string;
+  updated_at: string;
 }
 
 const SUBJECTS = [
@@ -39,23 +36,91 @@ const SUBJECTS = [
   { id: "science", name: "Science", icon: Beaker },
 ];
 
+type ChatState = "idle" | "sending" | "error";
+
 const StudentInterface = () => {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isProcessTeaching, setIsProcessTeaching] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [chatState, setChatState] = useState<ChatState>("idle");
   const [activeSubject, setActiveSubject] = useState("general");
-  const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Load sessions on mount
+  useEffect(() => {
+    if (user) loadSessions();
+  }, [user]);
+
+  const loadSessions = async () => {
+    const { data } = await (supabase as any)
+      .from('ai_chat_sessions')
+      .select('id, title, subject, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(20);
+    if (data) setSessions(data);
+  };
+
+  const loadSession = async (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    const { data } = await (supabase as any)
+      .from('ai_chat_messages')
+      .select('id, role, content, created_at')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true });
+
+    if (data) {
+      setMessages(data.map(m => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        timestamp: new Date(m.created_at),
+      })));
+    }
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) setActiveSubject(session.subject || 'general');
+    setShowHistory(false);
+  };
+
+  const createSession = async (): Promise<string | null> => {
+    if (!user) return null;
+    const { data, error } = await (supabase as any)
+      .from('ai_chat_sessions')
+      .insert({ user_id: user.id, subject: activeSubject, title: 'New Chat' })
+      .select('id')
+      .single();
+    if (error || !data) {
+      console.error('Failed to create session:', error);
+      return null;
+    }
+    setCurrentSessionId(data.id);
+    return data.id;
+  };
+
+  const saveMessage = async (sessionId: string, role: string, content: string, meta?: Record<string, unknown>) => {
+    if (!user) return;
+    await (supabase as any).from('ai_chat_messages').insert({
+      session_id: sessionId,
+      user_id: user.id,
+      role,
+      content,
+      moderation_status: (meta?.moderationStatus as string) || 'approved',
+      severity: (meta?.severity as string) || 'low',
+      metadata: meta ? meta : {},
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim() || isLoading) return;
+    if (!prompt.trim() || chatState === "sending") return;
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -64,55 +129,78 @@ const StudentInterface = () => {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     const sentPrompt = prompt.trim();
     setPrompt("");
-    setIsLoading(true);
-    setBlockedMessage(null);
+    setChatState("sending");
 
     try {
+      // Ensure session exists
+      let sessionId = currentSessionId;
+      if (!sessionId) {
+        sessionId = await createSession();
+        if (!sessionId) throw new Error("Could not create chat session");
+      }
+
+      // Save user message
+      await saveMessage(sessionId, 'user', sentPrompt);
+
+      // Update session title on first message
+      if (messages.length === 0) {
+        const title = sentPrompt.length > 50 ? sentPrompt.substring(0, 50) + '...' : sentPrompt;
+        await (supabase as any).from('ai_chat_sessions').update({ title }).eq('id', sessionId);
+      }
+
+      // Call AI
       const { data, error } = await supabase.functions.invoke("ai-chat", {
         body: {
           prompt: sentPrompt,
           subject: activeSubject,
           gradeLevel: "high-school",
           processTeaching: isProcessTeaching,
+          sessionId,
         },
       });
 
-      if (error) {
-        throw new Error(error.message || "Failed to get AI response");
-      }
+      if (error) throw new Error(error.message || "Failed to get AI response");
 
-      if (data?.blocked) {
-        setBlockedMessage(data.reason);
-        setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
-        toast({ title: "Prompt Blocked", description: data.reason, variant: "destructive" });
-        return;
-      }
+      // Extract reply with guaranteed fallback
+      const reply = data?.reply || data?.response || "I'm sorry, I couldn't generate a response. Please try again.";
+      const meta = data?.meta || {};
 
-      if (data?.error) {
-        toast({ title: "Error", description: data.error, variant: "destructive" });
-        return;
+      if (data?.error && !data?.success) {
+        toast({ title: "Warning", description: data.error, variant: "destructive" });
       }
 
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: data.response,
+        content: reply,
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, assistantMessage]);
+      await saveMessage(sessionId, 'assistant', reply, meta);
+      setChatState("idle");
+      loadSessions(); // refresh sidebar
     } catch (error: any) {
       console.error("AI Chat error:", error);
+
+      // Insert fallback assistant message so the user sees something
+      const fallbackMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "⚠️ Something went wrong. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, fallbackMsg]);
+
       toast({
         title: "Error",
         description: error.message || "Failed to get AI response. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+      setChatState("error");
     }
   };
 
@@ -125,10 +213,11 @@ const StudentInterface = () => {
 
   const clearChat = () => {
     setMessages([]);
-    setBlockedMessage(null);
+    setCurrentSessionId(null);
+    setChatState("idle");
   };
 
-  const activeSubjectData = SUBJECTS.find((s) => s.id === activeSubject)!;
+  const activeSubjectData = SUBJECTS.find(s => s.id === activeSubject)!;
 
   return (
     <div className="flex h-screen bg-background">
@@ -148,20 +237,16 @@ const StudentInterface = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)}>
+              <History className="h-4 w-4 mr-1" /> History
+            </Button>
             <div className="flex items-center gap-2">
-              <Switch
-                id="process-mode"
-                checked={isProcessTeaching}
-                onCheckedChange={setIsProcessTeaching}
-              />
-              <Label htmlFor="process-mode" className="text-sm cursor-pointer">
-                Process Teaching
-              </Label>
+              <Switch id="process-mode" checked={isProcessTeaching} onCheckedChange={setIsProcessTeaching} />
+              <Label htmlFor="process-mode" className="text-sm cursor-pointer">Process Teaching</Label>
             </div>
             {messages.length > 0 && (
               <Button variant="ghost" size="sm" onClick={clearChat}>
-                <Trash2 className="h-4 w-4 mr-1" />
-                Clear
+                <Trash2 className="h-4 w-4 mr-1" /> New Chat
               </Button>
             )}
           </div>
@@ -169,100 +254,71 @@ const StudentInterface = () => {
 
         {/* Subject tabs */}
         <div className="border-b border-border px-6 py-2 flex gap-2 shrink-0 bg-card overflow-x-auto">
-          {SUBJECTS.map((subject) => {
+          {SUBJECTS.map(subject => {
             const Icon = subject.icon;
             const isActive = activeSubject === subject.id;
             return (
-              <button
-                key={subject.id}
-                onClick={() => setActiveSubject(subject.id)}
+              <button key={subject.id} onClick={() => setActiveSubject(subject.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {subject.name}
+                  isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                }`}>
+                <Icon className="h-3.5 w-3.5" />{subject.name}
               </button>
             );
           })}
         </div>
 
-        {/* Messages area */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {blockedMessage && (
-            <Alert variant="destructive" className="mb-4 max-w-2xl mx-auto">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{blockedMessage}</AlertDescription>
-            </Alert>
+        <div className="flex-1 flex min-h-0">
+          {/* History panel */}
+          {showHistory && (
+            <div className="w-64 border-r border-border bg-card overflow-y-auto p-3 space-y-1">
+              <h3 className="text-sm font-semibold mb-2">Chat History</h3>
+              {sessions.length === 0 && <p className="text-xs text-muted-foreground">No previous chats</p>}
+              {sessions.map(s => (
+                <button key={s.id} onClick={() => loadSession(s.id)}
+                  className={`w-full text-left text-sm p-2 rounded hover:bg-accent truncate ${currentSessionId === s.id ? 'bg-accent' : ''}`}>
+                  {s.title || 'Untitled'}
+                </button>
+              ))}
+            </div>
           )}
 
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center max-w-lg mx-auto">
-              <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <Sparkles className="h-8 w-8 text-primary" />
-              </div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">Start Learning</h2>
-              <p className="text-muted-foreground text-sm mb-6">
-                Ask any question about{" "}
-                <span className="font-medium text-foreground">{activeSubjectData.name}</span>.
-                {isProcessTeaching
-                  ? " I'll guide you through the thinking process step by step."
-                  : " I'll give you clear, detailed explanations."}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-                {activeSubject === "math" && (
-                  <>
-                    <SuggestionChip onClick={(t) => setPrompt(t)} text="How do I solve quadratic equations?" />
-                    <SuggestionChip onClick={(t) => setPrompt(t)} text="Explain the Pythagorean theorem" />
-                  </>
-                )}
-                {activeSubject === "writing" && (
-                  <>
-                    <SuggestionChip onClick={(t) => setPrompt(t)} text="How do I write a strong thesis statement?" />
-                    <SuggestionChip onClick={(t) => setPrompt(t)} text="Tips for structuring a persuasive essay" />
-                  </>
-                )}
-                {activeSubject === "languages" && (
-                  <>
-                    <SuggestionChip onClick={(t) => setPrompt(t)} text="How do verb conjugations work in Spanish?" />
-                    <SuggestionChip onClick={(t) => setPrompt(t)} text="Tips for learning vocabulary faster" />
-                  </>
-                )}
-                {activeSubject === "science" && (
-                  <>
-                    <SuggestionChip onClick={(t) => setPrompt(t)} text="Explain photosynthesis step by step" />
-                    <SuggestionChip onClick={(t) => setPrompt(t)} text="How does Newton's second law work?" />
-                  </>
-                )}
-                {activeSubject === "general" && (
-                  <>
-                    <SuggestionChip onClick={(t) => setPrompt(t)} text="How can I study more effectively?" />
-                    <SuggestionChip onClick={(t) => setPrompt(t)} text="Explain critical thinking skills" />
-                  </>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="max-w-3xl mx-auto space-y-4">
-              {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
-              ))}
-              {isLoading && (
-                <div className="flex gap-3">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Bot className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
-                    <Loader className="h-4 w-4 animate-spin" />
-                    Thinking...
-                  </div>
+          {/* Messages area */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center max-w-lg mx-auto">
+                <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                  <Sparkles className="h-8 w-8 text-primary" />
                 </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
+                <h2 className="text-xl font-semibold text-foreground mb-2">Start Learning</h2>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Ask any question about <span className="font-medium text-foreground">{activeSubjectData.name}</span>.
+                  {isProcessTeaching
+                    ? " I'll guide you through the thinking process step by step."
+                    : " I'll give you clear, detailed explanations."}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                  <SuggestionChip onClick={t => setPrompt(t)} text="How can I study more effectively?" />
+                  <SuggestionChip onClick={t => setPrompt(t)} text="Explain critical thinking skills" />
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-3xl mx-auto space-y-4">
+                {messages.map(msg => <MessageBubble key={msg.id} message={msg} />)}
+                {chatState === "sending" && (
+                  <div className="flex gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Bot className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
+                      <Loader className="h-4 w-4 animate-spin" /> Thinking...
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Input area */}
@@ -272,22 +328,17 @@ const StudentInterface = () => {
               <div className="flex-1">
                 <Textarea
                   placeholder={`Ask about ${activeSubjectData.name.toLowerCase()}...`}
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
+                  value={prompt} onChange={e => setPrompt(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="min-h-[44px] max-h-[160px] resize-none"
-                  rows={1}
+                  className="min-h-[44px] max-h-[160px] resize-none" rows={1}
                 />
               </div>
-              <Button type="submit" disabled={isLoading || !prompt.trim()} size="icon" className="h-11 w-11 shrink-0">
-                {isLoading ? <Loader className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              <Button type="submit" disabled={chatState === "sending" || !prompt.trim()} size="icon" className="h-11 w-11 shrink-0">
+                {chatState === "sending" ? <Loader className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              {isProcessTeaching
-                ? "📚 Process Teaching ON — guiding you to discover answers"
-                : "💡 Direct mode — clear explanations with answers"}
-              {" · "}Press Enter to send, Shift+Enter for new line
+              {isProcessTeaching ? "📚 Process Teaching ON" : "💡 Direct mode"} · Enter to send, Shift+Enter for new line
             </p>
           </form>
         </div>
@@ -296,12 +347,10 @@ const StudentInterface = () => {
   );
 };
 
-function SuggestionChip({ text, onClick }: { text: string; onClick: (text: string) => void }) {
+function SuggestionChip({ text, onClick }: { text: string; onClick: (t: string) => void }) {
   return (
-    <button
-      onClick={() => onClick(text)}
-      className="text-left text-sm px-3 py-2 rounded-lg border border-border bg-card hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground"
-    >
+    <button onClick={() => onClick(text)}
+      className="text-left text-sm px-3 py-2 rounded-lg border border-border bg-card hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground">
       {text}
     </button>
   );
@@ -309,21 +358,12 @@ function SuggestionChip({ text, onClick }: { text: string; onClick: (text: strin
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
-
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
-      <div
-        className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-          isUser ? "bg-primary text-primary-foreground" : "bg-primary/10"
-        }`}
-      >
+      <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isUser ? "bg-primary text-primary-foreground" : "bg-primary/10"}`}>
         {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 text-primary" />}
       </div>
-      <div
-        className={`rounded-2xl px-4 py-3 max-w-[85%] ${
-          isUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-        }`}
-      >
+      <div className={`rounded-2xl px-4 py-3 max-w-[85%] ${isUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
         {isUser ? (
           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
         ) : (
