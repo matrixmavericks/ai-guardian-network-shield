@@ -1,90 +1,148 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { getCurrentUser, logout as logoutService, login as loginService, User } from '@/services/localStorageService';
+import { supabase } from '@/integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
+
+interface AuthUser {
+  id: string;
+  email: string;
+  role: string;
+  fullName: string;
+}
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
+  session: Session | null;
   isLoading: boolean;
-  logout: () => void;
-  login: (email: string, password: string, rememberMe: boolean) => User | null;
+  logout: () => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
+  signUp: (email: string, password: string, fullName: string, role: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null, 
+  user: null,
+  session: null,
   isLoading: true,
-  logout: () => {},
-  login: () => null
+  logout: async () => {},
+  login: async () => { throw new Error('Not initialized'); },
+  signUp: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
+async function buildAuthUser(supabaseUser: User): Promise<AuthUser> {
+  // Fetch role from user_roles table
+  const { data: roles } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', supabaseUser.id);
+
+  const role = roles?.[0]?.role || 'student';
+
+  // Fetch profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('user_id', supabaseUser.id)
+    .maybeSingle();
+
+  return {
+    id: supabaseUser.id,
+    email: supabaseUser.email || '',
+    role,
+    fullName: profile?.full_name || supabaseUser.email?.split('@')[0] || 'User',
+  };
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const currentUser = getCurrentUser();
-        console.log("Initial user load:", currentUser);
-        setUser(currentUser);
-      } catch (error) {
-        console.error("Error loading user:", error);
-      } finally {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      setSession(newSession);
+      if (newSession?.user) {
+        // Use setTimeout to avoid potential deadlock with Supabase client
+        setTimeout(async () => {
+          try {
+            const authUser = await buildAuthUser(newSession.user);
+            setUser(authUser);
+          } catch (e) {
+            console.error('Failed to build auth user:', e);
+            setUser(null);
+          }
+          setIsLoading(false);
+        }, 0);
+      } else {
+        setUser(null);
         setIsLoading(false);
       }
-    };
+    });
 
-    loadUser();
-    
-    // Listen for storage events to handle logout from other tabs
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'aiConditioner_user' && e.newValue === null) {
-        setUser(null);
-      } else if (e.key === 'aiConditioner_user' && e.newValue) {
+    // THEN check existing session
+    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
+      setSession(existingSession);
+      if (existingSession?.user) {
         try {
-          setUser(JSON.parse(e.newValue));
-        } catch (error) {
-          console.error("Failed to parse user data:", error);
+          const authUser = await buildAuthUser(existingSession.user);
+          setUser(authUser);
+        } catch (e) {
+          console.error('Failed to build auth user:', e);
         }
       }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogout = () => {
-    logoutService();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
+    setSession(null);
   };
 
-  const handleLogin = (email: string, password: string, rememberMe: boolean) => {
-    try {
-      console.log("Login attempt in auth context:", { email, password, rememberMe });
-      const loggedInUser = loginService(email, password, rememberMe);
-      console.log("Login service result:", loggedInUser);
-      
-      if (loggedInUser) {
-        setUser(loggedInUser);
-        return loggedInUser;
-      }
-      return null;
-    } catch (error) {
-      console.error("Login error in auth context:", error);
-      return null;
-    }
+  const handleLogin = async (email: string, password: string): Promise<AuthUser> => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    if (!data.user) throw new Error('Login failed');
+    const authUser = await buildAuthUser(data.user);
+    setUser(authUser);
+    setSession(data.session);
+    return authUser;
   };
 
-  // For debugging purposes
-  console.log("Auth context current state - user:", user, "isLoading:", isLoading);
+  const handleSignUp = async (email: string, password: string, fullName: string, role: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (error) throw error;
+    if (!data.user) throw new Error('Sign up failed');
+
+    // Create profile
+    await supabase.from('profiles').insert({
+      user_id: data.user.id,
+      full_name: fullName,
+    });
+
+    // Assign role
+    await supabase.from('user_roles').insert({
+      user_id: data.user.id,
+      role: role as any,
+    });
+  };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isLoading, 
+    <AuthContext.Provider value={{
+      user,
+      session,
+      isLoading,
       logout: handleLogout,
-      login: handleLogin
+      login: handleLogin,
+      signUp: handleSignUp,
     }}>
       {children}
     </AuthContext.Provider>

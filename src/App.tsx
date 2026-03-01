@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -25,7 +24,6 @@ import AdminMonitoring from './pages/AdminMonitoring';
 import AIConfigurationPage from './pages/AIConfigurationPage';
 import ModelTrainingPage from './pages/ModelTrainingPage';
 
-// Protected route component
 const ProtectedRoute = ({ 
   children, 
   allowedRoles = ['admin', 'teacher', 'student', 'parent'],
@@ -37,19 +35,15 @@ const ProtectedRoute = ({
 }) => {
   const { user, isLoading } = useAuth();
   
-  // Show loading
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
-  // Check if user exists
   if (!user) {
     return <Navigate to={redirectTo} replace />;
   }
   
-  // Check if user has any of the allowed roles
-  const hasRequiredRole = allowedRoles.includes(user.role);
-  if (!hasRequiredRole) {
+  if (!allowedRoles.includes(user.role)) {
     return <Navigate to="/login" replace />;
   }
   
@@ -66,166 +60,23 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Admin & Teacher Routes */}
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/assignments" 
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}>
-                <AssignmentsPage />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/security-keys" 
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <SecurityKeysPage />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/teacher-plan-generator" 
-            element={
-              <ProtectedRoute allowedRoles={['teacher']}>
-                <TeacherPlanGenerator />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* User Management */}
-          <Route 
-            path="/users" 
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <UserManagement />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* Settings */}
-          <Route 
-            path="/settings" 
-            element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* Messages */}
-          <Route 
-            path="/messages" 
-            element={
-              <ProtectedRoute>
-                <MessagesPage />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* Student Routes */}
-          <Route 
-            path="/student-dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={['student']}>
-                <StudentDashboard />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/ai-learning-assistant" 
-            element={
-              <ProtectedRoute allowedRoles={['student', 'teacher']}>
-                <StudentInterface />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/grades" 
-            element={
-              <ProtectedRoute>
-                <GradesPage />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/learning-paths" 
-            element={
-              <ProtectedRoute allowedRoles={['student']}>
-                <LearningPathsPage />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/learning-path/:id" 
-            element={
-              <ProtectedRoute allowedRoles={['student']}>
-                <LearningPathDetail />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* Create custom learning path */}
-          <Route 
-            path="/create-learning-path" 
-            element={
-              <ProtectedRoute allowedRoles={['teacher', 'admin']}>
-                <CreateLearningPathPage />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* Parent Routes */}
-          <Route 
-            path="/parent-dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={['parent']}>
-                <ParentDashboard />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* Admin Monitoring & Configuration */}
-          <Route 
-            path="/admin-monitoring" 
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminMonitoring />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/ai-configuration" 
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AIConfigurationPage />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/model-training" 
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
-                <ModelTrainingPage />
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/assignments" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><AssignmentsPage /></ProtectedRoute>} />
+          <Route path="/security-keys" element={<ProtectedRoute allowedRoles={['admin']}><SecurityKeysPage /></ProtectedRoute>} />
+          <Route path="/teacher-plan-generator" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherPlanGenerator /></ProtectedRoute>} />
+          <Route path="/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
+          <Route path="/student-dashboard" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />
+          <Route path="/ai-learning-assistant" element={<ProtectedRoute allowedRoles={['student', 'teacher']}><StudentInterface /></ProtectedRoute>} />
+          <Route path="/grades" element={<ProtectedRoute><GradesPage /></ProtectedRoute>} />
+          <Route path="/learning-paths" element={<ProtectedRoute allowedRoles={['student']}><LearningPathsPage /></ProtectedRoute>} />
+          <Route path="/learning-path/:id" element={<ProtectedRoute allowedRoles={['student']}><LearningPathDetail /></ProtectedRoute>} />
+          <Route path="/create-learning-path" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><CreateLearningPathPage /></ProtectedRoute>} />
+          <Route path="/parent-dashboard" element={<ProtectedRoute allowedRoles={['parent']}><ParentDashboard /></ProtectedRoute>} />
+          <Route path="/admin-monitoring" element={<ProtectedRoute allowedRoles={['admin']}><AdminMonitoring /></ProtectedRoute>} />
+          <Route path="/ai-configuration" element={<ProtectedRoute allowedRoles={['admin']}><AIConfigurationPage /></ProtectedRoute>} />
+          <Route path="/model-training" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ModelTrainingPage /></ProtectedRoute>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

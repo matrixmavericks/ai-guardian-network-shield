@@ -1,87 +1,126 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const FALLBACK_REPLY = "I'm sorry, the AI is temporarily unavailable. Please try again in a moment.";
+
+const BLOCKED_KEYWORDS = [
+  'write my essay', 'do my homework', 'give me the answer',
+  'solve this for me', 'cheat', 'plagiarize', 'copy paste',
+  'give me the exact answer'
+];
+
+function json(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // --- Auth ---
+  const authHeader = req.headers.get('Authorization');
+  let userId: string | null = null;
+
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const token = authHeader.replace('Bearer ', '');
+      const { data, error } = await supabase.auth.getClaims(token);
+      if (!error && data?.claims?.sub) {
+        userId = data.claims.sub;
+      }
+    } catch (e) {
+      console.error('Auth check failed:', e);
+    }
+  }
+
+  // --- Parse body ---
+  let prompt: string;
+  let subject: string;
+  let gradeLevel: string;
+  let processTeaching: boolean;
+  let sessionId: string | null;
+
   try {
-    const { prompt, subject, gradeLevel, processTeaching } = await req.json();
-    console.log('AI Chat request:', { prompt, subject, gradeLevel, processTeaching });
+    const body = await req.json();
+    prompt = (body.prompt || '').trim();
+    subject = body.subject || 'general';
+    gradeLevel = body.gradeLevel || 'high-school';
+    processTeaching = body.processTeaching !== false;
+    sessionId = body.sessionId || null;
+  } catch {
+    return json({ success: false, reply: FALLBACK_REPLY, error: 'Invalid request body', meta: null }, 400);
+  }
 
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
+  if (!prompt) {
+    return json({ success: false, reply: 'Please enter a question.', error: 'Empty prompt', meta: null }, 400);
+  }
 
-    // Blocked keywords check (inline, no external call needed for basic check)
-    const blockedKeywords = [
-      'write my essay', 'do my homework', 'give me the answer',
-      'solve this for me', 'cheat', 'plagiarize', 'copy paste'
-    ];
+  // --- Moderation ---
+  const lowerPrompt = prompt.toLowerCase();
+  const flaggedKeywords = BLOCKED_KEYWORDS.filter(kw => lowerPrompt.includes(kw));
+  let moderationStatus: 'approved' | 'rewritten' | 'flagged' = 'approved';
+  let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
+  let effectivePrompt = prompt;
 
-    const lowerPrompt = prompt.toLowerCase();
-    const flaggedKeywords = blockedKeywords.filter(kw => lowerPrompt.includes(kw));
+  if (flaggedKeywords.length > 0) {
+    moderationStatus = 'rewritten';
+    severity = flaggedKeywords.length >= 3 ? 'high' : 'medium';
+    // Rewrite into process-learning prompt instead of blocking
+    effectivePrompt = `The student asked: "${prompt}". Instead of giving them the direct answer, guide them through the thinking process step by step. Ask them guiding questions to help them discover the answer themselves. Focus on teaching the underlying concepts.`;
+  }
 
-    if (flaggedKeywords.length > 0) {
-      return new Response(
-        JSON.stringify({
-          blocked: true,
-          reason: 'This prompt appears to request direct answers or academic dishonesty. Please rephrase to focus on learning the concept.',
-          flaggedKeywords,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  // --- Build system prompt ---
+  let systemMessage = `You are an educational AI assistant. Subject: ${subject}. Grade level: ${gradeLevel}.
+Use markdown formatting. Use **bold** for key terms. Use bullet points and numbered lists. Keep explanations clear and age-appropriate.`;
 
-    // Build system message based on subject and teaching mode
-    let systemMessage = `You are an educational AI assistant helping students learn. Current subject: ${subject || 'general'}. Grade level: ${gradeLevel || 'not specified'}.
+  if (processTeaching || moderationStatus === 'rewritten') {
+    systemMessage += `
+IMPORTANT: You are in Process Teaching Mode.
+1. NEVER give direct answers
+2. Break problems into step-by-step learning opportunities
+3. Ask guiding questions
+4. Explain underlying concepts
+5. Encourage the student to discover the answer themselves`;
+  } else {
+    systemMessage += `\nProvide helpful, educational responses with clear explanations.`;
+  }
 
-Important formatting rules:
-- Use markdown formatting in your responses
-- Use **bold** for key terms
-- Use bullet points and numbered lists for steps
-- Use code blocks for math expressions when appropriate
-- Keep explanations clear and age-appropriate`;
+  // Subject-specific instructions
+  const subjectInstructions: Record<string, string> = {
+    math: '\nFor math: Show steps clearly, explain reasoning, use proper notation.',
+    writing: '\nFor writing: Focus on structure, thesis development, original thought.',
+    languages: '\nFor languages: Help with grammar rules, translation concepts, cultural context.',
+    science: '\nFor science: Explain with evidence-based reasoning, encourage hypothesis formation.',
+  };
+  if (subjectInstructions[subject]) {
+    systemMessage += subjectInstructions[subject];
+  }
 
-    if (processTeaching) {
-      systemMessage += `
+  // --- Call AI with timeout ---
+  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!lovableApiKey) {
+    return json({ success: false, reply: FALLBACK_REPLY, error: 'AI service not configured', meta: null }, 500);
+  }
 
-IMPORTANT: You are in Process Teaching Mode. Follow these rules:
-1. NEVER give direct answers to questions
-2. Break down problems into step-by-step learning opportunities
-3. Ask guiding questions to help the student think through the problem
-4. Explain the underlying concepts and principles
-5. Encourage the student to discover the answer themselves
-6. Use the Socratic method - ask questions that lead to understanding`;
-    } else {
-      systemMessage += `
+  let responseText = '';
 
-Provide helpful, educational responses. You can give direct answers but always explain the reasoning and concepts behind them.`;
-    }
-
-    // Add subject-specific instructions
-    switch (subject) {
-      case 'math':
-        systemMessage += '\n\nFor math: Show steps clearly, explain mathematical reasoning, and use proper notation.';
-        break;
-      case 'writing':
-        systemMessage += '\n\nFor writing: Focus on structure, thesis development, and original thought. Guide their writing process.';
-        break;
-      case 'languages':
-        systemMessage += '\n\nFor languages: Help with translation concepts, grammar rules, and cultural context.';
-        break;
-      case 'science':
-        systemMessage += '\n\nFor science: Explain phenomena with evidence-based reasoning, encourage hypothesis formation.';
-        break;
-    }
-
-    console.log('Calling Lovable AI');
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -93,44 +132,72 @@ Provide helpful, educational responses. You can give direct answers but always e
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemMessage },
-          { role: 'user', content: prompt }
+          { role: 'user', content: effectivePrompt },
         ],
       }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeout);
+
     if (!aiResponse.ok) {
+      const status = aiResponse.status;
       const errorText = await aiResponse.text();
-      console.error('AI gateway error:', aiResponse.status, errorText);
+      console.error('AI gateway error:', status, errorText);
 
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (status === 429) {
+        return json({ success: false, reply: 'Rate limit exceeded. Please wait a moment and try again.', error: 'rate_limited', meta: null }, 429);
       }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI service requires payment. Please add credits to continue.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (status === 402) {
+        return json({ success: false, reply: 'AI service requires credits. Please contact your administrator.', error: 'payment_required', meta: null }, 402);
       }
-
-      throw new Error(`AI gateway error: ${aiResponse.status}`);
+      throw new Error(`AI gateway returned ${status}`);
     }
 
     const aiData = await aiResponse.json();
-    const responseText = aiData.choices[0].message.content;
-
-    return new Response(
-      JSON.stringify({ response: responseText }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error in ai-chat:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    responseText = aiData?.choices?.[0]?.message?.content || '';
+  } catch (err) {
+    console.error('AI call failed:', err);
   }
+
+  // GUARANTEED non-empty reply
+  if (!responseText || responseText.trim().length === 0) {
+    responseText = FALLBACK_REPLY;
+  }
+
+  // --- Log to prompt_logs (best-effort, don't fail the response) ---
+  if (userId) {
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const adminClient = createClient(supabaseUrl, serviceKey);
+
+      await adminClient.from('prompt_logs').insert({
+        user_id: userId,
+        original_prompt: prompt,
+        modified_prompt: moderationStatus === 'rewritten' ? effectivePrompt : null,
+        response: responseText.substring(0, 500),
+        status: moderationStatus === 'rewritten' ? 'rewritten' : moderationStatus === 'flagged' ? 'flagged' : 'approved',
+        severity,
+        subject,
+        grade_level: gradeLevel,
+        process_mode_enabled: processTeaching,
+        flagged_keywords: flaggedKeywords.length > 0 ? flaggedKeywords : null,
+        ai_engine: 'google',
+      });
+    } catch (logErr) {
+      console.error('Prompt logging failed (non-fatal):', logErr);
+    }
+  }
+
+  return json({
+    success: true,
+    reply: responseText,
+    error: null,
+    meta: {
+      moderationStatus,
+      severity,
+      flaggedKeywords: flaggedKeywords.length > 0 ? flaggedKeywords : undefined,
+    },
+  });
 });
