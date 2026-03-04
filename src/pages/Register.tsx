@@ -40,14 +40,18 @@ const Register = () => {
 
     setIsSubmitting(true);
     try {
-      await signUp(formData.email, formData.password, formData.name, formData.role);
+      await signUp(formData.email.trim(), formData.password, formData.name.trim(), formData.role);
       toast({
         title: "Account created",
-        description: "Please check your email to verify your account, then log in.",
+        description: "Check your email to verify your account. Your profile will finish setup the first time you sign in.",
       });
       navigate("/login");
     } catch (error: any) {
-      toast({ title: "Registration failed", description: error.message || "An error occurred.", variant: "destructive" });
+      toast({
+        title: "Registration failed",
+        description: error?.message || "We couldn't create your account. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
