@@ -217,6 +217,107 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_path_progress: {
+        Row: {
+          bookmarked: boolean
+          completed_modules: string[]
+          created_at: string
+          id: string
+          last_accessed_at: string
+          path_id: string
+          progress: number
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bookmarked?: boolean
+          completed_modules?: string[]
+          created_at?: string
+          id?: string
+          last_accessed_at?: string
+          path_id: string
+          progress?: number
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bookmarked?: boolean
+          completed_modules?: string[]
+          created_at?: string
+          id?: string
+          last_accessed_at?: string
+          path_id?: string
+          progress?: number
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_path_progress_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "learning_paths"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_paths: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          difficulty: string
+          enrolled_count: number
+          estimated_hours: number
+          featured: boolean
+          id: string
+          is_public: boolean
+          modules: Json
+          rating: number
+          subject: string
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string
+          difficulty?: string
+          enrolled_count?: number
+          estimated_hours?: number
+          featured?: boolean
+          id?: string
+          is_public?: boolean
+          modules?: Json
+          rating?: number
+          subject: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          difficulty?: string
+          enrolled_count?: number
+          estimated_hours?: number
+          featured?: boolean
+          id?: string
+          is_public?: boolean
+          modules?: Json
+          rating?: number
+          subject?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
