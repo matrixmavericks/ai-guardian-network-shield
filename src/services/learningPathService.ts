@@ -153,7 +153,7 @@ export const getPathProgress = async (userId: string, pathId: string): Promise<P
 };
 
 export const saveProgress = async (progress: PathProgress): Promise<PathProgress> => {
-  const payload = {
+  const payload: any = {
     user_id: progress.userId,
     path_id: progress.pathId,
     progress: progress.progress,

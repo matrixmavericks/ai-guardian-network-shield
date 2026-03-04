@@ -1,112 +1,170 @@
-
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { 
-  BookOpen, 
-  ArrowLeft, 
-  CheckCircle, 
-  FileText, 
-  Play, 
-  ListChecks,
-  GraduationCap,
-  Calendar
-} from "lucide-react";
-import { getLearningPathById, LearningPath, LearningModule } from "@/services/localStorageService";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  ArrowLeft,
+  BookOpen,
+  Calendar,
+  CheckCircle,
+  FileText,
+  ListChecks,
+  Play,
+} from "lucide-react";
+import {
+  getLearningPathById,
+  getPathProgress,
+  markModuleComplete,
+  touchLearningPath,
+  type LearningModule,
+  type LearningPath,
+  type PathProgress,
+} from "@/services/learningPathService";
 
 const LearningPathDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const [learningPath, setLearningPath] = useState<LearningPath | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("overview");
-  const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null);
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  const [learningPath, setLearningPath] = useState<LearningPath | null>(null);
+  const [pathProgress, setPathProgress] = useState<PathProgress | null>(null);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      const path = getLearningPathById(id);
-      if (path) {
-        setLearningPath(path);
-        if (path.modules.length > 0) {
-          setSelectedModule(path.modules[0]);
+    const load = async () => {
+      if (!id) return;
+      setIsLoading(true);
+      try {
+        const [path, progress] = await Promise.all([
+          getLearningPathById(id),
+          user ? getPathProgress(user.id, id) : Promise.resolve(null),
+        ]);
+
+        if (!path) {
+          toast({
+            title: "Learning Path Not Found",
+            description: "The requested learning path could not be found.",
+            variant: "destructive",
+          });
+          navigate("/learning-paths");
+          return;
         }
-      } else {
+
+        setLearningPath(path);
+        setSelectedModule(path.modules[0] ?? null);
+        setPathProgress(progress);
+      } catch (error: any) {
         toast({
-          title: "Learning Path Not Found",
-          description: "The requested learning path could not be found.",
+          title: "Load failed",
+          description: error?.message || "Could not load this learning path.",
           variant: "destructive",
         });
         navigate("/learning-paths");
+      } finally {
+        setIsLoading(false);
       }
-    }
-  }, [id, navigate, toast]);
+    };
 
-  if (!learningPath) {
-    return (
-      <div className="container py-12 text-center">
-        <p className="text-xl text-slate-600">Loading learning path...</p>
-      </div>
-    );
+    load();
+  }, [id, navigate, toast, user]);
+
+  const sortedModules = useMemo(
+    () => [...(learningPath?.modules ?? [])].sort((a, b) => a.order - b.order),
+    [learningPath],
+  );
+
+  const completedModules = pathProgress?.completedModules ?? [];
+  const progressValue = pathProgress?.progress ?? 0;
+
+  const handleStartLearning = async () => {
+    if (!user || !learningPath) return;
+    setIsSaving(true);
+    try {
+      const updated = await touchLearningPath(user.id, learningPath.id);
+      setPathProgress(updated);
+      setActiveTab("content");
+      toast({ title: "Learning started", description: "Your progress is now being tracked." });
+    } catch (error: any) {
+      toast({ title: "Unable to start", description: error?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCompleteModule = async () => {
+    if (!user || !learningPath || !selectedModule) return;
+    setIsSaving(true);
+    try {
+      const updated = await markModuleComplete(user.id, learningPath.id, selectedModule.id, learningPath.modules.length);
+      setPathProgress(updated);
+      toast({ title: "Module completed", description: "Progress saved successfully." });
+    } catch (error: any) {
+      toast({ title: "Save failed", description: error?.message || "Could not save module progress.", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="container py-12 text-center text-muted-foreground">Loading learning path...</div>;
   }
 
-  const sortedModules = [...learningPath.modules].sort((a, b) => a.order - b.order);
+  if (!learningPath) return null;
 
   return (
     <div className="container py-8">
-      <Button 
-        variant="ghost" 
-        className="mb-6 pl-0" 
-        onClick={() => navigate("/learning-paths")}
-      >
+      <Button variant="ghost" className="mb-6 pl-0" onClick={() => navigate("/learning-paths")}>
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Learning Paths
       </Button>
 
-      <div className="flex flex-col lg:flex-row gap-8">
+      <div className="flex flex-col gap-8 lg:flex-row">
         <div className="lg:w-1/4">
           <div className="sticky top-6">
             <Card>
-              <CardHeader className="bg-slate-50 pb-2">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Modules</CardTitle>
               </CardHeader>
               <CardContent className="pt-4">
                 <div className="space-y-3">
-                  {sortedModules.map((module, index) => (
-                    <div 
-                      key={module.id}
-                      onClick={() => setSelectedModule(module)}
-                      className={`flex items-center p-2 rounded-md cursor-pointer ${
-                        selectedModule?.id === module.id 
-                          ? "bg-blue-50 border border-blue-200" 
-                          : "hover:bg-slate-50"
-                      }`}
-                    >
-                      <div className="bg-slate-200 text-slate-700 h-6 w-6 rounded-full flex items-center justify-center text-sm font-medium mr-3">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{module.title}</p>
-                        <p className="text-xs text-slate-500">
-                          {module.resources.length} resources • {module.quizzes.length} quizzes
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                  {sortedModules.map((module, index) => {
+                    const completed = completedModules.includes(module.id);
+                    return (
+                      <button
+                        type="button"
+                        key={module.id}
+                        onClick={() => setSelectedModule(module)}
+                        className={`flex w-full items-center rounded-md border p-2 text-left ${selectedModule?.id === module.id ? "border-primary bg-accent" : "border-border"}`}
+                      >
+                        <div className="mr-3 flex h-6 w-6 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
+                          {completed ? <CheckCircle className="h-4 w-4 text-primary" /> : index + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{module.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {module.resources.length} resources • {module.quizzes.length} quizzes
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                <div className="mt-6 pt-6 border-t">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Your Progress</span>
-                      <span className="font-medium">25%</span>
-                    </div>
-                    <Progress value={25} className="h-2" />
+                <div className="mt-6 border-t pt-6">
+                  <div className="mb-1 flex justify-between text-sm">
+                    <span>Your Progress</span>
+                    <span className="font-medium">{progressValue}%</span>
                   </div>
+                  <Progress value={progressValue} className="h-2" />
                 </div>
               </CardContent>
             </Card>
@@ -115,30 +173,20 @@ const LearningPathDetail = () => {
 
         <div className="lg:w-3/4">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">{learningPath.title}</h1>
-            <div className="flex items-center mb-4">
-              <Badge className="mr-2">{learningPath.subject}</Badge>
-              <span className="text-slate-500 text-sm">
-                {learningPath.modules.length} modules
-              </span>
+            <h1 className="mb-2 text-3xl font-bold">{learningPath.title}</h1>
+            <div className="mb-4 flex items-center gap-2">
+              <Badge>{learningPath.subject}</Badge>
+              <Badge variant="outline">{learningPath.difficulty}</Badge>
+              <span className="text-sm text-muted-foreground">{learningPath.modules.length} modules</span>
             </div>
-            <p className="text-slate-600">{learningPath.description}</p>
+            <p className="text-muted-foreground">{learningPath.description}</p>
           </div>
 
           <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
-              <TabsTrigger value="overview">
-                <BookOpen className="h-4 w-4 mr-2" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="content">
-                <FileText className="h-4 w-4 mr-2" />
-                Module Content
-              </TabsTrigger>
-              <TabsTrigger value="assessment">
-                <ListChecks className="h-4 w-4 mr-2" />
-                Assessments
-              </TabsTrigger>
+              <TabsTrigger value="overview"><BookOpen className="mr-2 h-4 w-4" />Overview</TabsTrigger>
+              <TabsTrigger value="content"><FileText className="mr-2 h-4 w-4" />Module Content</TabsTrigger>
+              <TabsTrigger value="assessment"><ListChecks className="mr-2 h-4 w-4" />Assessments</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview">
@@ -146,99 +194,70 @@ const LearningPathDetail = () => {
                 <CardHeader>
                   <CardTitle>Path Overview</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">About this Learning Path</h3>
-                      <p className="text-slate-600">{learningPath.description}</p>
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">What You'll Learn</h3>
-                      <ul className="space-y-2">
-                        {sortedModules.map(module => (
-                          <li key={module.id} className="flex items-start">
-                            <CheckCircle className="h-5 w-5 mr-2 text-green-500 mt-0.5" />
-                            <div>
-                              <p className="font-medium">{module.title}</p>
-                              <p className="text-sm text-slate-600">{module.description}</p>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">Timeline</h3>
-                      <div className="flex items-center text-slate-600 mb-4">
-                        <Calendar className="h-5 w-5 mr-2" />
-                        <span>Estimated completion: 4 weeks</span>
-                      </div>
-                      <div className="space-y-3">
-                        {sortedModules.map((module, index) => (
-                          <div key={module.id} className="flex items-center">
-                            <div className="bg-blue-100 text-blue-800 h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium mr-3">
-                              {index + 1}
-                            </div>
-                            <div className="flex-grow">
-                              <p className="font-medium">{module.title}</p>
-                              <div className="h-1 bg-slate-100 rounded mt-2">
-                                <div 
-                                  className="h-full bg-blue-500 rounded" 
-                                  style={{ width: index === 0 ? "75%" : "0%" }}
-                                ></div>
-                              </div>
-                            </div>
-                            <div className="text-sm text-slate-500 ml-4">
-                              {index === 0 ? "75% complete" : "Not started"}
-                            </div>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h3 className="mb-2 text-lg font-medium">What You'll Learn</h3>
+                    <ul className="space-y-2">
+                      {sortedModules.map((module) => (
+                        <li key={module.id} className="flex items-start">
+                          <CheckCircle className="mr-2 mt-0.5 h-5 w-5 text-primary" />
+                          <div>
+                            <p className="font-medium">{module.title}</p>
+                            <p className="text-sm text-muted-foreground">{module.description}</p>
                           </div>
-                        ))}
-                      </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="mb-2 text-lg font-medium">Timeline</h3>
+                    <div className="mb-4 flex items-center text-muted-foreground">
+                      <Calendar className="mr-2 h-5 w-5" />
+                      <span>Estimated completion: {learningPath.estimatedHours} hours</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-
-              <div className="mt-6 flex justify-center">
-                <Button size="lg" className="px-8">
-                  <Play className="mr-2 h-4 w-4" />
-                  Start Learning
-                </Button>
-              </div>
+              {user && (
+                <div className="mt-6 flex justify-center">
+                  <Button size="lg" className="px-8" onClick={handleStartLearning} disabled={isSaving}>
+                    <Play className="mr-2 h-4 w-4" />
+                    {progressValue > 0 ? "Continue Learning" : "Start Learning"}
+                  </Button>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="content">
               {selectedModule && (
                 <Card>
-                  <CardHeader className="bg-slate-50">
-                    <CardTitle>
-                      Module {selectedModule.order}: {selectedModule.title}
-                    </CardTitle>
+                  <CardHeader>
+                    <CardTitle>Module {selectedModule.order}: {selectedModule.title}</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-6">
+                  <CardContent className="space-y-6 pt-6">
+                    <p>{selectedModule.description}</p>
                     <div>
-                      <p className="mb-6">{selectedModule.description}</p>
-                      
-                      <h3 className="text-lg font-medium mb-4">Learning Resources</h3>
+                      <h3 className="mb-4 text-lg font-medium">Learning Resources</h3>
                       <div className="grid gap-4">
                         {selectedModule.resources.map((resource, index) => (
-                          <div key={index} className="p-4 border rounded-md hover:bg-slate-50">
+                          <div key={index} className="rounded-md border p-4">
                             <div className="flex items-center">
-                              <FileText className="h-5 w-5 mr-2 text-blue-600" />
+                              <FileText className="mr-2 h-5 w-5 text-primary" />
                               <h4 className="font-medium">{resource}</h4>
                             </div>
                           </div>
                         ))}
                       </div>
-                      
-                      <div className="mt-8 flex justify-center">
-                        <Button className="px-8">
-                          <Play className="mr-2 h-4 w-4" />
-                          Start Module
+                    </div>
+                    {user && (
+                      <div className="flex justify-center">
+                        <Button className="px-8" onClick={handleCompleteModule} disabled={isSaving || completedModules.includes(selectedModule.id)}>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          {completedModules.includes(selectedModule.id) ? "Module Completed" : "Mark Module Complete"}
                         </Button>
                       </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -251,35 +270,15 @@ const LearningPathDetail = () => {
                     <CardTitle>Assessments for {selectedModule.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       {selectedModule.quizzes.map((quiz, index) => (
-                        <div key={index} className="border rounded-lg p-4 hover:bg-slate-50">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <ListChecks className="h-5 w-5 mr-3 text-blue-600" />
-                              <div>
-                                <h4 className="font-medium">{quiz}</h4>
-                                <p className="text-sm text-slate-500">
-                                  10 questions • 15 minutes
-                                </p>
-                              </div>
-                            </div>
-                            <Button variant="outline" size="sm">
-                              Take Quiz
-                            </Button>
+                        <div key={index} className="rounded-lg border p-4">
+                          <div className="flex items-center gap-3">
+                            <ListChecks className="h-5 w-5 text-primary" />
+                            <p className="font-medium">{quiz}</p>
                           </div>
                         </div>
                       ))}
-
-                      {selectedModule.quizzes.length === 0 && (
-                        <div className="text-center py-8">
-                          <GraduationCap className="h-12 w-12 mx-auto text-slate-300 mb-2" />
-                          <p className="text-lg font-medium text-slate-700">No assessments yet</p>
-                          <p className="text-slate-500">
-                            Assessments for this module will be available soon.
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
