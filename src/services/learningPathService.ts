@@ -107,7 +107,7 @@ export const getLearningPathById = async (id: string): Promise<LearningPath | nu
 };
 
 export const saveLearningPath = async (path: Omit<LearningPath, "id" | "createdAt" | "rating" | "enrolledCount">): Promise<LearningPath> => {
-  const payload = {
+  const payload: any = {
     title: path.title,
     description: path.description,
     subject: path.subject,
