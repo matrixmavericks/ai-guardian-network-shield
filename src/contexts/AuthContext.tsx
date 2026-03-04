@@ -29,8 +29,52 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+async function ensureUserSetup(supabaseUser: User) {
+  const fullName = supabaseUser.user_metadata?.full_name as string | undefined;
+  const requestedRole = supabaseUser.user_metadata?.requested_role as string | undefined;
+  const safeRole = requestedRole === 'teacher' || requestedRole === 'parent' ? requestedRole : 'student';
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', supabaseUser.id)
+    .maybeSingle();
+
+  if (!profile) {
+    const { error: profileError } = await supabase.from('profiles').insert({
+      user_id: supabaseUser.id,
+      full_name: fullName || supabaseUser.email?.split('@')[0] || 'User',
+    });
+
+    if (profileError) {
+      throw profileError;
+    }
+  }
+
+  const { data: roles, error: rolesError } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', supabaseUser.id);
+
+  if (rolesError) {
+    throw rolesError;
+  }
+
+  if (!roles || roles.length === 0) {
+    const { error: roleInsertError } = await supabase.from('user_roles').insert({
+      user_id: supabaseUser.id,
+      role: safeRole as any,
+    });
+
+    if (roleInsertError) {
+      throw roleInsertError;
+    }
+  }
+}
+
 async function buildAuthUser(supabaseUser: User): Promise<AuthUser> {
-  // Fetch role from user_roles table
+  await ensureUserSetup(supabaseUser);
+
   const { data: roles } = await supabase
     .from('user_roles')
     .select('role')
@@ -38,7 +82,6 @@ async function buildAuthUser(supabaseUser: User): Promise<AuthUser> {
 
   const role = roles?.[0]?.role || 'student';
 
-  // Fetch profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name')
@@ -49,7 +92,7 @@ async function buildAuthUser(supabaseUser: User): Promise<AuthUser> {
     id: supabaseUser.id,
     email: supabaseUser.email || '',
     role,
-    fullName: profile?.full_name || supabaseUser.email?.split('@')[0] || 'User',
+    fullName: profile?.full_name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
   };
 }
 
@@ -114,25 +157,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const handleSignUp = async (email: string, password: string, fullName: string, role: string) => {
+    const safeRole = role === 'teacher' || role === 'parent' ? role : 'student';
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          full_name: fullName,
+          requested_role: safeRole,
+        },
+      },
     });
+
     if (error) throw error;
     if (!data.user) throw new Error('Sign up failed');
-
-    // Create profile
-    await supabase.from('profiles').insert({
-      user_id: data.user.id,
-      full_name: fullName,
-    });
-
-    // Assign role
-    await supabase.from('user_roles').insert({
-      user_id: data.user.id,
-      role: role as any,
-    });
   };
 
   return (
