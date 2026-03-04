@@ -1,122 +1,131 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.78.0";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { title, description, subject, difficulty, estimatedHours } = await req.json();
-    console.log('Generating learning path:', { title, subject, difficulty });
-
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return json({ success: false, error: "Unauthorized" }, 401);
     }
 
-    const systemPrompt = `You are an expert instructional designer specializing in creating structured learning paths. Your task is to generate comprehensive learning modules for educational courses.
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } },
+    );
 
-For each module you create, include:
-1. A clear, descriptive title
-2. A detailed description of what the learner will accomplish
-3. 3-5 learning resources (suggest types like videos, articles, interactive exercises)
-4. 1-2 assessment quizzes or activities to test understanding
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      return json({ success: false, error: "Unauthorized" }, 401);
+    }
 
-Structure your response as a JSON array of modules with this exact format:
+    const { title, description, subject, difficulty, estimatedHours } = await req.json();
+    if (!title?.trim() || !subject?.trim()) {
+      return json({ success: false, error: "Title and subject are required." }, 400);
+    }
+
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableApiKey) {
+      return json({ success: false, error: "AI gateway is not configured." }, 500);
+    }
+
+    const systemPrompt = `You are an expert instructional designer. Return valid JSON only.
+
+Schema:
 {
   "modules": [
     {
-      "title": "Module Title",
-      "description": "Detailed description of the module content and learning outcomes",
-      "resources": ["Resource 1: Description", "Resource 2: Description", "Resource 3: Description"],
-      "quizzes": ["Quiz 1: Topic assessment", "Quiz 2: Practice exercise"]
+      "title": "string",
+      "description": "string",
+      "resources": ["string"],
+      "quizzes": ["string"]
     }
   ],
-  "suggestedTags": ["tag1", "tag2", "tag3"]
+  "suggestedTags": ["string"]
 }
 
-Create 4-6 modules that progressively build knowledge from fundamentals to advanced concepts.`;
+Rules:
+- Create 4 to 6 modules in a strong teaching sequence.
+- Keep each module practical and age-appropriate.
+- Resources must be concise learning activities, readings, videos, or exercises.
+- Quizzes must be short assessment prompts, not full answers.
+- suggestedTags should contain 3 to 6 short tags.`;
 
-    const userPrompt = `Create a structured learning path with the following details:
-
+    const userPrompt = `Build a learning path.
 Title: ${title}
 Subject: ${subject}
-Difficulty Level: ${difficulty}
-Estimated Duration: ${estimatedHours} hours
-${description ? `Description: ${description}` : ''}
+Difficulty: ${difficulty || "beginner"}
+Estimated hours: ${estimatedHours || 10}
+Description: ${description || ""}`;
 
-Generate a comprehensive learning path with progressive modules that take learners from basics to mastery. Return ONLY valid JSON.`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: "google/gemini-3-flash-preview",
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
         ],
+        response_format: { type: "json_object" },
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI gateway error:', response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI service requires payment. Please add credits.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      throw new Error(`AI gateway error: ${response.status}`);
+      console.error("generate-learning-path gateway error", response.status, errorText);
+      if (response.status === 429) return json({ success: false, error: "AI rate limit reached. Try again in a minute." }, 429);
+      if (response.status === 402) return json({ success: false, error: "AI credits are required before generating more learning paths." }, 402);
+      return json({ success: false, error: "AI generation failed." }, 500);
     }
 
     const data = await response.json();
-    let content = data.choices[0].message.content;
-    
-    // Extract JSON from markdown code blocks if present
-    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      content = jsonMatch[1].trim();
-    }
-    
-    // Parse and validate the response
-    let parsedContent;
-    try {
-      parsedContent = JSON.parse(content);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', content);
-      throw new Error('Invalid response format from AI');
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) {
+      return json({ success: false, error: "AI returned an empty learning path." }, 500);
     }
 
-    console.log('Learning path generated successfully');
+    const parsed = JSON.parse(content);
+    const modules = Array.isArray(parsed?.modules) ? parsed.modules : [];
+    const suggestedTags = Array.isArray(parsed?.suggestedTags) ? parsed.suggestedTags : [];
 
-    return new Response(
-      JSON.stringify(parsedContent),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    if (modules.length === 0) {
+      return json({ success: false, error: "AI could not build modules for this request." }, 500);
+    }
 
+    return json({ success: true, modules, suggestedTags });
   } catch (error) {
-    console.error('Error generating learning path:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error("generate-learning-path error", error);
+    return json({
+      success: false,
+      error: error instanceof Error && error.name === "AbortError"
+        ? "AI generation timed out. Please try again."
+        : error instanceof Error
+          ? error.message
+          : "Unknown error",
+    }, 500);
   }
 });
