@@ -12,10 +12,11 @@ import {
   BookOpen,
   Calendar,
   CheckCircle,
-  FileText,
   ListChecks,
   Play,
 } from "lucide-react";
+import ResourceViewer from "@/components/learning/ResourceViewer";
+import QuizPlayer from "@/components/learning/QuizPlayer";
 import {
   getLearningPathById,
   getPathProgress,
