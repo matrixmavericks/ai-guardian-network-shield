@@ -72,7 +72,7 @@ function App() {
           <Route path="/grades" element={<ProtectedRoute><GradesPage /></ProtectedRoute>} />
           <Route path="/learning-paths" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><LearningPathsPage /></ProtectedRoute>} />
           <Route path="/learning-path/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><LearningPathDetail /></ProtectedRoute>} />
-          <Route path="/create-learning-path" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><CreateLearningPathPage /></ProtectedRoute>} />
+          <Route path="/create-learning-path" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><CreateLearningPathPage /></ProtectedRoute>} />
           <Route path="/parent-dashboard" element={<ProtectedRoute allowedRoles={['parent']}><ParentDashboard /></ProtectedRoute>} />
           <Route path="/admin-monitoring" element={<ProtectedRoute allowedRoles={['admin']}><AdminMonitoring /></ProtectedRoute>} />
           <Route path="/ai-configuration" element={<ProtectedRoute allowedRoles={['admin']}><AIConfigurationPage /></ProtectedRoute>} />

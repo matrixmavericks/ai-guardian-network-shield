@@ -34,7 +34,7 @@ serve(async (req) => {
       return json({ success: false, error: "Unauthorized" }, 401);
     }
 
-    const { title, description, subject, difficulty, estimatedHours } = await req.json();
+    const { title, description, subject, difficulty, estimatedHours, gradeLevel } = await req.json();
     if (!title?.trim() || !subject?.trim()) {
       return json({ success: false, error: "Title and subject are required." }, 400);
     }
@@ -61,15 +61,17 @@ Schema:
 
 Rules:
 - Create 4 to 6 modules in a strong teaching sequence.
-- Keep each module practical and age-appropriate.
-- Resources must be concise learning activities, readings, videos, or exercises.
-- Quizzes must be short assessment prompts, not full answers.
-- suggestedTags should contain 3 to 6 short tags.`;
+- Keep each module practical and age-appropriate for the grade level.
+- Resources must be concise learning activities, readings, or exercises (3-5 per module). Each resource string should be a clear topic title that can be expanded into a full lesson.
+- Quizzes must be short assessment topic titles (1-2 per module) that test understanding of the module content.
+- suggestedTags should contain 3 to 6 short tags.
+- Tailor language complexity and content depth to the specified grade level and difficulty.`;
 
     const userPrompt = `Build a learning path.
 Title: ${title}
 Subject: ${subject}
 Difficulty: ${difficulty || "beginner"}
+Grade Level: ${gradeLevel || "self-learner"}
 Estimated hours: ${estimatedHours || 10}
 Description: ${description || ""}`;
 
