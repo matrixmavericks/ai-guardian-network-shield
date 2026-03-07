@@ -4,9 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, X, Save, Trash2, BookOpen, Sparkles, Loader, Wand2 } from "lucide-react";
+import { PlusCircle, X, Save, Trash2, BookOpen, Sparkles, Loader, Wand2, GraduationCap } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
 import DashboardNav from '@/components/DashboardNav';
@@ -107,14 +106,17 @@ const CreateLearningPathPage = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('');
+  const [customSubject, setCustomSubject] = useState('');
   const [difficulty, setDifficulty] = useState<LearningDifficulty>('beginner');
+  const [gradeLevel, setGradeLevel] = useState('');
   const [estimatedHours, setEstimatedHours] = useState(10);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
   const [modules, setModules] = useState<LearningModule[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const effectiveSubject = subject === 'Other' ? customSubject.trim() : subject;
 
   const addModule = () => {
     setModules((current) => [
@@ -141,7 +143,7 @@ const CreateLearningPathPage = () => {
   };
 
   const handleGenerateWithAI = async () => {
-    if (!title.trim() || !subject.trim()) {
+    if (!title.trim() || !effectiveSubject) {
       toast({ title: 'Missing info', description: 'Add a title and subject first.', variant: 'destructive' });
       return;
     }
@@ -149,7 +151,7 @@ const CreateLearningPathPage = () => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-learning-path', {
-        body: { title, description, subject, difficulty, estimatedHours },
+        body: { title, description, subject: effectiveSubject, difficulty, estimatedHours, gradeLevel },
       });
 
       if (error) throw error;
@@ -169,7 +171,7 @@ const CreateLearningPathPage = () => {
         setTags(data.suggestedTags.map(String));
       }
 
-      toast({ title: 'Modules generated', description: `AI created ${generatedModules.length} modules.` });
+      toast({ title: 'Modules generated', description: `AI created ${generatedModules.length} modules with resources and quizzes.` });
     } catch (error: any) {
       toast({ title: 'Generation failed', description: error?.message || 'Please try again.', variant: 'destructive' });
     } finally {
@@ -182,11 +184,7 @@ const CreateLearningPathPage = () => {
       toast({ title: 'Login required', description: 'Please sign in first.', variant: 'destructive' });
       return;
     }
-    if (user.role !== 'teacher' && user.role !== 'admin') {
-      toast({ title: 'Access denied', description: 'Only teachers and admins can create learning paths.', variant: 'destructive' });
-      return;
-    }
-    if (!title.trim() || !subject.trim()) {
+    if (!title.trim() || !effectiveSubject) {
       toast({ title: 'Missing information', description: 'Add a title and subject.', variant: 'destructive' });
       return;
     }
@@ -204,17 +202,17 @@ const CreateLearningPathPage = () => {
       const saved = await saveLearningPath({
         title: title.trim(),
         description: description.trim(),
-        subject,
+        subject: effectiveSubject,
         difficulty,
         estimatedHours,
         tags,
         modules,
         createdBy: user.id,
         featured: false,
-        isPublic,
+        isPublic: user.role === 'teacher' || user.role === 'admin',
       });
 
-      toast({ title: 'Learning path created', description: 'Your path is now live.' });
+      toast({ title: 'Learning path created!', description: 'Start learning now.' });
       navigate(`/learning-path/${saved.id}`);
     } catch (error: any) {
       toast({ title: 'Save failed', description: error?.message || 'Could not save the learning path.', variant: 'destructive' });
@@ -230,39 +228,52 @@ const CreateLearningPathPage = () => {
         <DashboardNav />
         <main className="flex-1 p-6">
           <div className="max-w-5xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-6 w-6 text-primary" />
-                <h1 className="text-2xl font-bold text-foreground">Create Learning Path</h1>
+                <h1 className="text-2xl font-bold text-foreground">Create Your Learning Path</h1>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={handleGenerateWithAI} disabled={isGenerating || !title.trim() || !subject.trim()}>
+                <Button variant="outline" onClick={handleGenerateWithAI} disabled={isGenerating || !title.trim() || !effectiveSubject}>
                   {isGenerating ? <><Loader className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Wand2 className="mr-2 h-4 w-4" />Generate with AI</>}
                 </Button>
                 <Button onClick={handleSave} disabled={isSaving}>
                   <Save className="mr-2 h-4 w-4" />
-                  {isSaving ? 'Saving...' : 'Save Learning Path'}
+                  {isSaving ? 'Saving...' : 'Save & Start Learning'}
                 </Button>
               </div>
             </div>
 
+            {/* Quick-start hero for students */}
+            <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-accent/10">
+              <CardContent className="flex items-start gap-4 py-6">
+                <GraduationCap className="h-10 w-10 text-primary shrink-0 mt-1" />
+                <div>
+                  <h2 className="text-lg font-semibold">How it works</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    1. Enter what you want to learn &nbsp;→&nbsp; 2. Click <strong>Generate with AI</strong> to build a full curriculum &nbsp;→&nbsp; 3. <strong>Save & Start Learning</strong> — each module has interactive lessons, notes, and quizzes powered by AI.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
-                <CardTitle>Path Information</CardTitle>
-                <CardDescription>Enter the core details and let AI build the teaching sequence.</CardDescription>
+                <CardTitle>What do you want to learn?</CardTitle>
+                <CardDescription>Tell us the topic and we'll build a personalized learning journey.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Learning Path Title</Label>
-                  <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Algebra Foundations" />
+                  <Label htmlFor="title">Topic / Title</Label>
+                  <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Algebra Foundations, World War II, Python Programming" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe what students should achieve." rows={4} />
+                  <Label htmlFor="description">What specifically do you want to learn? (optional)</Label>
+                  <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="E.g., I want to understand quadratic equations and graphing parabolas. Focus on practical problem-solving." rows={3} />
                 </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="subject">Subject</Label>
+                    <Label htmlFor="subject">Subject Area</Label>
                     <Select value={subject} onValueChange={setSubject}>
                       <SelectTrigger id="subject"><SelectValue placeholder="Select subject" /></SelectTrigger>
                       <SelectContent>
@@ -276,25 +287,44 @@ const CreateLearningPathPage = () => {
                         <SelectItem value="English">English</SelectItem>
                         <SelectItem value="Language">Language</SelectItem>
                         <SelectItem value="Arts">Arts</SelectItem>
+                        <SelectItem value="Geography">Geography</SelectItem>
+                        <SelectItem value="Economics">Economics</SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {subject === 'Other' && (
+                      <Input value={customSubject} onChange={(e) => setCustomSubject(e.target.value)} placeholder="Type your subject" className="mt-2" />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="difficulty">Depth / Difficulty</Label>
+                    <Select value={difficulty} onValueChange={(value: LearningDifficulty) => setDifficulty(value)}>
+                      <SelectTrigger id="difficulty"><SelectValue placeholder="Select difficulty" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Beginner — Intro level</SelectItem>
+                        <SelectItem value="intermediate">Intermediate — Some background</SelectItem>
+                        <SelectItem value="advanced">Advanced — Deep dive</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="difficulty">Difficulty Level</Label>
-                    <Select value={difficulty} onValueChange={(value: LearningDifficulty) => setDifficulty(value)}>
-                      <SelectTrigger id="difficulty"><SelectValue placeholder="Select difficulty" /></SelectTrigger>
+                    <Label htmlFor="gradeLevel">Grade Level</Label>
+                    <Select value={gradeLevel} onValueChange={setGradeLevel}>
+                      <SelectTrigger id="gradeLevel"><SelectValue placeholder="Select grade" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="beginner">Beginner</SelectItem>
-                        <SelectItem value="intermediate">Intermediate</SelectItem>
-                        <SelectItem value="advanced">Advanced</SelectItem>
+                        <SelectItem value="elementary">Elementary (K-5)</SelectItem>
+                        <SelectItem value="middle-school">Middle School (6-8)</SelectItem>
+                        <SelectItem value="high-school">High School (9-12)</SelectItem>
+                        <SelectItem value="undergraduate">Undergraduate</SelectItem>
+                        <SelectItem value="graduate">Graduate / Professional</SelectItem>
+                        <SelectItem value="self-learner">Self-Learner / Any Age</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="estimatedHours">Estimated Hours</Label>
+                    <Label htmlFor="estimatedHours">Estimated Study Hours</Label>
                     <Input id="estimatedHours" type="number" min="1" max="200" value={estimatedHours} onChange={(e) => setEstimatedHours(parseInt(e.target.value, 10) || 10)} />
                   </div>
                   <div className="space-y-2">
@@ -324,13 +354,6 @@ const CreateLearningPathPage = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center justify-between space-x-2">
-                  <Label htmlFor="public-path" className="cursor-pointer">Public Learning Path</Label>
-                  <div className="flex items-center space-x-2">
-                    <Switch id="public-path" checked={isPublic} onCheckedChange={setIsPublic} />
-                    <span className="text-sm text-muted-foreground">{isPublic ? 'Available to students' : 'Private draft'}</span>
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
@@ -344,12 +367,12 @@ const CreateLearningPathPage = () => {
                   <ModuleForm key={module.id} module={module} onUpdate={(updated) => updateModule(module.id, updated)} onRemove={() => removeModule(module.id)} />
                 ))
               ) : (
-                <Card className="border-dashed bg-slate-50">
+                <Card className="border-dashed bg-muted/30">
                   <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                    <BookOpen className="mb-4 h-12 w-12 text-slate-400" />
+                    <BookOpen className="mb-4 h-12 w-12 text-muted-foreground/50" />
                     <h3 className="mb-2 text-lg font-medium">No Modules Yet</h3>
-                    <p className="mb-4 text-slate-500">Generate modules with AI or add one manually.</p>
-                    <Button onClick={addModule}><PlusCircle className="mr-2 h-4 w-4" />Add First Module</Button>
+                    <p className="mb-4 text-muted-foreground">Fill in the topic above and click <strong>Generate with AI</strong> to build your curriculum automatically.</p>
+                    <Button variant="outline" onClick={addModule}><PlusCircle className="mr-2 h-4 w-4" />Or add manually</Button>
                   </CardContent>
                 </Card>
               )}

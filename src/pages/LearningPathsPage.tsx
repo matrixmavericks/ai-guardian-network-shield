@@ -124,7 +124,7 @@ const LearningPathsPage = () => {
     navigate(`/learning-path/${pathId}`);
   };
 
-  const canCreatePath = user?.role === "teacher" || user?.role === "admin";
+  const canCreatePath = !!user;
 
   return (
     <div className="container py-8">
