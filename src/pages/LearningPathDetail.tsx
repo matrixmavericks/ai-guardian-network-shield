@@ -232,57 +232,94 @@ const LearningPathDetail = () => {
 
             <TabsContent value="content">
               {selectedModule && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Module {selectedModule.order}: {selectedModule.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6 pt-6">
-                    <p>{selectedModule.description}</p>
-                    <div>
-                      <h3 className="mb-4 text-lg font-medium">Learning Resources</h3>
-                      <div className="grid gap-4">
-                        {selectedModule.resources.map((resource, index) => (
-                          <div key={index} className="rounded-md border p-4">
-                            <div className="flex items-center">
-                              <FileText className="mr-2 h-5 w-5 text-primary" />
-                              <h4 className="font-medium">{resource}</h4>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Module {selectedModule.order}: {selectedModule.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p className="text-muted-foreground">{selectedModule.description}</p>
+                    </CardContent>
+                  </Card>
+
+                  <div>
+                    <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                      Learning Resources
+                    </h3>
+                    <div className="space-y-3">
+                      {selectedModule.resources.map((resource, index) => (
+                        <ResourceViewer
+                          key={`${selectedModule.id}-resource-${index}`}
+                          resourceTitle={resource}
+                          subject={learningPath.subject}
+                          moduleTitle={selectedModule.title}
+                          moduleDescription={selectedModule.description}
+                          difficulty={learningPath.difficulty}
+                        />
+                      ))}
+                      {selectedModule.resources.length === 0 && (
+                        <p className="text-sm text-muted-foreground">No resources for this module.</p>
+                      )}
                     </div>
-                    {user && (
-                      <div className="flex justify-center">
-                        <Button className="px-8" onClick={handleCompleteModule} disabled={isSaving || completedModules.includes(selectedModule.id)}>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          {completedModules.includes(selectedModule.id) ? "Module Completed" : "Mark Module Complete"}
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                  </div>
+
+                  <div>
+                    <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
+                      <ListChecks className="h-5 w-5 text-primary" />
+                      Quizzes &amp; Assessments
+                    </h3>
+                    <div className="space-y-3">
+                      {selectedModule.quizzes.map((quiz, index) => (
+                        <QuizPlayer
+                          key={`${selectedModule.id}-quiz-${index}`}
+                          quizTitle={quiz}
+                          subject={learningPath.subject}
+                          moduleTitle={selectedModule.title}
+                          moduleDescription={selectedModule.description}
+                          difficulty={learningPath.difficulty}
+                        />
+                      ))}
+                      {selectedModule.quizzes.length === 0 && (
+                        <p className="text-sm text-muted-foreground">No quizzes for this module.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {user && (
+                    <div className="flex justify-center pt-4">
+                      <Button size="lg" className="px-8" onClick={handleCompleteModule} disabled={isSaving || completedModules.includes(selectedModule.id)}>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        {completedModules.includes(selectedModule.id) ? "Module Completed ✓" : "Mark Module Complete"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
             </TabsContent>
 
             <TabsContent value="assessment">
               {selectedModule && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Assessments for {selectedModule.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {selectedModule.quizzes.map((quiz, index) => (
-                        <div key={index} className="rounded-lg border p-4">
-                          <div className="flex items-center gap-3">
-                            <ListChecks className="h-5 w-5 text-primary" />
-                            <p className="font-medium">{quiz}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold">All Assessments for: {selectedModule.title}</h2>
+                  {selectedModule.quizzes.map((quiz, index) => (
+                    <QuizPlayer
+                      key={`${selectedModule.id}-assessment-${index}`}
+                      quizTitle={quiz}
+                      subject={learningPath.subject}
+                      moduleTitle={selectedModule.title}
+                      moduleDescription={selectedModule.description}
+                      difficulty={learningPath.difficulty}
+                    />
+                  ))}
+                  {selectedModule.quizzes.length === 0 && (
+                    <Card>
+                      <CardContent className="py-8 text-center text-muted-foreground">
+                        No assessments available for this module.
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               )}
             </TabsContent>
           </Tabs>
