@@ -59,6 +59,18 @@ interface LearningProfile {
   overall_summary: string;
 }
 
+interface DocumentDiagnostics {
+  totalDocuments: number;
+  analyzedDocuments: number;
+  extractedCharacters: number;
+  documents: Array<{
+    fileName: string;
+    type: string;
+    status: string;
+    extractedChars: number;
+  }>;
+}
+
 interface StudentDocument {
   id: string;
   file_name: string;
