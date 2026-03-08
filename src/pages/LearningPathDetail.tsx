@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
+import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft,
   BookOpen,
@@ -15,6 +17,7 @@ import {
   ListChecks,
   Play,
   Sparkles,
+  Users,
 } from "lucide-react";
 import ResourceViewer from "@/components/learning/ResourceViewer";
 import QuizPlayer from "@/components/learning/QuizPlayer";
