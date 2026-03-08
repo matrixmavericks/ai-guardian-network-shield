@@ -77,13 +77,14 @@ serve(async (req) => {
 
     // Fetch actual content of text-based documents from storage
     console.log(`Found ${studentDocuments.length} documents for user ${targetUserId}`);
-    const documentContents: { fileName: string; type: string; description: string; content: string }[] = [];
+    const documentContents: { fileName: string; type: string; description: string; content: string; extractedChars: number; status: string }[] = [];
     for (const doc of studentDocuments) {
       try {
         // Extract the storage path from the file_url
         console.log(`Processing doc: ${doc.file_name}, file_url: ${doc.file_url}`);
         const urlParts = doc.file_url?.split('/student-documents/');
-        const storagePath = urlParts && urlParts.length > 1 ? urlParts[1] : null;
+        const rawStoragePath = urlParts && urlParts.length > 1 ? urlParts[1] : null;
+        const storagePath = rawStoragePath ? decodeURIComponent(rawStoragePath) : null;
         console.log(`Storage path resolved: ${storagePath}`);
         
         if (storagePath) {
@@ -93,21 +94,43 @@ serve(async (req) => {
             .download(storagePath);
           
           if (!fileError && fileData) {
-            const text = await fileData.text();
-            // Limit content to 6000 chars per document to stay within context limits
-            const trimmedContent = text.substring(0, 6000);
+            const isPdf = doc.file_name?.toLowerCase().endsWith('.pdf') || doc.document_type?.toLowerCase() === 'pdf';
+            let extractedText = '';
+
+            if (isPdf) {
+              // Lightweight PDF fallback: extract printable text chunks from bytes
+              const bytes = new Uint8Array(await fileData.arrayBuffer());
+              const decoded = new TextDecoder('latin1').decode(bytes);
+              const printableChunks = decoded
+                .split(/[^\x20-\x7E\n\r\t]+/)
+                .map((chunk) => chunk.trim())
+                .filter((chunk) => /[a-zA-Z]{3,}/.test(chunk) && chunk.length > 4)
+                .slice(0, 500);
+              extractedText = printableChunks.join(' ').replace(/\s+/g, ' ');
+            } else {
+              extractedText = await fileData.text();
+            }
+
+            const trimmedContent = extractedText.substring(0, 6000);
+            const extractedChars = trimmedContent.length;
             documentContents.push({
               fileName: doc.file_name,
               type: doc.document_type,
               description: doc.description || '',
-              content: trimmedContent,
+              content: trimmedContent || '[No extractable text found in file]',
+              extractedChars,
+              status: extractedChars > 0 ? 'extracted' : 'no_text',
             });
+            console.log(`Extracted ${extractedChars} chars from ${doc.file_name}`);
           } else {
+            console.error(`Download failed for ${doc.file_name}:`, fileError?.message);
             documentContents.push({
               fileName: doc.file_name,
               type: doc.document_type,
               description: doc.description || '',
               content: '[Could not read file content]',
+              extractedChars: 0,
+              status: 'download_failed',
             });
           }
         }
@@ -118,6 +141,8 @@ serve(async (req) => {
           type: doc.document_type,
           description: doc.description || '',
           content: '[Error reading file]',
+          extractedChars: 0,
+          status: 'error',
         });
       }
     }
@@ -188,6 +213,8 @@ serve(async (req) => {
       fileName: d.fileName,
       type: d.type,
       description: d.description,
+      status: d.status,
+      extractedChars: d.extractedChars,
       content: d.content,
     }));
 
@@ -219,7 +246,7 @@ ${JSON.stringify(assignmentsSummary, null, 2)}
 ## Uploaded Documents (Syllabi, Report Cards, etc.) — ACTUAL CONTENT:
 ${documentsSummary.length > 0 ? JSON.stringify(documentsSummary, null, 2) : "No documents uploaded yet."}
 
-IMPORTANT: If documents are provided above with actual "content" fields, deeply analyze that content — look for grades, subjects, topics covered, teacher comments, curriculum outlines, etc. Cross-reference document content with chat history and assignment performance to build a comprehensive profile.
+IMPORTANT: If documents are provided and any has status="extracted", you MUST explicitly reference them by fileName in strengths/conceptual_gaps evidence text and include at least 2 document-based findings.
 
 Analyze this student's learning profile comprehensively.`;
 
@@ -337,7 +364,19 @@ Analyze this student's learning profile comprehensively.`;
 
     const profile = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify({ profile }), {
+    const documentDiagnostics = {
+      totalDocuments: studentDocuments.length,
+      analyzedDocuments: documentContents.filter((d) => d.status === "extracted").length,
+      extractedCharacters: documentContents.reduce((sum, d) => sum + d.extractedChars, 0),
+      documents: documentContents.map((d) => ({
+        fileName: d.fileName,
+        type: d.type,
+        status: d.status,
+        extractedChars: d.extractedChars,
+      })),
+    };
+
+    return new Response(JSON.stringify({ profile, documentDiagnostics }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

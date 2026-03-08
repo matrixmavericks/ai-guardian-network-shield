@@ -59,6 +59,18 @@ interface LearningProfile {
   overall_summary: string;
 }
 
+interface DocumentDiagnostics {
+  totalDocuments: number;
+  analyzedDocuments: number;
+  extractedCharacters: number;
+  documents: Array<{
+    fileName: string;
+    type: string;
+    status: string;
+    extractedChars: number;
+  }>;
+}
+
 interface StudentDocument {
   id: string;
   file_name: string;
@@ -104,6 +116,7 @@ const AdaptiveLearningProfile = ({ targetUserId, targetUserName }: AdaptiveLearn
   const { user } = useAuth();
   const [profile, setProfile] = useState<LearningProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [documentDiagnostics, setDocumentDiagnostics] = useState<DocumentDiagnostics | null>(null);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [docsLoaded, setDocsLoaded] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -138,6 +151,7 @@ const AdaptiveLearningProfile = ({ targetUserId, targetUserName }: AdaptiveLearn
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       setProfile(data.profile);
+      setDocumentDiagnostics(data.documentDiagnostics || null);
       toast({ title: "Analysis Complete", description: `${isViewingOwnProfile ? "Your" : displayName + "'s"} adaptive learning profile has been generated.` });
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to analyze profile", variant: "destructive" });
@@ -372,6 +386,29 @@ const AdaptiveLearningProfile = ({ targetUserId, targetUserName }: AdaptiveLearn
           <RefreshCw className="h-4 w-4" /> Re-analyze
         </Button>
       </div>
+
+      {documentDiagnostics && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" /> Document Analysis Impact
+            </CardTitle>
+            <CardDescription>
+              {documentDiagnostics.analyzedDocuments}/{documentDiagnostics.totalDocuments} documents analyzed, {documentDiagnostics.extractedCharacters.toLocaleString()} characters extracted
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {documentDiagnostics.documents.map((doc, idx) => (
+              <div key={`${doc.fileName}-${idx}`} className="flex items-center justify-between text-sm border rounded-md px-3 py-2">
+                <span className="truncate pr-3">{doc.fileName}</span>
+                <Badge variant={doc.status === "extracted" ? "secondary" : "outline"}>
+                  {doc.status} · {doc.extractedChars} chars
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Learning Style */}
