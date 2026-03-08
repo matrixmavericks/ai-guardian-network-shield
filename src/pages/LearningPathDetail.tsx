@@ -37,6 +37,7 @@ const LearningPathDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isTeacher } = useUserRole();
 
   const [learningPath, setLearningPath] = useState<LearningPath | null>(null);
   const [pathProgress, setPathProgress] = useState<PathProgress | null>(null);
