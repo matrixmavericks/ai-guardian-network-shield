@@ -8,6 +8,8 @@ import { Shield, LogIn } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
+import { lovable } from '@/integrations/lovable/index';
+import { Separator } from "@/components/ui/separator";
 
 const Login = () => {
   const { toast } = useToast();
