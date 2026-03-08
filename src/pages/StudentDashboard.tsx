@@ -730,6 +730,10 @@ const StudentDashboard = () => {
                 </Card>
               </div>
             </TabsContent>
+
+            <TabsContent value="adaptive">
+              <AdaptiveLearningProfile />
+            </TabsContent>
           </Tabs>
         </div>
       </div>
