@@ -115,6 +115,10 @@ const CreateLearningPathPage = () => {
   const [modules, setModules] = useState<LearningModule[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [syllabusText, setSyllabusText] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [syllabusAnalysis, setSyllabusAnalysis] = useState<any>(null);
 
   const effectiveSubject = subject === 'Other' ? customSubject.trim() : subject;
 
