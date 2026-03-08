@@ -45,6 +45,23 @@ serve(async (req) => {
       .select("id, title, subject, difficulty, modules, tags")
       .eq("created_by", userId);
 
+    // Fetch assignment submissions and grades
+    const { data: submissionsData } = await supabase
+      .from("assignment_submissions")
+      .select("assignment_id, content, grade, max_grade, feedback, status, submitted_at, graded_at")
+      .eq("student_id", userId);
+
+    // Fetch assignment details for context
+    const assignmentIds = (submissionsData || []).map((s: any) => s.assignment_id);
+    let assignmentsData: any[] = [];
+    if (assignmentIds.length > 0) {
+      const { data: assignments } = await supabase
+        .from("class_assignments")
+        .select("id, title, subject, description")
+        .in("id", assignmentIds);
+      assignmentsData = assignments || [];
+    }
+
     // Build context for AI analysis
     const chatSummary = (chatMessages || [])
       .filter((m: any) => m.role === "user")
