@@ -1045,41 +1045,127 @@ const ClassDetailPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Student sees assignments */}
+              {/* Student sees assignments with submit functionality */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
-                    Assignments
+                    Assignments ({assignments.length})
                   </CardTitle>
+                  <CardDescription>Click on an assignment to submit your work</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {assignments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No assignments yet.</p>
+                    <p className="text-sm text-muted-foreground text-center py-8">No assignments yet.</p>
                   ) : (
                     <div className="space-y-3">
-                      {assignments.map(a => (
-                        <div key={a.id} className="border rounded-lg p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h4 className="font-medium">{a.title}</h4>
-                              {a.description && <p className="text-sm text-muted-foreground mt-1">{a.description}</p>}
+                      {assignments.map(a => {
+                        const sub = getStudentSubmission(a.id);
+                        const isGraded = sub && sub.grade !== null;
+                        const isSubmitted = !!sub;
+                        const overdue = a.due_date ? new Date(a.due_date) < new Date() : false;
+                        return (
+                          <div
+                            key={a.id}
+                            className={`border rounded-lg p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
+                              isGraded ? 'border-green-500/30 bg-green-50/30' :
+                              isSubmitted ? 'border-primary/30 bg-primary/5' :
+                              overdue ? 'border-destructive/30' : ''
+                            }`}
+                            onClick={() => !isGraded && openStudentSubmitDialog(a)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium">{a.title}</h4>
+                                  {isGraded && (
+                                    <Badge variant="default" className="bg-green-600">
+                                      <CheckCircle2 className="mr-1 h-3 w-3" />
+                                      {sub.grade}/{sub.max_grade} ({Math.round((sub.grade / sub.max_grade) * 100)}%)
+                                    </Badge>
+                                  )}
+                                  {isSubmitted && !isGraded && (
+                                    <Badge variant="secondary">
+                                      <Clock className="mr-1 h-3 w-3" /> Submitted
+                                    </Badge>
+                                  )}
+                                  {!isSubmitted && overdue && (
+                                    <Badge variant="destructive">
+                                      <AlertTriangle className="mr-1 h-3 w-3" /> Overdue
+                                    </Badge>
+                                  )}
+                                </div>
+                                {a.description && <p className="text-sm text-muted-foreground mt-1">{a.description}</p>}
+                                {sub?.feedback && (
+                                  <div className="mt-2 bg-muted rounded-lg p-2 text-sm">
+                                    <span className="font-medium">Feedback:</span> {sub.feedback}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 ml-4">
+                                {a.due_date && (
+                                  <Badge variant="outline" className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {new Date(a.due_date).toLocaleDateString()}
+                                  </Badge>
+                                )}
+                                {!isGraded && (
+                                  <Button size="sm" variant={isSubmitted ? 'outline' : 'default'}>
+                                    {isSubmitted ? 'Resubmit' : 'Submit'}
+                                    <Send className="ml-2 h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                            {a.due_date && (
-                              <Badge variant="outline" className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {new Date(a.due_date).toLocaleDateString()}
-                              </Badge>
-                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
               </Card>
             </div>
           )}
+
+          {/* Student Submit Dialog */}
+          <Dialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Submit: {selectedSubmitAssignment?.title}</DialogTitle>
+                <DialogDescription>
+                  {selectedSubmitAssignment?.description || 'Write your answer or upload a file.'}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Your Answer</Label>
+                  <Textarea
+                    placeholder="Type your answer here..."
+                    value={submitText}
+                    onChange={e => setSubmitText(e.target.value)}
+                    rows={6}
+                  />
+                </div>
+                <div>
+                  <Label>Attach File (optional)</Label>
+                  <Input
+                    type="file"
+                    onChange={e => setSubmitFile(e.target.files?.[0] || null)}
+                    className="mt-1"
+                  />
+                  {submitFile && (
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                      <Upload className="h-3 w-3" /> {submitFile.name}
+                    </p>
+                  )}
+                </div>
+                <Button onClick={handleStudentSubmit} disabled={submitting} className="w-full">
+                  {submitting ? 'Submitting...' : 'Submit Assignment'}
+                  <Send className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>
