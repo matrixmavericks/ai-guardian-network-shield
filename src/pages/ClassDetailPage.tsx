@@ -15,9 +15,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Copy, Users, Brain, MessageSquare, Book, Send, UserCircle, Shield,
-  Plus, FileText, Calendar, Sparkles, RefreshCw, Trash2, CheckCircle2, ClipboardList
+  Plus, FileText, Calendar, Sparkles, RefreshCw, Trash2, CheckCircle2, ClipboardList,
+  BarChart3, Upload, Clock, AlertTriangle
 } from 'lucide-react';
 import TeacherGradingView from '@/components/TeacherGradingView';
+import { Progress } from '@/components/ui/progress';
 
 interface Student {
   student_id: string;
