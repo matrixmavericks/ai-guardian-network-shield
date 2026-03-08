@@ -127,13 +127,48 @@ const ClassDetailPage = () => {
         );
         setStudents(enriched);
       } else {
-        // Student: fetch assignments for this class
-        const { data: assignmentsData } = await supabase
+        // Student: fetch assignments and own submissions for this class
+        const [assignmentsRes, submissionsRes] = await Promise.all([
+          supabase.from('class_assignments').select('*').eq('class_id', id).order('created_at', { ascending: false }),
+          supabase.from('assignment_submissions').select('*').eq('student_id', user.id),
+        ]);
+        setAssignments((assignmentsRes.data as ClassAssignment[]) || []);
+        setStudentSubmissions(submissionsRes.data || []);
+      }
+
+      // For teachers: fetch analytics (all submissions for this class's assignments)
+      if (isTeacher) {
+        const { data: classAssignments } = await supabase
           .from('class_assignments')
-          .select('*')
-          .eq('class_id', id)
-          .order('created_at', { ascending: false });
-        setAssignments((assignmentsData as ClassAssignment[]) || []);
+          .select('id, title, subject')
+          .eq('class_id', id);
+        
+        if (classAssignments?.length) {
+          const assignmentIds = classAssignments.map(a => a.id);
+          const { data: allSubs } = await supabase
+            .from('assignment_submissions')
+            .select('*')
+            .in('assignment_id', assignmentIds);
+          
+          const analytics = classAssignments.map(a => {
+            const subs = (allSubs || []).filter((s: any) => s.assignment_id === a.id);
+            const graded = subs.filter((s: any) => s.grade !== null);
+            const avgGrade = graded.length > 0
+              ? Math.round(graded.reduce((sum: number, s: any) => sum + (s.grade / s.max_grade) * 100, 0) / graded.length)
+              : null;
+            return {
+              id: a.id,
+              title: a.title,
+              subject: a.subject,
+              totalSubmissions: subs.length,
+              gradedCount: graded.length,
+              avgGrade,
+              highestGrade: graded.length > 0 ? Math.max(...graded.map((s: any) => Math.round((s.grade / s.max_grade) * 100))) : null,
+              lowestGrade: graded.length > 0 ? Math.min(...graded.map((s: any) => Math.round((s.grade / s.max_grade) * 100))) : null,
+            };
+          });
+          setAnalyticsData(analytics);
+        }
       }
     } catch (err: any) {
       console.error(err);
