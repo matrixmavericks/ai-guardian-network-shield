@@ -246,7 +246,7 @@ ${JSON.stringify(assignmentsSummary, null, 2)}
 ## Uploaded Documents (Syllabi, Report Cards, etc.) — ACTUAL CONTENT:
 ${documentsSummary.length > 0 ? JSON.stringify(documentsSummary, null, 2) : "No documents uploaded yet."}
 
-IMPORTANT: If documents are provided above with actual "content" fields, deeply analyze that content — look for grades, subjects, topics covered, teacher comments, curriculum outlines, etc. Cross-reference document content with chat history and assignment performance to build a comprehensive profile.
+IMPORTANT: If documents are provided and any has status="extracted", you MUST explicitly reference them by fileName in strengths/conceptual_gaps evidence text and include at least 2 document-based findings.
 
 Analyze this student's learning profile comprehensively.`;
 
