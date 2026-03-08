@@ -47,6 +47,30 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
+  const isTeacherOrAdmin = currentUser?.role === 'teacher' || currentUser?.role === 'admin';
+
+  const promoteToTeacher = async (targetUserId: string, userName: string) => {
+    try {
+      const { error } = await supabase.from('user_roles').insert({
+        user_id: targetUserId,
+        role: 'teacher' as any,
+      });
+      if (error) {
+        if (error.code === '23505') {
+          toast({ title: "Already a teacher", description: `${userName} already has the teacher role.` });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({ title: "Role updated", description: `${userName} is now a teacher.` });
+        fetchUsers();
+      }
+    } catch (err: any) {
+      console.error('Error promoting user:', err);
+      toast({ title: "Failed to promote user", description: err.message, variant: "destructive" });
+    }
+  };
 
   const fetchUsers = async () => {
     setIsLoading(true);
