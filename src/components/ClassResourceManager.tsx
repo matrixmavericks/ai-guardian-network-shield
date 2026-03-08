@@ -443,18 +443,33 @@ const ClassResourceManager: React.FC<Props> = ({ classId, className, isTeacher, 
                       ? <BookmarkCheck className="h-4 w-4 text-primary" />
                       : <Bookmark className="h-4 w-4 text-muted-foreground" />}
                   </Button>
-                  {/* AI integration */}
+                  {/* AI & Learning Path integration */}
                   {!isTeacher && (
-                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => {
-                      const params = new URLSearchParams({
-                        resourceTitle: resource.title,
-                        resourceDesc: resource.description || resource.file_name || "",
-                        ...(resource.external_url ? { resourceUrl: resource.external_url } : {}),
-                      });
-                      navigate(`/ai-learning-assistant?${params.toString()}`);
-                    }}>
-                      Use in AI
-                    </Button>
+                    <>
+                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => {
+                        const params = new URLSearchParams({
+                          resourceTitle: resource.title,
+                          resourceDesc: resource.description || resource.file_name || "",
+                          ...(resource.external_url ? { resourceUrl: resource.external_url } : {}),
+                          ...(resource.file_url ? { resourceFileUrl: resource.file_url } : {}),
+                        });
+                        navigate(`/ai-learning-assistant?${params.toString()}`);
+                      }}>
+                        Use in AI
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => {
+                        const params = new URLSearchParams({
+                          fromResource: "true",
+                          resourceTitle: resource.title,
+                          resourceDesc: resource.description || resource.file_name || "",
+                          ...(resource.external_url ? { resourceUrl: resource.external_url } : {}),
+                          ...(resource.file_url ? { resourceFileUrl: resource.file_url } : {}),
+                        });
+                        navigate(`/create-learning-path?${params.toString()}`);
+                      }}>
+                        Create Path
+                      </Button>
+                    </>
                   )}
                   {/* Open/Download */}
                   {resource.resource_type === "link" && resource.external_url && (

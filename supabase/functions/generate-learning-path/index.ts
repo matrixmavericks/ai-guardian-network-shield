@@ -11,14 +11,51 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+async function fetchFileContent(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const contentType = response.headers.get("content-type") || "";
+
+    // For text-based files, return content directly
+    if (
+      contentType.includes("text/") ||
+      contentType.includes("json") ||
+      contentType.includes("xml") ||
+      contentType.includes("csv") ||
+      contentType.includes("markdown")
+    ) {
+      const text = await response.text();
+      // Limit to ~8000 chars to stay within token limits
+      return text.slice(0, 8000);
+    }
+
+    // For PDFs and other binary docs, we can't extract text directly in Deno easily
+    // Return null so the AI uses the metadata instead
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const {
+      title,
+      description,
+      subject,
+      difficulty,
+      estimatedHours,
+      gradeLevel,
+      resourceContent,
+      resourceUrl,
+      resourceTitle,
+    } = await req.json();
 
-    const { title, description, subject, difficulty, estimatedHours, gradeLevel } = await req.json();
     if (!title?.trim() || !subject?.trim()) {
       return json({ success: false, error: "Title and subject are required." }, 400);
     }
@@ -26,6 +63,12 @@ serve(async (req) => {
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableApiKey) {
       return json({ success: false, error: "AI gateway is not configured." }, 500);
+    }
+
+    // Try to fetch file content if a URL is provided and no content was passed
+    let fileContent = resourceContent || null;
+    if (!fileContent && resourceUrl) {
+      fileContent = await fetchFileContent(resourceUrl);
     }
 
     const systemPrompt = `You are an expert instructional designer. Return valid JSON only.
@@ -44,14 +87,15 @@ Schema:
 }
 
 Rules:
-- Create 4 to 6 modules in a strong teaching sequence.
+- Create 4 to 8 modules in a strong teaching sequence.
 - Keep each module practical and age-appropriate for the grade level.
 - Resources must be concise learning activities, readings, or exercises (3-5 per module). Each resource string should be a clear topic title that can be expanded into a full lesson.
 - Quizzes must be short assessment topic titles (1-2 per module) that test understanding of the module content.
 - suggestedTags should contain 3 to 6 short tags.
-- Tailor language complexity and content depth to the specified grade level and difficulty.`;
+- Tailor language complexity and content depth to the specified grade level and difficulty.
+${fileContent ? "- IMPORTANT: The user has provided actual document/file content below. Base the learning path heavily on the specific topics, concepts, and material found in this content. Cover the material thoroughly and in a logical teaching order." : ""}`;
 
-    const userPrompt = `Build a learning path.
+    let userPrompt = `Build a learning path.
 Title: ${title}
 Subject: ${subject}
 Difficulty: ${difficulty || "beginner"}
@@ -59,8 +103,18 @@ Grade Level: ${gradeLevel || "self-learner"}
 Estimated hours: ${estimatedHours || 10}
 Description: ${description || ""}`;
 
+    if (resourceTitle) {
+      userPrompt += `\nSource Resource: ${resourceTitle}`;
+    }
+
+    if (fileContent) {
+      userPrompt += `\n\n--- DOCUMENT CONTENT (base the learning path on this material) ---\n${fileContent}\n--- END DOCUMENT CONTENT ---`;
+    } else if (resourceUrl) {
+      userPrompt += `\nResource URL: ${resourceUrl} (could not extract content, use the title and description to infer topics)`;
+    }
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 45000);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

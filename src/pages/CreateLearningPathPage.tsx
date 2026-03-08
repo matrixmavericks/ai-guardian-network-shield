@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, X, Save, Trash2, BookOpen, Sparkles, Loader, Wand2, GraduationCap, Upload, FileText, ArrowRight, Star } from "lucide-react";
+import { PlusCircle, X, Save, Trash2, BookOpen, Sparkles, Loader, Wand2, GraduationCap, Upload, FileText, ArrowRight, Star, FileCheck } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardNav from '@/components/DashboardNav';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateId, saveLearningPath, type LearningDifficulty, type LearningModule } from '@/services/learningPathService';
 
 const ResourceForm = ({ value, onChange, onRemove }: { value: string; onChange: (newValue: string) => void; onRemove: () => void; }) => (
@@ -102,6 +103,7 @@ const CreateLearningPathPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -119,6 +121,50 @@ const CreateLearningPathPage = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [syllabusAnalysis, setSyllabusAnalysis] = useState<any>(null);
+
+  // Resource-based learning path creation
+  const [resourceContext, setResourceContext] = useState<{
+    title: string;
+    description: string;
+    url?: string;
+    fileUrl?: string;
+    fileContent?: string;
+  } | null>(null);
+  const [fetchingContent, setFetchingContent] = useState(false);
+
+  // Pick up resource context from URL params
+  useEffect(() => {
+    const fromResource = searchParams.get('fromResource');
+    if (fromResource === 'true') {
+      const resTitle = searchParams.get('resourceTitle') || '';
+      const resDesc = searchParams.get('resourceDesc') || '';
+      const resUrl = searchParams.get('resourceUrl') || undefined;
+      const resFileUrl = searchParams.get('resourceFileUrl') || undefined;
+
+      setResourceContext({ title: resTitle, description: resDesc, url: resUrl, fileUrl: resFileUrl });
+      setTitle(resTitle);
+      setDescription(resDesc);
+
+      // Clean URL params
+      setSearchParams({}, { replace: true });
+
+      // Try to fetch text content from the file
+      if (resFileUrl) {
+        setFetchingContent(true);
+        fetch(resFileUrl)
+          .then(async (resp) => {
+            const contentType = resp.headers.get('content-type') || '';
+            if (contentType.includes('text/') || contentType.includes('json') || contentType.includes('csv') || contentType.includes('markdown') || contentType.includes('xml')) {
+              const text = await resp.text();
+              setResourceContext(prev => prev ? { ...prev, fileContent: text.slice(0, 8000) } : prev);
+              setSyllabusText(text.slice(0, 8000));
+            }
+          })
+          .catch(() => {})
+          .finally(() => setFetchingContent(false));
+      }
+    }
+  }, []);
 
   const effectiveSubject = subject === 'Other' ? customSubject.trim() : subject;
 
@@ -155,7 +201,17 @@ const CreateLearningPathPage = () => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-learning-path', {
-        body: { title, description, subject: effectiveSubject, difficulty, estimatedHours, gradeLevel },
+        body: {
+          title,
+          description,
+          subject: effectiveSubject,
+          difficulty,
+          estimatedHours,
+          gradeLevel,
+          resourceContent: resourceContext?.fileContent || syllabusText || undefined,
+          resourceUrl: resourceContext?.url || resourceContext?.fileUrl || undefined,
+          resourceTitle: resourceContext?.title || undefined,
+        },
       });
 
       if (error) throw error;
@@ -330,6 +386,22 @@ const CreateLearningPathPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Resource context indicator */}
+            {resourceContext && (
+              <Alert className="border-primary/30 bg-primary/5">
+                <FileCheck className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                  <span>
+                    Building learning path from: <strong>{resourceContext.title}</strong>
+                    {resourceContext.fileContent ? ' (file content loaded)' : fetchingContent ? ' (loading content...)' : ' (using title & description)'}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => setResourceContext(null)}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
 
             <Card>
               <CardHeader>
