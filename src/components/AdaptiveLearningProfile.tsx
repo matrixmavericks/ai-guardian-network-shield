@@ -116,6 +116,7 @@ const AdaptiveLearningProfile = ({ targetUserId, targetUserName }: AdaptiveLearn
   const { user } = useAuth();
   const [profile, setProfile] = useState<LearningProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [documentDiagnostics, setDocumentDiagnostics] = useState<DocumentDiagnostics | null>(null);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [docsLoaded, setDocsLoaded] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);

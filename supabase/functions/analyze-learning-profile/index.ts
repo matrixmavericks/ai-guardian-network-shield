@@ -77,7 +77,7 @@ serve(async (req) => {
 
     // Fetch actual content of text-based documents from storage
     console.log(`Found ${studentDocuments.length} documents for user ${targetUserId}`);
-    const documentContents: { fileName: string; type: string; description: string; content: string }[] = [];
+    const documentContents: { fileName: string; type: string; description: string; content: string; extractedChars: number; status: string }[] = [];
     for (const doc of studentDocuments) {
       try {
         // Extract the storage path from the file_url
