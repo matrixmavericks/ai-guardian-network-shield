@@ -27,6 +27,7 @@ import {
   getGradeColor,
   type GradingSystem,
 } from '@/services/gradingService';
+import ClassResourceManager from '@/components/ClassResourceManager';
 
 interface Student {
   student_id: string;
