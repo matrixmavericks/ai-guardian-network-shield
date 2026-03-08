@@ -36,22 +36,19 @@ const MessagesPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   
-  // Fetch contacts (all users except current user)
+  // Fetch contacts via class memberships (classmates + teachers + past conversations)
   useEffect(() => {
     if (!user) return;
 
     const fetchContacts = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, full_name')
-        .neq('user_id', user.id);
+      const { data, error } = await supabase.rpc('get_user_contacts', { _user_id: user.id });
 
       if (error) {
         console.error('Error fetching contacts:', error);
         return;
       }
 
-      setContacts(data || []);
+      setContacts((data || []).map((c: any) => ({ user_id: c.user_id, full_name: c.full_name, role: c.role })));
       
       // Fetch unread counts for each contact
       if (data) {
