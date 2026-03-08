@@ -146,19 +146,6 @@ const CreateLearningPathPage = () => {
     );
   };
 
-  const ensureValidSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      throw new Error('Your session expired. Please log in again.');
-    }
-
-    const { error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError) {
-      throw new Error('Your session is no longer valid. Please log in again.');
-    }
-  };
-
   const handleGenerateWithAI = async () => {
     if (!title.trim() || !effectiveSubject) {
       toast({ title: 'Missing info', description: 'Add a title and subject first.', variant: 'destructive' });
@@ -167,7 +154,6 @@ const CreateLearningPathPage = () => {
 
     setIsGenerating(true);
     try {
-      await ensureValidSession();
       const { data, error } = await supabase.functions.invoke('generate-learning-path', {
         body: { title, description, subject: effectiveSubject, difficulty, estimatedHours, gradeLevel },
       });
@@ -230,7 +216,6 @@ const CreateLearningPathPage = () => {
     // Auto-generate the full learning path
     setIsGenerating(true);
     try {
-      await ensureValidSession();
       const resolvedSubject = rec.subject || effectiveSubject;
       const { data, error } = await supabase.functions.invoke('generate-learning-path', {
         body: {
