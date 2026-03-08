@@ -495,7 +495,7 @@ const ClassDetailPage = () => {
                           {students.map(s => (
                             <button
                               key={s.student_id}
-                              onClick={() => { setSelectedStudent(s); setAdaptiveProfile(null); }}
+                              onClick={() => { setSelectedStudent(s); }}
                               className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 ${
                                 selectedStudent?.student_id === s.student_id
                                   ? 'bg-primary/10 border border-primary/20'
