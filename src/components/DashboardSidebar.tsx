@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, FileText, Settings, UserPlus, Layers, Brain, MessageSquare, Book } from 'lucide-react';
+import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, FileText, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const DashboardSidebar = () => {
@@ -25,12 +25,14 @@ const DashboardSidebar = () => {
 
     if (role === 'admin') {
       return [...baseItems,
+      { title: "Classes", href: "/classes", icon: <Users className="h-5 w-5" /> },
       { title: "User Management", href: "/users", icon: <UserPlus className="h-5 w-5" /> },
       { title: "Security Keys", href: "/security-keys", icon: <Shield className="h-5 w-5" /> },
       { title: "Settings", href: "/settings", icon: <Settings className="h-5 w-5" /> }];
 
     } else if (role === 'teacher') {
       return [...baseItems,
+      { title: "Classes", href: "/classes", icon: <Users className="h-5 w-5" /> },
       { title: "Grades", href: "/grades", icon: <GraduationCap className="h-5 w-5" /> },
       { title: "Teaching Plans", href: "/teacher-plan-generator", icon: <Layers className="h-5 w-5" /> },
       { title: "Messages", href: "/messages", icon: <MessageSquare className="h-5 w-5" /> },
@@ -38,6 +40,7 @@ const DashboardSidebar = () => {
 
     } else {
       return [...baseItems,
+      { title: "Classes", href: "/classes", icon: <Users className="h-5 w-5" /> },
       { title: "Grades", href: "/grades", icon: <GraduationCap className="h-5 w-5" /> },
       { title: "Learning Paths", href: "/learning-paths", icon: <Book className="h-5 w-5" /> },
       { title: "AI Assistant", href: "/ai-learning-assistant", icon: <Brain className="h-5 w-5" /> },

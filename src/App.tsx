@@ -23,6 +23,8 @@ import ParentDashboard from './pages/ParentDashboard';
 import AdminMonitoring from './pages/AdminMonitoring';
 import AIConfigurationPage from './pages/AIConfigurationPage';
 import ModelTrainingPage from './pages/ModelTrainingPage';
+import ClassesPage from './pages/ClassesPage';
+import ClassDetailPage from './pages/ClassDetailPage';
 
 const ProtectedRoute = ({ 
   children, 
@@ -77,6 +79,8 @@ function App() {
           <Route path="/admin-monitoring" element={<ProtectedRoute allowedRoles={['admin']}><AdminMonitoring /></ProtectedRoute>} />
           <Route path="/ai-configuration" element={<ProtectedRoute allowedRoles={['admin']}><AIConfigurationPage /></ProtectedRoute>} />
           <Route path="/model-training" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ModelTrainingPage /></ProtectedRoute>} />
+          <Route path="/classes" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><ClassesPage /></ProtectedRoute>} />
+          <Route path="/class/:id" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><ClassDetailPage /></ProtectedRoute>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
