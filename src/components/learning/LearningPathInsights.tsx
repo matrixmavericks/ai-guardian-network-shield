@@ -46,6 +46,8 @@ interface LearningPathInsightsProps {
   pathSubject: string;
   pathDifficulty: string;
   modules: { id: string; title: string; description: string }[];
+  studentId?: string;
+  studentName?: string;
 }
 
 const severityConfig = {
