@@ -611,19 +611,28 @@ const ClassDetailPage = () => {
                                 </p>
                               ) : (
                                 <div className="space-y-3">
-                                  {learningPaths.map(p => (
-                                    <div key={p.id} className="flex items-center justify-between border rounded-lg p-3">
-                                      <div>
-                                        <p className="font-medium text-sm">{p.title}</p>
-                                        <p className="text-xs text-muted-foreground">{p.subject}</p>
+                                  {learningPaths.map(p => {
+                                    const isAssigned = assignedPathIds.includes(p.id);
+
+                                    return (
+                                      <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <p className="text-sm font-medium">{p.title}</p>
+                                            {isAssigned && <Badge variant="secondary">Assigned</Badge>}
+                                          </div>
+                                          <p className="text-xs text-muted-foreground">{p.subject}</p>
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          disabled={isAssigned || loadingAssignedPaths}
+                                          onClick={() => assignLearningPath(p.id)}
+                                        >
+                                          {isAssigned ? 'Assigned' : 'Assign'}
+                                        </Button>
                                       </div>
-                                      <Button size="sm" onClick={() => {
-                                        assignLearningPath(p.id);
-                                      }}>
-                                        Assign
-                                      </Button>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               )}
                             </CardContent>
