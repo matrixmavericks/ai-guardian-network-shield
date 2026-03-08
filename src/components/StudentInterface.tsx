@@ -161,6 +161,9 @@ const StudentInterface = () => {
           gradeLevel: "high-school",
           processTeaching: isProcessTeaching,
           sessionId,
+          resourceContext: resourceContext
+            ? `Title: ${resourceContext.title}\nDescription: ${resourceContext.description}${resourceContext.url ? `\nURL: ${resourceContext.url}` : ""}`
+            : null,
         },
       });
 
