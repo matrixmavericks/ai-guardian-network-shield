@@ -219,9 +219,12 @@ const LearningPathDetail = () => {
           </div>
 
           <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
+            <TabsList className="mb-6 flex-wrap">
               <TabsTrigger value="overview"><BookOpen className="mr-2 h-4 w-4" />Overview</TabsTrigger>
               <TabsTrigger value="insights"><Sparkles className="mr-2 h-4 w-4" />My Insights</TabsTrigger>
+              {isTeacher && assignedStudents.length > 0 && (
+                <TabsTrigger value="student-insights"><Users className="mr-2 h-4 w-4" />Student Insights</TabsTrigger>
+              )}
               <TabsTrigger value="content"><BookOpen className="mr-2 h-4 w-4" />Module Content</TabsTrigger>
               <TabsTrigger value="assessment"><ListChecks className="mr-2 h-4 w-4" />Assessments</TabsTrigger>
             </TabsList>
