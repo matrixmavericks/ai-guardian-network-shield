@@ -335,6 +335,7 @@ const LearningPathDetail = () => {
             )}
 
 
+            <TabsContent value="content">
               {selectedModule && (
                 <div className="space-y-6">
                   <Card>
