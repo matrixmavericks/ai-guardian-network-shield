@@ -15,7 +15,9 @@ const Index = () => {
       <nav className="bg-white shadow-sm py-4 px-6 md:px-10 flex justify-between items-center">
         <div className="flex items-center">
           <Shield className="h-8 w-8 text-blue-600 mr-2" />
-          <span className="text-xl font-bold text-slate-800">AI Conditioner</span>
+          <span className="text-xl font-bold text-slate-800">Refyn Technologies
+
+          </span>
         </div>
         <div className="flex gap-4">
           <Link to="/login">
@@ -119,8 +121,6 @@ const Index = () => {
           &copy; {new Date().getFullYear()} AI Conditioner. All rights reserved.
         </div>
       </footer>
-    </div>
-  );
-};
+    </div>);};
 
 export default Index;
