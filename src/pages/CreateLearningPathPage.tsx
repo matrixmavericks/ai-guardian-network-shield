@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, X, Save, Trash2, BookOpen, Sparkles, Loader, Wand2, GraduationCap } from "lucide-react";
+import { PlusCircle, X, Save, Trash2, BookOpen, Sparkles, Loader, Wand2, GraduationCap, Upload, FileText, ArrowRight, Star } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
 import DashboardNav from '@/components/DashboardNav';
