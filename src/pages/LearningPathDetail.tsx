@@ -16,12 +16,14 @@ import {
   CheckCircle,
   ListChecks,
   Play,
+  Shield,
   Sparkles,
   Users,
 } from "lucide-react";
 import ResourceViewer from "@/components/learning/ResourceViewer";
 import QuizPlayer from "@/components/learning/QuizPlayer";
 import LearningPathInsights from "@/components/learning/LearningPathInsights";
+import ClassRiskSummary from "@/components/learning/ClassRiskSummary";
 import {
   getLearningPathById,
   getPathProgress,
@@ -223,7 +225,10 @@ const LearningPathDetail = () => {
               <TabsTrigger value="overview"><BookOpen className="mr-2 h-4 w-4" />Overview</TabsTrigger>
               <TabsTrigger value="insights"><Sparkles className="mr-2 h-4 w-4" />My Insights</TabsTrigger>
               {isTeacher && assignedStudents.length > 0 && (
-                <TabsTrigger value="student-insights"><Users className="mr-2 h-4 w-4" />Student Insights</TabsTrigger>
+                <>
+                  <TabsTrigger value="class-risks"><Shield className="mr-2 h-4 w-4" />Class Risks</TabsTrigger>
+                  <TabsTrigger value="student-insights"><Users className="mr-2 h-4 w-4" />Student Insights</TabsTrigger>
+                </>
               )}
               <TabsTrigger value="content"><BookOpen className="mr-2 h-4 w-4" />Module Content</TabsTrigger>
               <TabsTrigger value="assessment"><ListChecks className="mr-2 h-4 w-4" />Assessments</TabsTrigger>
@@ -287,6 +292,19 @@ const LearningPathDetail = () => {
                 </Card>
               )}
             </TabsContent>
+
+            {isTeacher && assignedStudents.length > 0 && (
+              <TabsContent value="class-risks">
+                <ClassRiskSummary
+                  pathId={learningPath.id}
+                  pathTitle={learningPath.title}
+                  pathSubject={learningPath.subject}
+                  pathDifficulty={learningPath.difficulty}
+                  modules={learningPath.modules.map(m => ({ id: m.id, title: m.title, description: m.description }))}
+                  studentIds={assignedStudents.map(s => s.id)}
+                />
+              </TabsContent>
+            )}
 
             {isTeacher && assignedStudents.length > 0 && (
               <TabsContent value="student-insights">
