@@ -90,6 +90,9 @@ const ClassDetailPage = () => {
   const [submitFile, setSubmitFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [studentSubmissions, setStudentSubmissions] = useState<any[]>([]);
+  const [gradingSystems, setGradingSystems] = useState<GradingSystem[]>([]);
+  const [classGradingSystem, setClassGradingSystem] = useState<GradingSystem | null>(null);
+  const [savingGradingSystem, setSavingGradingSystem] = useState(false);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
