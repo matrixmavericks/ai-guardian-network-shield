@@ -918,6 +918,15 @@ const ClassDetailPage = () => {
                 </div>
               </TabsContent>
 
+              {/* ===== RESOURCES TAB ===== */}
+              <TabsContent value="resources">
+                <ClassResourceManager
+                  classId={classInfo.id}
+                  className={classInfo.name}
+                  isTeacher={true}
+                />
+              </TabsContent>
+
               {/* ===== LEARNING PATHS TAB ===== */}
               <TabsContent value="learning-paths">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
