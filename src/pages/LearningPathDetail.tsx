@@ -294,6 +294,19 @@ const LearningPathDetail = () => {
             </TabsContent>
 
             {isTeacher && assignedStudents.length > 0 && (
+              <TabsContent value="class-risks">
+                <ClassRiskSummary
+                  pathId={learningPath.id}
+                  pathTitle={learningPath.title}
+                  pathSubject={learningPath.subject}
+                  pathDifficulty={learningPath.difficulty}
+                  modules={learningPath.modules.map(m => ({ id: m.id, title: m.title, description: m.description }))}
+                  studentIds={assignedStudents.map(s => s.id)}
+                />
+              </TabsContent>
+            )}
+
+            {isTeacher && assignedStudents.length > 0 && (
               <TabsContent value="student-insights">
                 <div className="space-y-6">
                   <Card>
