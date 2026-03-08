@@ -51,6 +51,10 @@ const StudentDashboard = () => {
   const { user } = useAuth();
   const currentUser = user ? { id: user.id, name: user.email?.split('@')[0] || 'Student' } : null;
 
+  // Empty defaults - real data is now in StudentAssignmentView component
+  const assignments: any[] = [];
+  const grades: any[] = [];
+
   // Calculate stats
   const pendingAssignments = assignments.filter(
     assignment => !grades.some(grade => grade.assignmentId === assignment.id)
