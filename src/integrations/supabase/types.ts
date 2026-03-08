@@ -355,6 +355,120 @@ export type Database = {
           },
         ]
       }
+      class_resource_folders: {
+        Row: {
+          class_id: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          parent_folder_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          parent_folder_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          parent_folder_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_resource_folders_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_resource_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "class_resource_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_resources: {
+        Row: {
+          class_id: string
+          created_at: string
+          description: string | null
+          external_url: string | null
+          file_name: string | null
+          file_size: number | null
+          file_url: string | null
+          folder_id: string | null
+          id: string
+          mime_type: string | null
+          resource_type: string
+          tags: string[]
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          description?: string | null
+          external_url?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          folder_id?: string | null
+          id?: string
+          mime_type?: string | null
+          resource_type?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          description?: string | null
+          external_url?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          folder_id?: string | null
+          id?: string
+          mime_type?: string | null
+          resource_type?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_resources_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_resources_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "class_resource_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           created_at: string
@@ -781,6 +895,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      student_resource_bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          resource_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          resource_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          resource_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_resource_bookmarks_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "class_resources"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
