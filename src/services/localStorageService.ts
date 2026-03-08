@@ -117,10 +117,8 @@ const STORAGE_KEYS = {
 const initializeStorage = () => {
   console.log("Initializing storage...");
   
-  // Force clear any existing storage to ensure we have fresh demo data with passwords
-  localStorage.removeItem(STORAGE_KEYS.USERS);
-  
   // Check if users already exist
+  // NOTE: never reset existing storage here, otherwise user-created data gets wiped on reload
   if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
     console.log("Creating demo data...");
     // Create demo users
