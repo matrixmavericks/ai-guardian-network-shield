@@ -21,6 +21,8 @@ serve(async (req) => {
 
     const systemPrompt = `You are an expert educational curriculum designer. Create detailed, practical teaching plans that educators can immediately use in their classrooms.
 
+CRITICAL MATH FORMATTING: NEVER use LaTeX/dollar-sign notation ($x^2$, \\frac{}, etc). Use Unicode symbols: × ÷ ² ³ √ π ∑ ≤ ≥ ≠. Write fractions as a/b. Write exponents as x², x³. Use plain text for all math.
+
 Your teaching plans should include:
 1. Clear learning objectives aligned with educational standards
 2. Weekly or daily lesson breakdowns with specific activities
