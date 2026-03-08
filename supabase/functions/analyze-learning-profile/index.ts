@@ -65,7 +65,7 @@ serve(async (req) => {
         .eq("student_id", targetUserId),
       supabase
         .from("student_documents")
-        .select("file_name, document_type, description, created_at")
+        .select("file_name, document_type, description, file_url, created_at")
         .eq("user_id", targetUserId),
     ]);
 
@@ -76,13 +76,15 @@ serve(async (req) => {
     const studentDocuments = documentsRes.data || [];
 
     // Fetch actual content of text-based documents from storage
+    console.log(`Found ${studentDocuments.length} documents for user ${targetUserId}`);
     const documentContents: { fileName: string; type: string; description: string; content: string }[] = [];
     for (const doc of studentDocuments) {
       try {
         // Extract the storage path from the file_url
-        // file_url format: .../storage/v1/object/public/student-documents/userId/filename
+        console.log(`Processing doc: ${doc.file_name}, file_url: ${doc.file_url}`);
         const urlParts = doc.file_url?.split('/student-documents/');
         const storagePath = urlParts && urlParts.length > 1 ? urlParts[1] : null;
+        console.log(`Storage path resolved: ${storagePath}`);
         
         if (storagePath) {
           const { data: fileData, error: fileError } = await supabase
