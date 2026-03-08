@@ -48,28 +48,8 @@ import StudentAssignmentView from '@/components/StudentAssignmentView';
 const StudentDashboard = () => {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
-  const [assignments, setAssignments] = useState<any[]>([]);
-  const [grades, setGrades] = useState<any[]>([]);
-  const currentUser = getCurrentUser();
-
-  useEffect(() => {
-    if (currentUser) {
-      const allAssignments = getAssignments();
-      const studentGrades = getGradesByStudent(currentUser.id);
-      
-      // Enrich grades with assignment data
-      const enrichedGrades = studentGrades.map(grade => {
-        const assignment = getAssignmentById(grade.assignmentId);
-        return {
-          ...grade,
-          assignment
-        };
-      });
-      
-      setAssignments(allAssignments);
-      setGrades(enrichedGrades);
-    }
-  }, [currentUser]);
+  const { user } = useAuth();
+  const currentUser = user ? { id: user.id, name: user.email?.split('@')[0] || 'Student' } : null;
 
   // Calculate stats
   const pendingAssignments = assignments.filter(
