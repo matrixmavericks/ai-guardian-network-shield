@@ -37,6 +37,8 @@ serve(async (req) => {
     if (type === "quiz") {
       systemPrompt = `You are an expert educational assessment creator. Return valid JSON only.
 
+CRITICAL MATH FORMATTING: NEVER use LaTeX/dollar-sign notation ($x^2$, \\frac{}, etc). Use Unicode symbols: × ÷ ² ³ √ π ∑ ≤ ≥ ≠. Write fractions as a/b. Write exponents as x², x³. Use plain text for all math.
+
 Schema:
 {
   "questions": [
