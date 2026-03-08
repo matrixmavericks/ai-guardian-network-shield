@@ -14,11 +14,52 @@ const BLOCKED_KEYWORDS = [
   'give me the exact answer'
 ];
 
+// Approximate cost per 1M tokens for Gemini 3 Flash Preview (USD)
+const COST_PER_1M_INPUT = 0.10;
+const COST_PER_1M_OUTPUT = 0.40;
+
 function json(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+function getAdminClient() {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  return createClient(supabaseUrl, serviceKey);
+}
+
+async function checkQuota(userId: string): Promise<{ allowed: boolean; reason?: string }> {
+  const adminClient = getAdminClient();
+  
+  // Get the most restrictive quota for this student
+  const { data: quotas } = await adminClient
+    .from('ai_usage_quotas')
+    .select('monthly_limit_usd')
+    .eq('student_id', userId);
+
+  if (!quotas || quotas.length === 0) return { allowed: true };
+
+  const lowestLimit = Math.min(...quotas.map((q: any) => Number(q.monthly_limit_usd)));
+
+  // Get current month's usage
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  
+  const { data: usage } = await adminClient
+    .from('ai_usage_logs')
+    .select('estimated_cost_usd')
+    .eq('user_id', userId)
+    .gte('created_at', startOfMonth);
+
+  const totalUsed = (usage || []).reduce((sum: number, r: any) => sum + Number(r.estimated_cost_usd), 0);
+
+  if (totalUsed >= lowestLimit) {
+    return { allowed: false, reason: `You've reached your monthly AI usage limit ($${lowestLimit.toFixed(2)}). Please contact your teacher.` };
+  }
+  return { allowed: true };
 }
 
 serve(async (req) => {
@@ -69,6 +110,18 @@ serve(async (req) => {
     return json({ success: false, reply: 'Please enter a question.', error: 'Empty prompt', meta: null }, 400);
   }
 
+  // --- Quota check ---
+  if (userId) {
+    try {
+      const quotaResult = await checkQuota(userId);
+      if (!quotaResult.allowed) {
+        return json({ success: false, reply: quotaResult.reason!, error: 'quota_exceeded', meta: null }, 429);
+      }
+    } catch (e) {
+      console.error('Quota check failed (non-fatal):', e);
+    }
+  }
+
   // --- Moderation ---
   const lowerPrompt = prompt.toLowerCase();
   const flaggedKeywords = BLOCKED_KEYWORDS.filter(kw => lowerPrompt.includes(kw));
@@ -79,7 +132,6 @@ serve(async (req) => {
   if (flaggedKeywords.length > 0) {
     moderationStatus = 'rewritten';
     severity = flaggedKeywords.length >= 3 ? 'high' : 'medium';
-    // Rewrite into process-learning prompt instead of blocking
     effectivePrompt = `The student asked: "${prompt}". Instead of giving them the direct answer, guide them through the thinking process step by step. Ask them guiding questions to help them discover the answer themselves. Focus on teaching the underlying concepts.`;
   }
 
@@ -107,7 +159,6 @@ IMPORTANT: You are in Process Teaching Mode.
     systemMessage += `\nProvide helpful, educational responses with clear explanations.`;
   }
 
-  // Subject-specific instructions
   const subjectInstructions: Record<string, string> = {
     math: '\nFor math: Show steps clearly, explain reasoning, use proper notation.',
     writing: '\nFor writing: Focus on structure, thesis development, original thought.',
@@ -125,10 +176,12 @@ IMPORTANT: You are in Process Teaching Mode.
   }
 
   let responseText = '';
+  let promptTokens = 0;
+  let completionTokens = 0;
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -164,22 +217,43 @@ IMPORTANT: You are in Process Teaching Mode.
 
     const aiData = await aiResponse.json();
     responseText = aiData?.choices?.[0]?.message?.content || '';
+    
+    // Extract token usage if available
+    if (aiData?.usage) {
+      promptTokens = aiData.usage.prompt_tokens || 0;
+      completionTokens = aiData.usage.completion_tokens || 0;
+    } else {
+      // Estimate tokens (~4 chars per token)
+      promptTokens = Math.ceil((systemMessage.length + effectivePrompt.length) / 4);
+      completionTokens = Math.ceil((responseText.length) / 4);
+    }
   } catch (err) {
     console.error('AI call failed:', err);
   }
 
-  // GUARANTEED non-empty reply
   if (!responseText || responseText.trim().length === 0) {
     responseText = FALLBACK_REPLY;
   }
 
-  // --- Log to prompt_logs (best-effort, don't fail the response) ---
+  // --- Log to prompt_logs + ai_usage_logs (best-effort) ---
   if (userId) {
     try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const adminClient = createClient(supabaseUrl, serviceKey);
+      const adminClient = getAdminClient();
+      const totalTokens = promptTokens + completionTokens;
+      const estimatedCost = (promptTokens / 1_000_000) * COST_PER_1M_INPUT + (completionTokens / 1_000_000) * COST_PER_1M_OUTPUT;
 
+      // Log usage
+      await adminClient.from('ai_usage_logs').insert({
+        user_id: userId,
+        session_id: sessionId || null,
+        prompt_tokens: promptTokens,
+        completion_tokens: completionTokens,
+        total_tokens: totalTokens,
+        estimated_cost_usd: estimatedCost,
+        model: 'google/gemini-3-flash-preview',
+      });
+
+      // Log prompt
       await adminClient.from('prompt_logs').insert({
         user_id: userId,
         original_prompt: prompt,
@@ -194,7 +268,7 @@ IMPORTANT: You are in Process Teaching Mode.
         ai_engine: 'google',
       });
     } catch (logErr) {
-      console.error('Prompt logging failed (non-fatal):', logErr);
+      console.error('Logging failed (non-fatal):', logErr);
     }
   }
 
