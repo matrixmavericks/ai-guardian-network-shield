@@ -27,6 +27,7 @@ import {
   getGradeColor,
   type GradingSystem,
 } from '@/services/gradingService';
+import ClassResourceManager from '@/components/ClassResourceManager';
 
 interface Student {
   student_id: string;
@@ -236,6 +237,23 @@ const ClassDetailPage = () => {
   };
 
 
+              {/* Class Resources */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5" />
+                    Class Resources
+                  </CardTitle>
+                  <CardDescription>Files, notes, and links shared by your teacher</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ClassResourceManager
+                    classId={classInfo.id}
+                    className={classInfo.name}
+                    isTeacher={false}
+                  />
+                </CardContent>
+              </Card>
 
   const sendMessage = async () => {
     if (!messageContent.trim() || !selectedStudent) return;
@@ -540,6 +558,9 @@ const ClassDetailPage = () => {
                 </TabsTrigger>
                 <TabsTrigger value="analytics">
                   <BarChart3 className="mr-2 h-4 w-4" /> Analytics
+                </TabsTrigger>
+                <TabsTrigger value="resources">
+                  <Upload className="mr-2 h-4 w-4" /> Resources
                 </TabsTrigger>
                 <TabsTrigger value="learning-paths">
                   <Book className="mr-2 h-4 w-4" /> Learning Paths
@@ -912,6 +933,15 @@ const ClassDetailPage = () => {
                     </CardContent>
                   </Card>
                 </div>
+              </TabsContent>
+
+              {/* ===== RESOURCES TAB ===== */}
+              <TabsContent value="resources">
+                <ClassResourceManager
+                  classId={classInfo.id}
+                  className={classInfo.name}
+                  isTeacher={true}
+                />
               </TabsContent>
 
               {/* ===== LEARNING PATHS TAB ===== */}

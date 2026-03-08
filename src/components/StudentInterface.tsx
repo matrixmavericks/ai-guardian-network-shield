@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import {
   Brain, Send, BookOpen, Calculator, PenTool, Languages, Loader,
   AlertTriangle, Beaker, Sparkles, User, Bot, Trash2, History,
+  FileText, X,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +14,7 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSearchParams } from "react-router-dom";
 
 interface ChatMessage {
   id: string;
@@ -47,9 +49,26 @@ const StudentInterface = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [resourceContext, setResourceContext] = useState<{ title: string; description: string; url?: string } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Pick up resource context from URL params (from "Use in AI" button)
+  useEffect(() => {
+    const resTitle = searchParams.get("resourceTitle");
+    const resDesc = searchParams.get("resourceDesc");
+    const resUrl = searchParams.get("resourceUrl");
+    if (resTitle) {
+      setResourceContext({ title: resTitle, description: resDesc || "", url: resUrl || undefined });
+      // Clean URL params
+      searchParams.delete("resourceTitle");
+      searchParams.delete("resourceDesc");
+      searchParams.delete("resourceUrl");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -159,6 +178,9 @@ const StudentInterface = () => {
           gradeLevel: "high-school",
           processTeaching: isProcessTeaching,
           sessionId,
+          resourceContext: resourceContext
+            ? `Title: ${resourceContext.title}\nDescription: ${resourceContext.description}${resourceContext.url ? `\nURL: ${resourceContext.url}` : ""}`
+            : null,
         },
       });
 
@@ -324,10 +346,22 @@ const StudentInterface = () => {
         {/* Input area */}
         <div className="border-t border-border px-6 py-4 bg-card shrink-0">
           <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+            {/* Resource context indicator */}
+            {resourceContext && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+                <FileText className="h-4 w-4 shrink-0 text-primary" />
+                <span className="flex-1 truncate">
+                  Referencing: <span className="font-medium">{resourceContext.title}</span>
+                </span>
+                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setResourceContext(null)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
             <div className="flex gap-2 items-end">
               <div className="flex-1">
                 <Textarea
-                  placeholder={`Ask about ${activeSubjectData.name.toLowerCase()}...`}
+                  placeholder={resourceContext ? `Ask about "${resourceContext.title}"...` : `Ask about ${activeSubjectData.name.toLowerCase()}...`}
                   value={prompt} onChange={e => setPrompt(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="min-h-[44px] max-h-[160px] resize-none" rows={1}

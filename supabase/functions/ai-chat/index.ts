@@ -94,6 +94,7 @@ serve(async (req) => {
   let gradeLevel: string;
   let processTeaching: boolean;
   let sessionId: string | null;
+  let resourceContext: string | null;
 
   try {
     const body = await req.json();
@@ -102,6 +103,7 @@ serve(async (req) => {
     gradeLevel = body.gradeLevel || 'high-school';
     processTeaching = body.processTeaching !== false;
     sessionId = body.sessionId || null;
+    resourceContext = body.resourceContext || null;
   } catch {
     return json({ success: false, reply: FALLBACK_REPLY, error: 'Invalid request body', meta: null }, 400);
   }
@@ -167,6 +169,11 @@ IMPORTANT: You are in Process Teaching Mode.
   };
   if (subjectInstructions[subject]) {
     systemMessage += subjectInstructions[subject];
+  }
+
+  // Add resource context if provided
+  if (resourceContext) {
+    systemMessage += `\n\nThe student is referencing the following class resource:\n${resourceContext}\nUse this context to provide more relevant and targeted assistance.`;
   }
 
   // --- Call AI with timeout ---
