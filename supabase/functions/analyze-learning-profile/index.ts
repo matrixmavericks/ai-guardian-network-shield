@@ -79,10 +79,18 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    async function ocrViaVision(blob: Blob, fileName: string): Promise<string> {
+    // OCR a single binary blob (image or full PDF) via Gemini Vision
+    async function ocrViaVision(blob: Blob, fileName: string, mimeOverride?: string): Promise<string> {
       const arrayBuf = await blob.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
-      const mimeType = blob.type || "application/octet-stream";
+      const bytes = new Uint8Array(arrayBuf);
+      // btoa can fail on large files; chunk it
+      let base64 = '';
+      const CHUNK = 8192;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        base64 += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+      }
+      base64 = btoa(base64);
+      const mimeType = mimeOverride || blob.type || "application/octet-stream";
 
       console.log(`Running OCR on ${fileName} (${(arrayBuf.byteLength / 1024).toFixed(0)} KB, ${mimeType})`);
 
@@ -100,7 +108,7 @@ serve(async (req) => {
               content: [
                 {
                   type: "text",
-                  text: "Extract ALL text from this document image. Include every heading, paragraph, grade, score, comment, subject name, date, and table content. Preserve the structure. Return ONLY the extracted text, no commentary.",
+                  text: "Extract ALL text from this document. Include every heading, paragraph, grade, score, comment, subject name, date, and table content. Preserve the structure. Return ONLY the extracted text, no commentary.",
                 },
                 {
                   type: "image_url",
@@ -127,7 +135,6 @@ serve(async (req) => {
     const documentContents: { fileName: string; type: string; description: string; content: string; extractedChars: number; status: string }[] = [];
 
     const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff", ".tif"];
-    const MIN_TEXT_CHARS = 100; // Below this, we consider the PDF "scanned" and fall back to OCR
 
     for (const doc of studentDocuments) {
       try {
@@ -148,35 +155,15 @@ serve(async (req) => {
             const isPdf = lowerName.endsWith('.pdf');
             const isImage = IMAGE_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
             let extractedText = '';
-            let method = 'text';
+            const method = 'ocr';
 
-            if (isImage) {
-              // Images → always OCR
-              method = 'ocr';
+            if (isPdf) {
+              // Send the entire PDF as application/pdf to Gemini — it handles multi-page natively
+              extractedText = await ocrViaVision(fileData, doc.file_name, "application/pdf");
+            } else if (isImage) {
               extractedText = await ocrViaVision(fileData, doc.file_name);
-            } else if (isPdf) {
-              // Try text extraction first
-              const bytes = new Uint8Array(await fileData.arrayBuffer());
-              const decoded = new TextDecoder('latin1').decode(bytes);
-              const printableChunks = decoded
-                .split(/[^\x20-\x7E\n\r\t]+/)
-                .map((chunk) => chunk.trim())
-                .filter((chunk) => /[a-zA-Z]{3,}/.test(chunk) && chunk.length > 4)
-                .slice(0, 500);
-              extractedText = printableChunks.join(' ').replace(/\s+/g, ' ');
-
-              // If very little text extracted, it's likely a scanned PDF → OCR
-              if (extractedText.length < MIN_TEXT_CHARS) {
-                console.log(`Only ${extractedText.length} chars from text extraction on ${doc.file_name}, falling back to OCR`);
-                method = 'ocr';
-                // Re-download since we consumed the blob
-                const { data: redownload } = await supabase.storage.from('student-documents').download(storagePath);
-                if (redownload) {
-                  extractedText = await ocrViaVision(redownload, doc.file_name);
-                }
-              }
             } else {
-              // Plain text files
+              // Plain text files — read directly, no OCR needed
               extractedText = await fileData.text();
             }
 
