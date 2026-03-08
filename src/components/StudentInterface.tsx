@@ -329,10 +329,22 @@ const StudentInterface = () => {
         {/* Input area */}
         <div className="border-t border-border px-6 py-4 bg-card shrink-0">
           <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+            {/* Resource context indicator */}
+            {resourceContext && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+                <FileText className="h-4 w-4 shrink-0 text-primary" />
+                <span className="flex-1 truncate">
+                  Referencing: <span className="font-medium">{resourceContext.title}</span>
+                </span>
+                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setResourceContext(null)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
             <div className="flex gap-2 items-end">
               <div className="flex-1">
                 <Textarea
-                  placeholder={`Ask about ${activeSubjectData.name.toLowerCase()}...`}
+                  placeholder={resourceContext ? `Ask about "${resourceContext.title}"...` : `Ask about ${activeSubjectData.name.toLowerCase()}...`}
                   value={prompt} onChange={e => setPrompt(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="min-h-[44px] max-h-[160px] resize-none" rows={1}
