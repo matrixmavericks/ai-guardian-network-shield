@@ -82,6 +82,20 @@ serve(async (req) => {
       };
     });
 
+    // Build assignment grades summary
+    const assignmentsSummary = (submissionsData || []).map((s: any) => {
+      const assignment = assignmentsData.find((a: any) => a.id === s.assignment_id);
+      return {
+        title: assignment?.title || 'Unknown',
+        subject: assignment?.subject || 'Unknown',
+        grade: s.grade,
+        maxGrade: s.max_grade,
+        percentage: s.grade !== null ? Math.round((s.grade / s.max_grade) * 100) : null,
+        feedback: s.feedback,
+        status: s.status,
+      };
+    });
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -89,8 +103,8 @@ serve(async (req) => {
 
 You MUST respond with a tool call using the "learning_profile" function. Analyze carefully:
 1. LEARNING STYLE: Determine from their questions whether they are visual, auditory, reading/writing, or kinesthetic learners. Look at how they phrase questions and what they struggle with.
-2. CONCEPTUAL GAPS: Identify fundamental misunderstandings or knowledge gaps from their questions and learning path progress.
-3. STRENGTH AREAS: What subjects/topics they excel at.
+2. CONCEPTUAL GAPS: Identify fundamental misunderstandings or knowledge gaps from their questions, learning path progress, AND assignment grades/feedback.
+3. STRENGTH AREAS: What subjects/topics they excel at (use assignment grades as key evidence).
 4. PREVENTIVE RECOMMENDATIONS: Predict future mistakes based on current patterns and suggest preemptive lessons.
 5. OPTIMIZED PLAN: Create a personalized micro-learning plan (5-7 focused activities) tailored to their learning style.
 
@@ -101,6 +115,9 @@ ${chatSummary || "No chat history available yet."}
 
 ## Learning Paths & Progress:
 ${JSON.stringify(pathsSummary, null, 2)}
+
+## Assignment Grades & Submissions:
+${JSON.stringify(assignmentsSummary, null, 2)}
 
 Analyze this student's learning profile comprehensively.`;
 
