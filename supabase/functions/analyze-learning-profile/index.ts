@@ -83,7 +83,8 @@ serve(async (req) => {
         // Extract the storage path from the file_url
         console.log(`Processing doc: ${doc.file_name}, file_url: ${doc.file_url}`);
         const urlParts = doc.file_url?.split('/student-documents/');
-        const storagePath = urlParts && urlParts.length > 1 ? urlParts[1] : null;
+        const rawStoragePath = urlParts && urlParts.length > 1 ? urlParts[1] : null;
+        const storagePath = rawStoragePath ? decodeURIComponent(rawStoragePath) : null;
         console.log(`Storage path resolved: ${storagePath}`);
         
         if (storagePath) {
@@ -93,16 +94,33 @@ serve(async (req) => {
             .download(storagePath);
           
           if (!fileError && fileData) {
-            const text = await fileData.text();
-            // Limit content to 6000 chars per document to stay within context limits
-            const trimmedContent = text.substring(0, 6000);
+            const isPdf = doc.file_name?.toLowerCase().endsWith('.pdf') || doc.document_type?.toLowerCase() === 'pdf';
+            let extractedText = '';
+
+            if (isPdf) {
+              // Lightweight PDF fallback: extract printable text chunks from bytes
+              const bytes = new Uint8Array(await fileData.arrayBuffer());
+              const decoded = new TextDecoder('latin1').decode(bytes);
+              const printableChunks = decoded
+                .split(/[^\x20-\x7E\n\r\t]+/)
+                .map((chunk) => chunk.trim())
+                .filter((chunk) => /[a-zA-Z]{3,}/.test(chunk) && chunk.length > 4)
+                .slice(0, 500);
+              extractedText = printableChunks.join(' ').replace(/\s+/g, ' ');
+            } else {
+              extractedText = await fileData.text();
+            }
+
+            const trimmedContent = extractedText.substring(0, 6000);
             documentContents.push({
               fileName: doc.file_name,
               type: doc.document_type,
               description: doc.description || '',
-              content: trimmedContent,
+              content: trimmedContent || '[No extractable text found in file]',
             });
+            console.log(`Extracted ${trimmedContent.length} chars from ${doc.file_name}`);
           } else {
+            console.error(`Download failed for ${doc.file_name}:`, fileError?.message);
             documentContents.push({
               fileName: doc.file_name,
               type: doc.document_type,
