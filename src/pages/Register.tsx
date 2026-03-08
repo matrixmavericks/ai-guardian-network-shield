@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Shield, ArrowLeft } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { lovable } from '@/integrations/lovable/index';
+import { Separator } from "@/components/ui/separator";
 
 const Register = () => {
   const [formData, setFormData] = useState({
