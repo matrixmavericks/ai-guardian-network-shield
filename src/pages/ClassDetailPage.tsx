@@ -236,25 +236,6 @@ const ClassDetailPage = () => {
     }
   };
 
-
-              {/* Class Resources */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="h-5 w-5" />
-                    Class Resources
-                  </CardTitle>
-                  <CardDescription>Files, notes, and links shared by your teacher</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ClassResourceManager
-                    classId={classInfo.id}
-                    className={classInfo.name}
-                    isTeacher={false}
-                  />
-                </CardContent>
-              </Card>
-
   const sendMessage = async () => {
     if (!messageContent.trim() || !selectedStudent) return;
     setSendingMessage(true);
