@@ -359,6 +359,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          grading_system_id: string | null
           id: string
           join_code: string
           name: string
@@ -369,6 +370,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          grading_system_id?: string | null
           id?: string
           join_code?: string
           name: string
@@ -379,6 +381,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          grading_system_id?: string | null
           id?: string
           join_code?: string
           name?: string
@@ -386,7 +389,15 @@ export type Database = {
           teacher_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "classes_grading_system_id_fkey"
+            columns: ["grading_system_id"]
+            isOneToOne: false
+            referencedRelation: "grading_systems"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       curriculum_links: {
         Row: {
@@ -442,6 +453,36 @@ export type Database = {
           earned_at?: string | null
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      grading_systems: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          id: string
+          is_default: boolean
+          name: string
+          scale_config: Json
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          scale_config?: Json
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          scale_config?: Json
         }
         Relationships: []
       }

@@ -1,289 +1,369 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Book, 
-  BarChart3, 
-  Calendar, 
-  FileText
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Book, BarChart3, Calendar, FileText, GraduationCap } from "lucide-react";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { format } from "date-fns";
-import { 
-  getGradesByStudent, 
-  getAssignmentById, 
-  Assignment,
-  Grade, 
-  getCurrentUser
-} from "@/services/localStorageService";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend
+  fetchGradingSystems,
+  convertPercentageToGrade,
+  calculateGPA,
+  getGradeColor,
+  getGradeBoundaries,
+  type GradingSystem,
+} from "@/services/gradingService";
+import {
+  ResponsiveContainer, LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell,
 } from "recharts";
 
+interface SubmissionGrade {
+  id: string;
+  grade: number;
+  max_grade: number;
+  feedback: string | null;
+  graded_at: string;
+  assignment_title: string;
+  subject: string;
+}
+
+const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"];
+
 const GradesPage = () => {
-  const [grades, setGrades] = useState<(Grade & { assignment: Assignment })[]>([]);
+  const { user } = useAuth();
+  const [grades, setGrades] = useState<SubmissionGrade[]>([]);
+  const [gradingSystems, setGradingSystems] = useState<GradingSystem[]>([]);
+  const [selectedSystem, setSelectedSystem] = useState<GradingSystem | null>(null);
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
-  const currentUser = getCurrentUser();
-  const subjects = [...new Set(grades.map(g => g.assignment.subject))];
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentUser) {
-      loadGrades();
-    }
-  }, [currentUser]);
+    if (!user) return;
+    loadData();
+  }, [user]);
 
-  const loadGrades = () => {
-    if (!currentUser) return;
-
-    const studentGrades = getGradesByStudent(currentUser.id);
-    
-    // Enrich grades with assignment data
-    const enrichedGrades = studentGrades.map(grade => {
-      const assignment = getAssignmentById(grade.assignmentId);
-      return {
-        ...grade,
-        assignment: assignment!
-      };
-    });
-
-    setGrades(enrichedGrades);
-  };
-
-  const formatDate = (dateString: string) => {
+  const loadData = async () => {
+    setLoading(true);
     try {
-      return format(new Date(dateString), "MMM d, yyyy");
-    } catch (error) {
-      return "Invalid date";
+      const [systems, submissionsRes] = await Promise.all([
+        fetchGradingSystems(),
+        supabase
+          .from("assignment_submissions")
+          .select("id, grade, max_grade, feedback, graded_at, assignment_id, status")
+          .eq("student_id", user!.id)
+          .eq("status", "graded")
+          .not("grade", "is", null)
+          .order("graded_at", { ascending: false }),
+      ]);
+
+      setGradingSystems(systems);
+      setSelectedSystem(systems.find(s => s.is_default) || systems[0] || null);
+
+      const subs = submissionsRes.data || [];
+      if (subs.length > 0) {
+        const assignmentIds = [...new Set(subs.map((s: any) => s.assignment_id))];
+        const { data: assignments } = await supabase
+          .from("class_assignments")
+          .select("id, title, subject")
+          .in("id", assignmentIds);
+        const aMap = Object.fromEntries((assignments || []).map((a: any) => [a.id, a]));
+
+        setGrades(
+          subs.map((s: any) => ({
+            id: s.id,
+            grade: s.grade,
+            max_grade: s.max_grade,
+            feedback: s.feedback,
+            graded_at: s.graded_at,
+            assignment_title: aMap[s.assignment_id]?.title || "Unknown",
+            subject: aMap[s.assignment_id]?.subject || "General",
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to load grades:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getGradeColor = (percentage: number) => {
-    if (percentage >= 90) return "text-green-600";
-    if (percentage >= 80) return "text-blue-600";
-    if (percentage >= 70) return "text-yellow-600";
-    if (percentage >= 60) return "text-orange-600";
-    return "text-red-600";
-  };
+  const subjects = useMemo(() => [...new Set(grades.map(g => g.subject))], [grades]);
+  const filteredGrades = subjectFilter ? grades.filter(g => g.subject === subjectFilter) : grades;
 
-  const getGradeLabel = (percentage: number) => {
-    if (percentage >= 90) return "A";
-    if (percentage >= 80) return "B";
-    if (percentage >= 70) return "C";
-    if (percentage >= 60) return "D";
-    return "F";
-  };
+  const percentages = useMemo(() => grades.map(g => (g.grade / g.max_grade) * 100), [grades]);
+  const overallAvg = percentages.length > 0 ? percentages.reduce((a, b) => a + b, 0) / percentages.length : 0;
 
-  const filteredGrades = subjectFilter
-    ? grades.filter(g => g.assignment.subject === subjectFilter)
-    : grades;
+  const subjectAverages = useMemo(() =>
+    subjects.map(subject => {
+      const sg = grades.filter(g => g.subject === subject);
+      const avg = sg.reduce((sum, g) => sum + (g.grade / g.max_grade) * 100, 0) / sg.length;
+      return { subject, average: Math.round(avg * 100) / 100 };
+    }).sort((a, b) => b.average - a.average),
+    [grades, subjects]
+  );
 
-  // Calculate overall average
-  const overallAverage = grades.length > 0
-    ? grades.reduce((sum, g) => sum + (g.score / g.assignment.points) * 100, 0) / grades.length
-    : 0;
+  const gradesToChart = useMemo(() =>
+    [...grades]
+      .sort((a, b) => new Date(a.graded_at).getTime() - new Date(b.graded_at).getTime())
+      .map(g => ({
+        date: format(new Date(g.graded_at), "MM/dd"),
+        name: g.assignment_title,
+        score: Math.round((g.grade / g.max_grade) * 100),
+      })),
+    [grades]
+  );
 
-  // Calculate subject averages for chart
-  const subjectAverages = subjects.map(subject => {
-    const subjectGrades = grades.filter(g => g.assignment.subject === subject);
-    const average = subjectGrades.length > 0
-      ? subjectGrades.reduce((sum, g) => sum + (g.score / g.assignment.points) * 100, 0) / subjectGrades.length
-      : 0;
-    
-    return {
-      subject,
-      average: Math.round(average * 100) / 100
-    };
-  });
+  // Grade distribution
+  const gradeDistribution = useMemo(() => {
+    if (!selectedSystem) return [];
+    const boundaries = getGradeBoundaries(selectedSystem);
+    return boundaries.map((b, i) => {
+      const upper = i === 0 ? 101 : boundaries[i - 1].min;
+      const count = percentages.filter(p => p >= b.min && p < upper).length;
+      return { label: b.label, count };
+    }).filter(d => d.count > 0);
+  }, [percentages, selectedSystem]);
 
-  // Prepare data for timeline chart
-  const gradesToChart = [...grades]
-    .sort((a, b) => new Date(a.gradedAt).getTime() - new Date(b.gradedAt).getTime())
-    .map(g => ({
-      date: format(new Date(g.gradedAt), "MM/dd"),
-      name: g.assignment.title,
-      score: Math.round((g.score / g.assignment.points) * 100)
-    }));
+  const gpa = selectedSystem ? calculateGPA(percentages, selectedSystem) : null;
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background">
+        <DashboardSidebar />
+        <div className="flex-1 flex items-center justify-center text-muted-foreground">Loading grades...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-background">
       <DashboardSidebar />
       <div className="flex-1 overflow-y-auto p-8">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6">Grades & Progress</h1>
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-2xl font-bold">Grades & Progress</h1>
+            {gradingSystems.length > 0 && (
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                <Select
+                  value={selectedSystem?.id || ""}
+                  onValueChange={(val) => setSelectedSystem(gradingSystems.find(s => s.id === val) || null)}
+                >
+                  <SelectTrigger className="w-52">
+                    <SelectValue placeholder="Grading System" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gradingSystems.map(sys => (
+                      <SelectItem key={sys.id} value={sys.id}>{sys.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Summary cards */}
+          <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Overall Grade</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <div className="text-3xl font-bold">
-                    <span className={getGradeColor(overallAverage)}>
-                      {Math.round(overallAverage)}%
-                    </span>
-                  </div>
-                  <div className="text-2xl font-bold bg-slate-100 px-3 py-1 rounded">
-                    <span className={getGradeColor(overallAverage)}>
-                      {getGradeLabel(overallAverage)}
-                    </span>
-                  </div>
+                  <span className={`text-3xl font-bold ${getGradeColor(overallAvg)}`}>
+                    {Math.round(overallAvg)}%
+                  </span>
+                  {selectedSystem && (
+                    <Badge variant="outline" className="text-lg">
+                      {convertPercentageToGrade(overallAvg, selectedSystem)}
+                    </Badge>
+                  )}
                 </div>
-                <Progress value={overallAverage} className="mt-2" />
+                <Progress value={overallAvg} className="mt-2" />
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Assignments Completed</CardTitle>
+                <CardTitle className="text-sm font-medium">Assignments Graded</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">
-                  {grades.length}
-                </div>
-                <p className="text-sm text-slate-500 mt-1">
-                  {subjects.length} subjects
-                </p>
+                <div className="text-3xl font-bold">{grades.length}</div>
+                <p className="mt-1 text-sm text-muted-foreground">{subjects.length} subjects</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Best Performing Subject</CardTitle>
+                <CardTitle className="text-sm font-medium">Best Subject</CardTitle>
               </CardHeader>
               <CardContent>
-                {subjects.length > 0 ? (
+                {subjectAverages.length > 0 ? (
                   <>
-                    <div className="text-2xl font-bold">
-                      {subjectAverages.sort((a, b) => b.average - a.average)[0]?.subject}
-                    </div>
-                    <p className="text-sm text-green-600 mt-1">
-                      {Math.round(subjectAverages.sort((a, b) => b.average - a.average)[0]?.average)}% average score
+                    <div className="text-xl font-bold">{subjectAverages[0].subject}</div>
+                    <p className="mt-1 text-sm text-emerald-600">
+                      {selectedSystem
+                        ? convertPercentageToGrade(subjectAverages[0].average, selectedSystem)
+                        : `${Math.round(subjectAverages[0].average)}%`}
+                      {" "}({Math.round(subjectAverages[0].average)}%)
                     </p>
                   </>
                 ) : (
-                  <p className="text-slate-500">No data available</p>
+                  <p className="text-muted-foreground">No data</p>
                 )}
               </CardContent>
             </Card>
+
+            {gpa !== null ? (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">GPA</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{gpa.toFixed(2)}</div>
+                  <p className="mt-1 text-sm text-muted-foreground">/ 4.0 scale</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {selectedSystem?.code === "ib" ? "IB Grade" : "Final Grade"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedSystem ? (
+                    <>
+                      <div className="text-3xl font-bold">
+                        {convertPercentageToGrade(overallAvg, selectedSystem)}
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {selectedSystem.code === "ib" ? "/ 7" : selectedSystem.name}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Select a system</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <Card>
+          {/* Charts row */}
+          <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>Grade Timeline</CardTitle>
-                <CardDescription>Your performance over time</CardDescription>
+                <CardDescription>Performance trend over time</CardDescription>
               </CardHeader>
               <CardContent>
                 {gradesToChart.length > 0 ? (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={gradesToChart}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
+                      <LineChart data={gradesToChart}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" />
                         <YAxis domain={[0, 100]} />
                         <Tooltip />
                         <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="score"
-                          stroke="#4F46E5"
-                          activeDot={{ r: 8 }}
-                          name="Grade %"
-                        />
+                        <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" activeDot={{ r: 6 }} name="Grade %" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-                    <BarChart3 className="h-12 w-12 mb-2 text-slate-300" />
-                    <p>No grades data available yet</p>
+                  <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
+                    <BarChart3 className="mb-2 h-12 w-12 opacity-30" />
+                    <p>No grades yet</p>
                   </div>
                 )}
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
-                <CardTitle>Subject Performance</CardTitle>
-                <CardDescription>Average grade by subject</CardDescription>
+                <CardTitle>Grade Distribution</CardTitle>
+                <CardDescription>{selectedSystem?.name}</CardDescription>
               </CardHeader>
               <CardContent>
-                {subjectAverages.length > 0 ? (
+                {gradeDistribution.length > 0 ? (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={subjectAverages}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="subject" />
-                        <YAxis domain={[0, 100]} />
+                      <PieChart>
+                        <Pie data={gradeDistribution} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={80} label={({ label, count }) => `${label} (${count})`}>
+                          {gradeDistribution.map((_, i) => (
+                            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                          ))}
+                        </Pie>
                         <Tooltip />
-                        <Legend />
-                        <Bar dataKey="average" fill="#4F46E5" name="Average %" />
-                      </BarChart>
+                      </PieChart>
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-                    <Book className="h-12 w-12 mb-2 text-slate-300" />
-                    <p>No subject data available yet</p>
+                  <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
+                    <BarChart3 className="mb-2 h-12 w-12 opacity-30" />
+                    <p>No data</p>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
 
+          {/* Subject performance */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Subject Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {subjectAverages.length > 0 ? (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={subjectAverages}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="subject" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip formatter={(val: number) =>
+                        selectedSystem
+                          ? [`${val}% (${convertPercentageToGrade(val, selectedSystem)})`, "Average"]
+                          : [`${val}%`, "Average"]
+                      } />
+                      <Bar dataKey="average" fill="hsl(var(--primary))" name="Average %" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
+                  <Book className="mb-2 h-12 w-12 opacity-30" />
+                  <p>No subject data</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Detailed grades table */}
           <Card>
             <CardHeader>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <CardTitle>Grades</CardTitle>
-                  <CardDescription>
-                    View your grades and assignment feedback
-                  </CardDescription>
+                  <CardTitle>All Grades</CardTitle>
+                  <CardDescription>Detailed view of all graded assignments</CardDescription>
                 </div>
                 {subjects.length > 0 && (
-                  <Select onValueChange={(value) => setSubjectFilter(value || null)}>
+                  <Select onValueChange={(value) => setSubjectFilter(value === "all" ? null : value)}>
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="All Subjects" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all_subjects">All Subjects</SelectItem>
+                      <SelectItem value="all">All Subjects</SelectItem>
                       {subjects.map(subject => (
                         <SelectItem key={subject} value={subject}>{subject}</SelectItem>
                       ))}
@@ -293,133 +373,51 @@ const GradesPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="byDate">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="byDate">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    By Date
-                  </TabsTrigger>
-                  <TabsTrigger value="bySubject">
-                    <Book className="h-4 w-4 mr-2" />
-                    By Subject
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="byDate">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Assignment</TableHead>
-                          <TableHead>Subject</TableHead>
-                          <TableHead>Grade</TableHead>
-                          <TableHead>Feedback</TableHead>
-                          <TableHead>Date Graded</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredGrades.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                              No grades found
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredGrades
-                            .sort((a, b) => new Date(b.gradedAt).getTime() - new Date(a.gradedAt).getTime())
-                            .map((grade) => (
-                              <TableRow key={grade.id}>
-                                <TableCell className="font-medium">
-                                  {grade.assignment.title}
-                                </TableCell>
-                                <TableCell>
-                                  <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                                    {grade.assignment.subject}
-                                  </span>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold">
-                                      {grade.score}/{grade.assignment.points}
-                                    </span>
-                                    <span className={`${getGradeColor((grade.score / grade.assignment.points) * 100)}`}>
-                                      ({Math.round((grade.score / grade.assignment.points) * 100)}%)
-                                    </span>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="max-w-xs truncate">
-                                  {grade.feedback || "No feedback provided"}
-                                </TableCell>
-                                <TableCell>{formatDate(grade.gradedAt)}</TableCell>
-                              </TableRow>
-                            ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="bySubject">
-                  {subjects.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
-                      <FileText className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-                      <p>No grades available yet</p>
-                    </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Assignment</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Raw Score</TableHead>
+                    <TableHead>Grade</TableHead>
+                    <TableHead className="hidden md:table-cell">Feedback</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredGrades.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                        No graded assignments yet
+                      </TableCell>
+                    </TableRow>
                   ) : (
-                    subjects
-                      .filter(subject => !subjectFilter || subject === subjectFilter)
-                      .map(subject => {
-                        const subjectGrades = grades.filter(g => g.assignment.subject === subject);
-                        const subjectAverage = subjectGrades.reduce((sum, g) => sum + (g.score / g.assignment.points) * 100, 0) / subjectGrades.length;
-                        
-                        return (
-                          <Card key={subject} className="mb-6 border-t-0 rounded-tl-none rounded-tr-none">
-                            <CardHeader>
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-lg">{subject}</CardTitle>
-                                <div className="text-xl font-bold">
-                                  <span className={getGradeColor(subjectAverage)}>
-                                    {Math.round(subjectAverage)}%
-                                  </span>
-                                  <span className="ml-2 text-sm bg-slate-100 px-2 py-1 rounded">
-                                    {getGradeLabel(subjectAverage)}
-                                  </span>
-                                </div>
-                              </div>
-                              <Progress value={subjectAverage} className="mt-2" />
-                            </CardHeader>
-                            <CardContent>
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Assignment</TableHead>
-                                    <TableHead>Grade</TableHead>
-                                    <TableHead>Date</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {subjectGrades.map(grade => (
-                                    <TableRow key={grade.id}>
-                                      <TableCell className="font-medium">
-                                        {grade.assignment.title}
-                                      </TableCell>
-                                      <TableCell>
-                                        <span className={`font-bold ${getGradeColor((grade.score / grade.assignment.points) * 100)}`}>
-                                          {grade.score}/{grade.assignment.points} ({Math.round((grade.score / grade.assignment.points) * 100)}%)
-                                        </span>
-                                      </TableCell>
-                                      <TableCell>{formatDate(grade.gradedAt)}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </CardContent>
-                          </Card>
-                        );
-                      })
+                    filteredGrades.map(g => {
+                      const pct = (g.grade / g.max_grade) * 100;
+                      return (
+                        <TableRow key={g.id}>
+                          <TableCell className="font-medium">{g.assignment_title}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{g.subject}</Badge>
+                          </TableCell>
+                          <TableCell>{g.grade}/{g.max_grade}</TableCell>
+                          <TableCell>
+                            <span className={`font-bold ${getGradeColor(pct)}`}>
+                              {selectedSystem ? convertPercentageToGrade(pct, selectedSystem) : `${Math.round(pct)}%`}
+                            </span>
+                          </TableCell>
+                          <TableCell className="hidden max-w-[200px] truncate text-sm text-muted-foreground md:table-cell">
+                            {g.feedback || "—"}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {g.graded_at ? format(new Date(g.graded_at), "MMM d, yyyy") : "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
-                </TabsContent>
-              </Tabs>
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </div>

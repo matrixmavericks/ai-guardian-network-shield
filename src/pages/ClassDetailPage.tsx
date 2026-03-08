@@ -16,11 +16,17 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Copy, Users, Brain, MessageSquare, Book, Send, UserCircle, Shield,
   Plus, FileText, Calendar, Sparkles, RefreshCw, Trash2, CheckCircle2, ClipboardList,
-  BarChart3, Upload, Clock, AlertTriangle
+  BarChart3, Upload, Clock, AlertTriangle, GraduationCap, Settings,
 } from 'lucide-react';
 import TeacherGradingView from '@/components/TeacherGradingView';
 import { Progress } from '@/components/ui/progress';
 import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
+import {
+  fetchGradingSystems,
+  convertPercentageToGrade,
+  getGradeColor,
+  type GradingSystem,
+} from '@/services/gradingService';
 
 interface Student {
   student_id: string;
@@ -84,11 +90,17 @@ const ClassDetailPage = () => {
   const [submitFile, setSubmitFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [studentSubmissions, setStudentSubmissions] = useState<any[]>([]);
+  const [gradingSystems, setGradingSystems] = useState<GradingSystem[]>([]);
+  const [classGradingSystem, setClassGradingSystem] = useState<GradingSystem | null>(null);
+  const [savingGradingSystem, setSavingGradingSystem] = useState(false);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
   useEffect(() => {
     fetchClassData();
+    fetchGradingSystems().then(systems => {
+      setGradingSystems(systems);
+    }).catch(console.error);
   }, [id, user]);
 
   useEffect(() => {
@@ -130,6 +142,23 @@ const ClassDetailPage = () => {
       if (clsErr) throw clsErr;
       if (!cls) { navigate('/classes'); return; }
       setClassInfo(cls);
+
+      // Load grading system for this class
+      if (cls.grading_system_id) {
+        const { data: gs } = await supabase
+          .from('grading_systems')
+          .select('*')
+          .eq('id', cls.grading_system_id)
+          .maybeSingle();
+        if (gs) setClassGradingSystem(gs as unknown as GradingSystem);
+      } else {
+        const { data: defaultGs } = await supabase
+          .from('grading_systems')
+          .select('*')
+          .eq('is_default', true)
+          .maybeSingle();
+        if (defaultGs) setClassGradingSystem(defaultGs as unknown as GradingSystem);
+      }
 
       if (isTeacher) {
         // Fetch members, paths, and assignments in parallel
@@ -515,6 +544,9 @@ const ClassDetailPage = () => {
                 <TabsTrigger value="learning-paths">
                   <Book className="mr-2 h-4 w-4" /> Learning Paths
                 </TabsTrigger>
+                <TabsTrigger value="settings">
+                  <Settings className="mr-2 h-4 w-4" /> Settings
+                </TabsTrigger>
               </TabsList>
 
               {/* ===== STUDENTS TAB ===== */}
@@ -826,19 +858,19 @@ const ClassDetailPage = () => {
                                   </p>
                                 </div>
                                 {a.avgGrade !== null && (
-                                  <div className={`text-xl font-bold ${
-                                    a.avgGrade >= 90 ? 'text-green-600' : a.avgGrade >= 70 ? 'text-yellow-600' : 'text-destructive'
-                                  }`}>
-                                    {a.avgGrade}%
+                                  <div className={`text-xl font-bold ${getGradeColor(a.avgGrade)}`}>
+                                    {classGradingSystem
+                                      ? convertPercentageToGrade(a.avgGrade, classGradingSystem)
+                                      : `${a.avgGrade}%`}
                                   </div>
                                 )}
                               </div>
                               {a.avgGrade !== null && (
                                 <div>
                                   <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                    <span>Low: {a.lowestGrade}%</span>
-                                    <span>Avg: {a.avgGrade}%</span>
-                                    <span>High: {a.highestGrade}%</span>
+                                    <span>Low: {classGradingSystem ? convertPercentageToGrade(a.lowestGrade, classGradingSystem) : `${a.lowestGrade}%`}</span>
+                                    <span>Avg: {classGradingSystem ? convertPercentageToGrade(a.avgGrade, classGradingSystem) : `${a.avgGrade}%`}</span>
+                                    <span>High: {classGradingSystem ? convertPercentageToGrade(a.highestGrade, classGradingSystem) : `${a.highestGrade}%`}</span>
                                   </div>
                                   <Progress value={a.avgGrade} />
                                 </div>
@@ -969,6 +1001,73 @@ const ClassDetailPage = () => {
                   </Card>
                 </div>
               </TabsContent>
+
+              {/* ===== SETTINGS TAB ===== */}
+              <TabsContent value="settings">
+                <div className="max-w-2xl space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5" />
+                        Grading System
+                      </CardTitle>
+                      <CardDescription>
+                        Choose how grades are displayed for this class. Students will see their grades converted to this scale.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Select
+                        value={classGradingSystem?.id || ""}
+                        onValueChange={async (val) => {
+                          const system = gradingSystems.find(s => s.id === val);
+                          if (!system || !classInfo) return;
+                          setSavingGradingSystem(true);
+                          try {
+                            const { error } = await supabase
+                              .from('classes')
+                              .update({ grading_system_id: val } as any)
+                              .eq('id', classInfo.id);
+                            if (error) throw error;
+                            setClassGradingSystem(system);
+                            toast.success(`Grading system set to ${system.name}`);
+                          } catch (err) {
+                            toast.error('Failed to update grading system');
+                          } finally {
+                            setSavingGradingSystem(false);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full" disabled={savingGradingSystem}>
+                          <SelectValue placeholder="Select grading system" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gradingSystems.map(sys => (
+                            <SelectItem key={sys.id} value={sys.id}>
+                              <div className="flex flex-col">
+                                <span>{sys.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {classGradingSystem && (
+                        <div className="rounded-lg border p-4">
+                          <p className="text-sm font-medium">{classGradingSystem.name}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{classGradingSystem.description}</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {classGradingSystem.scale_config?.boundaries?.slice(0, 8).map((b: any, i: number) => (
+                              <Badge key={i} variant="outline" className="text-xs">
+                                {b.label || b.grade}: ≥{b.min ?? b.min_pct}%
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
             </Tabs>
           ) : (
             /* ===== STUDENT VIEW ===== */
@@ -1020,9 +1119,12 @@ const ClassDetailPage = () => {
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-medium">{a.title}</h4>
                                   {isGraded && (
-                                    <Badge variant="default" className="bg-green-600">
+                                    <Badge variant="default" className="bg-emerald-600">
                                       <CheckCircle2 className="mr-1 h-3 w-3" />
-                                      {sub.grade}/{sub.max_grade} ({Math.round((sub.grade / sub.max_grade) * 100)}%)
+                                      {classGradingSystem
+                                        ? convertPercentageToGrade((sub.grade / sub.max_grade) * 100, classGradingSystem)
+                                        : `${sub.grade}/${sub.max_grade}`}
+                                      {' '}({Math.round((sub.grade / sub.max_grade) * 100)}%)
                                     </Badge>
                                   )}
                                   {isSubmitted && !isGraded && (
