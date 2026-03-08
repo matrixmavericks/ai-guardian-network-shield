@@ -97,14 +97,16 @@ const LearningPathInsights = ({ pathId, pathTitle, pathSubject, pathDifficulty, 
             <Sparkles className="h-8 w-8 text-primary" />
           </div>
           <div className="text-center">
-            <h3 className="text-lg font-semibold">Personalized Insights</h3>
+            <h3 className="text-lg font-semibold">{label}</h3>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Get AI-powered recommendations based on your past performance to help you succeed in this learning path.
+              {isTeacherView
+                ? `Get AI-powered analysis of ${studentName || "this student"}'s readiness for this learning path based on their past performance.`
+                : "Get AI-powered recommendations based on your past performance to help you succeed in this learning path."}
             </p>
           </div>
           <Button onClick={loadInsights} className="gap-2">
             <Sparkles className="h-4 w-4" />
-            Generate My Insights
+            {buttonLabel}
           </Button>
         </CardContent>
       </Card>
