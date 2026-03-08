@@ -288,7 +288,53 @@ const LearningPathDetail = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="content">
+            {isTeacher && assignedStudents.length > 0 && (
+              <TabsContent value="student-insights">
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Users className="h-5 w-5 text-primary" />
+                        View Student Insights
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="mb-4 text-sm text-muted-foreground">
+                        Select a student to view AI-generated insights about where they might struggle in this learning path.
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+                        {assignedStudents.map((student) => (
+                          <Button
+                            key={student.id}
+                            variant={selectedStudentId === student.id ? "default" : "outline"}
+                            className="justify-start"
+                            onClick={() => setSelectedStudentId(student.id)}
+                          >
+                            <Users className="mr-2 h-4 w-4" />
+                            {student.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {selectedStudentId && (
+                    <LearningPathInsights
+                      key={selectedStudentId}
+                      pathId={learningPath.id}
+                      pathTitle={learningPath.title}
+                      pathSubject={learningPath.subject}
+                      pathDifficulty={learningPath.difficulty}
+                      modules={learningPath.modules.map(m => ({ id: m.id, title: m.title, description: m.description }))}
+                      studentId={selectedStudentId}
+                      studentName={assignedStudents.find(s => s.id === selectedStudentId)?.name}
+                    />
+                  )}
+                </div>
+              </TabsContent>
+            )}
+
+
               {selectedModule && (
                 <div className="space-y-6">
                   <Card>
