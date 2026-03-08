@@ -182,10 +182,11 @@ serve(async (req) => {
       };
     });
 
-    const documentsSummary = studentDocuments.map((d: any) => ({
-      fileName: d.file_name,
-      type: d.document_type,
+    const documentsSummary = documentContents.map((d) => ({
+      fileName: d.fileName,
+      type: d.type,
       description: d.description,
+      content: d.content,
     }));
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
