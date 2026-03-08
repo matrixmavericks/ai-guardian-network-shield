@@ -70,6 +70,8 @@ const ClassDetailPage = () => {
   const [genPathDifficulty, setGenPathDifficulty] = useState('beginner');
   const [genPathGrade, setGenPathGrade] = useState('High School');
   const [generatingPath, setGeneratingPath] = useState(false);
+  // Grading
+  const [gradingAssignment, setGradingAssignment] = useState<ClassAssignment | null>(null);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
