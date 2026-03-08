@@ -15,9 +15,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Copy, Users, Brain, MessageSquare, Book, Send, UserCircle, Shield,
-  Plus, FileText, Calendar, Sparkles, RefreshCw, Trash2, CheckCircle2, ClipboardList
+  Plus, FileText, Calendar, Sparkles, RefreshCw, Trash2, CheckCircle2, ClipboardList,
+  BarChart3, Upload, Clock, AlertTriangle
 } from 'lucide-react';
 import TeacherGradingView from '@/components/TeacherGradingView';
+import { Progress } from '@/components/ui/progress';
 
 interface Student {
   student_id: string;
@@ -72,6 +74,15 @@ const ClassDetailPage = () => {
   const [generatingPath, setGeneratingPath] = useState(false);
   // Grading
   const [gradingAssignment, setGradingAssignment] = useState<ClassAssignment | null>(null);
+  // Analytics
+  const [analyticsData, setAnalyticsData] = useState<any[]>([]);
+  // Student submission
+  const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
+  const [selectedSubmitAssignment, setSelectedSubmitAssignment] = useState<ClassAssignment | null>(null);
+  const [submitText, setSubmitText] = useState('');
+  const [submitFile, setSubmitFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [studentSubmissions, setStudentSubmissions] = useState<any[]>([]);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
@@ -116,13 +127,48 @@ const ClassDetailPage = () => {
         );
         setStudents(enriched);
       } else {
-        // Student: fetch assignments for this class
-        const { data: assignmentsData } = await supabase
+        // Student: fetch assignments and own submissions for this class
+        const [assignmentsRes, submissionsRes] = await Promise.all([
+          supabase.from('class_assignments').select('*').eq('class_id', id).order('created_at', { ascending: false }),
+          supabase.from('assignment_submissions').select('*').eq('student_id', user.id),
+        ]);
+        setAssignments((assignmentsRes.data as ClassAssignment[]) || []);
+        setStudentSubmissions(submissionsRes.data || []);
+      }
+
+      // For teachers: fetch analytics (all submissions for this class's assignments)
+      if (isTeacher) {
+        const { data: classAssignments } = await supabase
           .from('class_assignments')
-          .select('*')
-          .eq('class_id', id)
-          .order('created_at', { ascending: false });
-        setAssignments((assignmentsData as ClassAssignment[]) || []);
+          .select('id, title, subject')
+          .eq('class_id', id);
+        
+        if (classAssignments?.length) {
+          const assignmentIds = classAssignments.map(a => a.id);
+          const { data: allSubs } = await supabase
+            .from('assignment_submissions')
+            .select('*')
+            .in('assignment_id', assignmentIds);
+          
+          const analytics = classAssignments.map(a => {
+            const subs = (allSubs || []).filter((s: any) => s.assignment_id === a.id);
+            const graded = subs.filter((s: any) => s.grade !== null);
+            const avgGrade = graded.length > 0
+              ? Math.round(graded.reduce((sum: number, s: any) => sum + (s.grade / s.max_grade) * 100, 0) / graded.length)
+              : null;
+            return {
+              id: a.id,
+              title: a.title,
+              subject: a.subject,
+              totalSubmissions: subs.length,
+              gradedCount: graded.length,
+              avgGrade,
+              highestGrade: graded.length > 0 ? Math.max(...graded.map((s: any) => Math.round((s.grade / s.max_grade) * 100))) : null,
+              lowestGrade: graded.length > 0 ? Math.min(...graded.map((s: any) => Math.round((s.grade / s.max_grade) * 100))) : null,
+            };
+          });
+          setAnalyticsData(analytics);
+        }
       }
     } catch (err: any) {
       console.error(err);
@@ -309,6 +355,82 @@ const ClassDetailPage = () => {
     }
   };
 
+  const handleStudentSubmit = async () => {
+    if (!selectedSubmitAssignment || !user) return;
+    if (!submitText.trim() && !submitFile) {
+      toast.error('Please provide an answer or upload a file');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      let fileUrl: string | null = null;
+      let fileName: string | null = null;
+
+      if (submitFile) {
+        const filePath = `${user.id}/${selectedSubmitAssignment.id}/${submitFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('submission-files')
+          .upload(filePath, submitFile, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage
+          .from('submission-files')
+          .getPublicUrl(filePath);
+        fileUrl = urlData.publicUrl;
+        fileName = submitFile.name;
+      }
+
+      const existing = studentSubmissions.find((s: any) => s.assignment_id === selectedSubmitAssignment.id);
+      if (existing) {
+        const { error } = await supabase
+          .from('assignment_submissions')
+          .update({
+            content: submitText.trim(),
+            file_url: fileUrl || existing.file_url,
+            file_name: fileName || existing.file_name,
+            submitted_at: new Date().toISOString(),
+            status: 'resubmitted',
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('assignment_submissions')
+          .insert({
+            assignment_id: selectedSubmitAssignment.id,
+            student_id: user.id,
+            content: submitText.trim(),
+            file_url: fileUrl,
+            file_name: fileName,
+            status: 'submitted',
+          });
+        if (error) throw error;
+      }
+
+      toast.success('Assignment submitted!');
+      setSubmitDialogOpen(false);
+      setSubmitText('');
+      setSubmitFile(null);
+      setSelectedSubmitAssignment(null);
+      fetchClassData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Failed to submit');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openStudentSubmitDialog = (assignment: ClassAssignment) => {
+    const existing = studentSubmissions.find((s: any) => s.assignment_id === assignment.id);
+    setSelectedSubmitAssignment(assignment);
+    setSubmitText(existing?.content || '');
+    setSubmitFile(null);
+    setSubmitDialogOpen(true);
+  };
+
+  const getStudentSubmission = (assignmentId: string) =>
+    studentSubmissions.find((s: any) => s.assignment_id === assignmentId);
+
   const copyCode = () => {
     if (classInfo) {
       navigator.clipboard.writeText(classInfo.join_code);
@@ -363,6 +485,9 @@ const ClassDetailPage = () => {
                 </TabsTrigger>
                 <TabsTrigger value="assignments">
                   <FileText className="mr-2 h-4 w-4" /> Assignments
+                </TabsTrigger>
+                <TabsTrigger value="analytics">
+                  <BarChart3 className="mr-2 h-4 w-4" /> Analytics
                 </TabsTrigger>
                 <TabsTrigger value="learning-paths">
                   <Book className="mr-2 h-4 w-4" /> Learning Paths
@@ -696,6 +821,126 @@ const ClassDetailPage = () => {
                 )}
               </TabsContent>
 
+              {/* ===== ANALYTICS TAB ===== */}
+              <TabsContent value="analytics">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold">{analyticsData.length}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Total Submissions</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold">
+                          {analyticsData.reduce((sum, a) => sum + a.totalSubmissions, 0)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Class Average</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {(() => {
+                          const graded = analyticsData.filter(a => a.avgGrade !== null);
+                          const avg = graded.length > 0
+                            ? Math.round(graded.reduce((sum, a) => sum + a.avgGrade, 0) / graded.length)
+                            : null;
+                          return avg !== null ? (
+                            <div className={`text-3xl font-bold ${avg >= 70 ? 'text-green-600' : 'text-destructive'}`}>
+                              {avg}%
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground">No grades yet</p>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Assignment Performance</CardTitle>
+                      <CardDescription>Average grades and submission stats per assignment</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {analyticsData.length === 0 ? (
+                        <p className="text-center py-8 text-muted-foreground">No assignments yet</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {analyticsData.map(a => (
+                            <div key={a.id} className="border rounded-lg p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <h4 className="font-medium">{a.title}</h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {a.subject} • {a.totalSubmissions} submission{a.totalSubmissions !== 1 ? 's' : ''} • {a.gradedCount} graded
+                                  </p>
+                                </div>
+                                {a.avgGrade !== null && (
+                                  <div className={`text-xl font-bold ${
+                                    a.avgGrade >= 90 ? 'text-green-600' : a.avgGrade >= 70 ? 'text-yellow-600' : 'text-destructive'
+                                  }`}>
+                                    {a.avgGrade}%
+                                  </div>
+                                )}
+                              </div>
+                              {a.avgGrade !== null && (
+                                <div>
+                                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                    <span>Low: {a.lowestGrade}%</span>
+                                    <span>Avg: {a.avgGrade}%</span>
+                                    <span>High: {a.highestGrade}%</span>
+                                  </div>
+                                  <Progress value={a.avgGrade} />
+                                </div>
+                              )}
+                              {a.avgGrade === null && a.totalSubmissions > 0 && (
+                                <p className="text-sm text-muted-foreground italic">Submissions pending grading</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Student rankings */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Students ({students.length})</CardTitle>
+                      <CardDescription>Enrolled students in this class</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {students.length === 0 ? (
+                        <p className="text-center py-8 text-muted-foreground">No students enrolled yet</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {students.map(s => (
+                            <div key={s.student_id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted">
+                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold">
+                                {s.profile?.full_name?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                              <span className="text-sm font-medium">{s.profile?.full_name || 'Unknown'}</span>
+                              {s.profile?.grade_level && (
+                                <Badge variant="secondary" className="text-xs">{s.profile.grade_level}</Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
               {/* ===== LEARNING PATHS TAB ===== */}
               <TabsContent value="learning-paths">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -800,41 +1045,127 @@ const ClassDetailPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Student sees assignments */}
+              {/* Student sees assignments with submit functionality */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
-                    Assignments
+                    Assignments ({assignments.length})
                   </CardTitle>
+                  <CardDescription>Click on an assignment to submit your work</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {assignments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No assignments yet.</p>
+                    <p className="text-sm text-muted-foreground text-center py-8">No assignments yet.</p>
                   ) : (
                     <div className="space-y-3">
-                      {assignments.map(a => (
-                        <div key={a.id} className="border rounded-lg p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h4 className="font-medium">{a.title}</h4>
-                              {a.description && <p className="text-sm text-muted-foreground mt-1">{a.description}</p>}
+                      {assignments.map(a => {
+                        const sub = getStudentSubmission(a.id);
+                        const isGraded = sub && sub.grade !== null;
+                        const isSubmitted = !!sub;
+                        const overdue = a.due_date ? new Date(a.due_date) < new Date() : false;
+                        return (
+                          <div
+                            key={a.id}
+                            className={`border rounded-lg p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
+                              isGraded ? 'border-green-500/30 bg-green-50/30' :
+                              isSubmitted ? 'border-primary/30 bg-primary/5' :
+                              overdue ? 'border-destructive/30' : ''
+                            }`}
+                            onClick={() => !isGraded && openStudentSubmitDialog(a)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium">{a.title}</h4>
+                                  {isGraded && (
+                                    <Badge variant="default" className="bg-green-600">
+                                      <CheckCircle2 className="mr-1 h-3 w-3" />
+                                      {sub.grade}/{sub.max_grade} ({Math.round((sub.grade / sub.max_grade) * 100)}%)
+                                    </Badge>
+                                  )}
+                                  {isSubmitted && !isGraded && (
+                                    <Badge variant="secondary">
+                                      <Clock className="mr-1 h-3 w-3" /> Submitted
+                                    </Badge>
+                                  )}
+                                  {!isSubmitted && overdue && (
+                                    <Badge variant="destructive">
+                                      <AlertTriangle className="mr-1 h-3 w-3" /> Overdue
+                                    </Badge>
+                                  )}
+                                </div>
+                                {a.description && <p className="text-sm text-muted-foreground mt-1">{a.description}</p>}
+                                {sub?.feedback && (
+                                  <div className="mt-2 bg-muted rounded-lg p-2 text-sm">
+                                    <span className="font-medium">Feedback:</span> {sub.feedback}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 ml-4">
+                                {a.due_date && (
+                                  <Badge variant="outline" className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {new Date(a.due_date).toLocaleDateString()}
+                                  </Badge>
+                                )}
+                                {!isGraded && (
+                                  <Button size="sm" variant={isSubmitted ? 'outline' : 'default'}>
+                                    {isSubmitted ? 'Resubmit' : 'Submit'}
+                                    <Send className="ml-2 h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                            {a.due_date && (
-                              <Badge variant="outline" className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {new Date(a.due_date).toLocaleDateString()}
-                              </Badge>
-                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
               </Card>
             </div>
           )}
+
+          {/* Student Submit Dialog */}
+          <Dialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Submit: {selectedSubmitAssignment?.title}</DialogTitle>
+                <DialogDescription>
+                  {selectedSubmitAssignment?.description || 'Write your answer or upload a file.'}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Your Answer</Label>
+                  <Textarea
+                    placeholder="Type your answer here..."
+                    value={submitText}
+                    onChange={e => setSubmitText(e.target.value)}
+                    rows={6}
+                  />
+                </div>
+                <div>
+                  <Label>Attach File (optional)</Label>
+                  <Input
+                    type="file"
+                    onChange={e => setSubmitFile(e.target.files?.[0] || null)}
+                    className="mt-1"
+                  />
+                  {submitFile && (
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                      <Upload className="h-3 w-3" /> {submitFile.name}
+                    </p>
+                  )}
+                </div>
+                <Button onClick={handleStudentSubmit} disabled={submitting} className="w-full">
+                  {submitting ? 'Submitting...' : 'Submit Assignment'}
+                  <Send className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>
