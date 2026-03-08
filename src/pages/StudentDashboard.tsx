@@ -42,12 +42,8 @@ import {
 } from 'lucide-react';
 import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
 import { formatDistanceToNow, format, isAfter, subDays } from 'date-fns';
-import { 
-  getCurrentUser, 
-  getAssignments,
-  getGradesByStudent,
-  getAssignmentById
-} from '@/services/localStorageService';
+import { useAuth } from '@/contexts/AuthContext';
+import StudentAssignmentView from '@/components/StudentAssignmentView';
 
 const StudentDashboard = () => {
   const [searchParams] = useSearchParams();
