@@ -1001,6 +1001,73 @@ const ClassDetailPage = () => {
                   </Card>
                 </div>
               </TabsContent>
+
+              {/* ===== SETTINGS TAB ===== */}
+              <TabsContent value="settings">
+                <div className="max-w-2xl space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5" />
+                        Grading System
+                      </CardTitle>
+                      <CardDescription>
+                        Choose how grades are displayed for this class. Students will see their grades converted to this scale.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Select
+                        value={classGradingSystem?.id || ""}
+                        onValueChange={async (val) => {
+                          const system = gradingSystems.find(s => s.id === val);
+                          if (!system || !classInfo) return;
+                          setSavingGradingSystem(true);
+                          try {
+                            const { error } = await supabase
+                              .from('classes')
+                              .update({ grading_system_id: val } as any)
+                              .eq('id', classInfo.id);
+                            if (error) throw error;
+                            setClassGradingSystem(system);
+                            toast.success(`Grading system set to ${system.name}`);
+                          } catch (err) {
+                            toast.error('Failed to update grading system');
+                          } finally {
+                            setSavingGradingSystem(false);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full" disabled={savingGradingSystem}>
+                          <SelectValue placeholder="Select grading system" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gradingSystems.map(sys => (
+                            <SelectItem key={sys.id} value={sys.id}>
+                              <div className="flex flex-col">
+                                <span>{sys.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {classGradingSystem && (
+                        <div className="rounded-lg border p-4">
+                          <p className="text-sm font-medium">{classGradingSystem.name}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{classGradingSystem.description}</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {classGradingSystem.scale_config?.boundaries?.slice(0, 8).map((b: any, i: number) => (
+                              <Badge key={i} variant="outline" className="text-xs">
+                                {b.label || b.grade}: ≥{b.min ?? b.min_pct}%
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
             </Tabs>
           ) : (
             /* ===== STUDENT VIEW ===== */
