@@ -213,6 +213,8 @@ serve(async (req) => {
       fileName: d.fileName,
       type: d.type,
       description: d.description,
+      status: d.status,
+      extractedChars: d.extractedChars,
       content: d.content,
     }));
 
