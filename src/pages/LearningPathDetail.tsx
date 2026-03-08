@@ -233,6 +233,25 @@ const LearningPathDetail = () => {
               )}
             </TabsContent>
 
+            <TabsContent value="insights">
+              {user && (
+                <LearningPathInsights
+                  pathId={learningPath.id}
+                  pathTitle={learningPath.title}
+                  pathSubject={learningPath.subject}
+                  pathDifficulty={learningPath.difficulty}
+                  modules={learningPath.modules.map(m => ({ id: m.id, title: m.title, description: m.description }))}
+                />
+              )}
+              {!user && (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    Please log in to see personalized insights.
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
             <TabsContent value="content">
               {selectedModule && (
                 <div className="space-y-6">
