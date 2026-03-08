@@ -52,7 +52,23 @@ const StudentInterface = () => {
   const [resourceContext, setResourceContext] = useState<{ title: string; description: string; url?: string } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Pick up resource context from URL params (from "Use in AI" button)
+  useEffect(() => {
+    const resTitle = searchParams.get("resourceTitle");
+    const resDesc = searchParams.get("resourceDesc");
+    const resUrl = searchParams.get("resourceUrl");
+    if (resTitle) {
+      setResourceContext({ title: resTitle, description: resDesc || "", url: resUrl || undefined });
+      // Clean URL params
+      searchParams.delete("resourceTitle");
+      searchParams.delete("resourceDesc");
+      searchParams.delete("resourceUrl");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
