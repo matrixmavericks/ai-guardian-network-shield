@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import {
   Brain, Send, BookOpen, Calculator, PenTool, Languages, Loader,
   AlertTriangle, Beaker, Sparkles, User, Bot, Trash2, History,
+  FileText, X,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
