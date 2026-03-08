@@ -37,8 +37,10 @@ import {
   GraduationCap, 
   TrendingUp,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Shield
 } from 'lucide-react';
+import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
 import { formatDistanceToNow, format, isAfter, subDays } from 'date-fns';
 import { 
   getCurrentUser, 
@@ -198,6 +200,10 @@ const StudentDashboard = () => {
               <TabsTrigger value="learning">
                 <Brain className="mr-2 h-4 w-4" />
                 AI Learning
+              </TabsTrigger>
+              <TabsTrigger value="adaptive">
+                <Shield className="mr-2 h-4 w-4" />
+                Adaptive Profile
               </TabsTrigger>
             </TabsList>
 
@@ -723,6 +729,10 @@ const StudentDashboard = () => {
                   </CardFooter>
                 </Card>
               </div>
+            </TabsContent>
+
+            <TabsContent value="adaptive">
+              <AdaptiveLearningProfile />
             </TabsContent>
           </Tabs>
         </div>
