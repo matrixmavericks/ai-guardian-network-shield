@@ -62,17 +62,22 @@ const attentionConfig = {
   critical: { label: "Critical", color: "destructive" as const },
 };
 
-const LearningPathInsights = ({ pathId, pathTitle, pathSubject, pathDifficulty, modules }: LearningPathInsightsProps) => {
+const LearningPathInsights = ({ pathId, pathTitle, pathSubject, pathDifficulty, modules, studentId, studentName }: LearningPathInsightsProps) => {
   const [insights, setInsights] = useState<PathInsights | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isTeacherView = !!studentId;
+  const label = isTeacherView ? `${studentName || "Student"}'s Insights` : "Personalized Insights";
+  const buttonLabel = isTeacherView ? `View ${studentName || "Student"}'s Insights` : "Generate My Insights";
+  const loadingLabel = isTeacherView ? `Analyzing ${studentName || "student"}'s learning history...` : "Analyzing your learning history...";
 
   const loadInsights = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const { data, error: fnError } = await supabase.functions.invoke("generate-path-insights", {
-        body: { pathId, pathTitle, pathSubject, pathDifficulty, modules },
+        body: { pathId, pathTitle, pathSubject, pathDifficulty, modules, ...(studentId ? { studentId } : {}) },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
