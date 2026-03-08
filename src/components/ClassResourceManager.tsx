@@ -67,6 +67,7 @@ const formatSize = (bytes: number) => {
 
 const ClassResourceManager: React.FC<Props> = ({ classId, className, isTeacher, onSelectResourceForAI }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [folders, setFolders] = useState<ResourceFolder[]>([]);
   const [resources, setResources] = useState<ClassResource[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
