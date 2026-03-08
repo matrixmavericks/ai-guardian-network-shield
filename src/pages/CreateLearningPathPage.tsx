@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, X, Save, Trash2, BookOpen, Sparkles, Loader, Wand2, GraduationCap } from "lucide-react";
+import { PlusCircle, X, Save, Trash2, BookOpen, Sparkles, Loader, Wand2, GraduationCap, Upload, FileText, ArrowRight, Star } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
 import DashboardNav from '@/components/DashboardNav';
@@ -115,6 +115,10 @@ const CreateLearningPathPage = () => {
   const [modules, setModules] = useState<LearningModule[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [syllabusText, setSyllabusText] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [syllabusAnalysis, setSyllabusAnalysis] = useState<any>(null);
 
   const effectiveSubject = subject === 'Other' ? customSubject.trim() : subject;
 
@@ -177,6 +181,37 @@ const CreateLearningPathPage = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleAnalyzeSyllabus = async () => {
+    if (!syllabusText.trim()) {
+      toast({ title: 'No syllabus', description: 'Paste or type your syllabus content first.', variant: 'destructive' });
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-syllabus', {
+        body: { syllabusText, subject: effectiveSubject, gradeLevel },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Analysis failed.');
+      setRecommendations(data.recommendations || []);
+      setSyllabusAnalysis(data.syllabusAnalysis || null);
+      toast({ title: 'Syllabus analyzed!', description: `Found ${(data.recommendations || []).length} recommended topics.` });
+    } catch (error: any) {
+      toast({ title: 'Analysis failed', description: error?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const applyRecommendation = (rec: any) => {
+    setTitle(rec.title);
+    setDescription(rec.description);
+    if (rec.subject) setSubject(rec.subject);
+    if (rec.difficulty) setDifficulty(rec.difficulty);
+    if (rec.estimatedHours) setEstimatedHours(rec.estimatedHours);
+    toast({ title: 'Topic applied!', description: 'Click "Generate with AI" to build the full learning path.' });
   };
 
   const handleSave = async () => {
@@ -354,6 +389,68 @@ const CreateLearningPathPage = () => {
                     )}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Syllabus-Based Recommendations */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Syllabus-Based Recommendations
+                </CardTitle>
+                <CardDescription>Paste your syllabus, report card, or curriculum outline and AI will recommend specific learning path topics.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea
+                  value={syllabusText}
+                  onChange={(e) => setSyllabusText(e.target.value)}
+                  placeholder="Paste your syllabus, course outline, report card feedback, or curriculum topics here..."
+                  rows={6}
+                />
+                <Button onClick={handleAnalyzeSyllabus} disabled={isAnalyzing || !syllabusText.trim()} variant="outline">
+                  {isAnalyzing ? <><Loader className="mr-2 h-4 w-4 animate-spin" />Analyzing...</> : <><Upload className="mr-2 h-4 w-4" />Analyze & Recommend Topics</>}
+                </Button>
+
+                {syllabusAnalysis && (
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <h4 className="font-medium text-sm">Syllabus Analysis</h4>
+                    {syllabusAnalysis.mainSubjects?.length > 0 && (
+                      <p className="text-sm text-muted-foreground"><strong>Subjects:</strong> {syllabusAnalysis.mainSubjects.join(', ')}</p>
+                    )}
+                    {syllabusAnalysis.keyTopics?.length > 0 && (
+                      <p className="text-sm text-muted-foreground"><strong>Key Topics:</strong> {syllabusAnalysis.keyTopics.join(', ')}</p>
+                    )}
+                    {syllabusAnalysis.suggestedOrder && (
+                      <p className="text-sm text-muted-foreground"><strong>Study Order:</strong> {syllabusAnalysis.suggestedOrder}</p>
+                    )}
+                  </div>
+                )}
+
+                {recommendations.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Recommended Learning Paths</h4>
+                    {recommendations.map((rec: any, index: number) => (
+                      <Card key={index} className="border-primary/20 hover:border-primary/50 transition-colors">
+                        <CardContent className="flex items-start gap-3 p-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h5 className="font-medium text-sm">{rec.title}</h5>
+                              {rec.priority === 'high' && <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded"><Star className="h-3 w-3" />High Priority</span>}
+                              <span className="text-xs bg-muted px-1.5 py-0.5 rounded capitalize">{rec.difficulty}</span>
+                              {rec.estimatedHours && <span className="text-xs text-muted-foreground">{rec.estimatedHours}h</span>}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">{rec.description}</p>
+                            {rec.reason && <p className="text-xs text-muted-foreground mt-1 italic">{rec.reason}</p>}
+                          </div>
+                          <Button size="sm" variant="outline" onClick={() => applyRecommendation(rec)} className="shrink-0">
+                            <ArrowRight className="h-3 w-3 mr-1" />Use
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
