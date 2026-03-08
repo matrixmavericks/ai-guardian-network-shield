@@ -34,6 +34,7 @@ const DashboardSidebar = () => {
       return [...baseItems,
       { title: "Classes", href: "/classes", icon: <Users className="h-5 w-5" /> },
       { title: "Grades", href: "/grades", icon: <GraduationCap className="h-5 w-5" /> },
+      { title: "Learning Paths", href: "/learning-paths", icon: <Book className="h-5 w-5" /> },
       { title: "Teaching Plans", href: "/teacher-plan-generator", icon: <Layers className="h-5 w-5" /> },
       { title: "Messages", href: "/messages", icon: <MessageSquare className="h-5 w-5" /> },
       { title: "AI Assistant", href: "/ai-learning-assistant", icon: <Brain className="h-5 w-5" /> }];
