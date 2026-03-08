@@ -486,6 +486,9 @@ const ClassDetailPage = () => {
                 <TabsTrigger value="assignments">
                   <FileText className="mr-2 h-4 w-4" /> Assignments
                 </TabsTrigger>
+                <TabsTrigger value="analytics">
+                  <BarChart3 className="mr-2 h-4 w-4" /> Analytics
+                </TabsTrigger>
                 <TabsTrigger value="learning-paths">
                   <Book className="mr-2 h-4 w-4" /> Learning Paths
                 </TabsTrigger>
