@@ -23,6 +23,8 @@ import ParentDashboard from './pages/ParentDashboard';
 import AdminMonitoring from './pages/AdminMonitoring';
 import AIConfigurationPage from './pages/AIConfigurationPage';
 import ModelTrainingPage from './pages/ModelTrainingPage';
+import ClassesPage from './pages/ClassesPage';
+import ClassDetailPage from './pages/ClassDetailPage';
 
 const ProtectedRoute = ({ 
   children, 
