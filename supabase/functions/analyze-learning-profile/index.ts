@@ -364,7 +364,19 @@ Analyze this student's learning profile comprehensively.`;
 
     const profile = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify({ profile }), {
+    const documentDiagnostics = {
+      totalDocuments: studentDocuments.length,
+      analyzedDocuments: documentContents.filter((d) => d.status === "extracted").length,
+      extractedCharacters: documentContents.reduce((sum, d) => sum + d.extractedChars, 0),
+      documents: documentContents.map((d) => ({
+        fileName: d.fileName,
+        type: d.type,
+        status: d.status,
+        extractedChars: d.extractedChars,
+      })),
+    };
+
+    return new Response(JSON.stringify({ profile, documentDiagnostics }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
