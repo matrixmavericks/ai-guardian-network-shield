@@ -65,7 +65,7 @@ serve(async (req) => {
         .eq("student_id", targetUserId),
       supabase
         .from("student_documents")
-        .select("file_name, document_type, description, created_at")
+        .select("file_name, document_type, description, file_url, created_at")
         .eq("user_id", targetUserId),
     ]);
 
