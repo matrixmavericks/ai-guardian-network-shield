@@ -153,6 +153,7 @@ const AdaptiveLearningProfile = ({ targetUserId, targetUserName }: AdaptiveLearn
       setProfile(data.profile);
       setDocumentDiagnostics(data.documentDiagnostics || null);
       toast({ title: "Analysis Complete", description: `${isViewingOwnProfile ? "Your" : displayName + "'s"} adaptive learning profile has been generated.` });
+    } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to analyze profile", variant: "destructive" });
     } finally {
       setLoading(false);
