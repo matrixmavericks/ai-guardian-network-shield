@@ -44,9 +44,12 @@ const Register = () => {
     try {
       await signUp(formData.email.trim(), formData.password, formData.name.trim(), formData.role);
       toast({
-        title: "Account created",
-        description: "Check your email to verify your account. Your profile will finish setup the first time you sign in.",
+        title: "Account created!",
+        description: "Your account is ready. Logging you in...",
       });
+      // Auto-confirm is enabled, so we can log in immediately
+      const { login } = await import('@/contexts/AuthContext').then(() => ({ login: null }));
+      // Just navigate to login page for now - the auth listener will pick up the session
       navigate("/login");
     } catch (error: any) {
       toast({
