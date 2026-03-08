@@ -14,6 +14,7 @@ import {
   CheckCircle,
   ListChecks,
   Play,
+  Sparkles,
 } from "lucide-react";
 import ResourceViewer from "@/components/learning/ResourceViewer";
 import QuizPlayer from "@/components/learning/QuizPlayer";
