@@ -36,7 +36,7 @@ async function ensureUserSetup(supabaseUser: User) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, email')
     .eq('user_id', supabaseUser.id)
     .maybeSingle();
 
