@@ -565,100 +565,10 @@ const ClassDetailPage = () => {
                         </TabsContent>
 
                         <TabsContent value="adaptive">
-                          <Card>
-                            <CardHeader>
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <CardTitle>Adaptive Learning Profile</CardTitle>
-                                  <CardDescription>AI analysis of {selectedStudent.profile?.full_name}'s patterns</CardDescription>
-                                </div>
-                                <Button onClick={() => fetchAdaptiveProfile(selectedStudent.student_id)} disabled={profileLoading}>
-                                  <Brain className="mr-2 h-4 w-4" />
-                                  {profileLoading ? 'Analyzing...' : adaptiveProfile ? 'Re-Analyze' : 'Analyze'}
-                                </Button>
-                              </div>
-                            </CardHeader>
-                            <CardContent>
-                              {profileLoading ? (
-                                <div className="text-center py-12 text-muted-foreground">
-                                  <Brain className="h-10 w-10 mx-auto mb-3 animate-pulse" />
-                                  <p>Analyzing learning patterns...</p>
-                                </div>
-                              ) : adaptiveProfile ? (
-                                <div className="space-y-6">
-                                  {adaptiveProfile.learning_style && (
-                                    <div>
-                                      <h4 className="font-semibold mb-2">Learning Style</h4>
-                                      <Badge className="text-sm">{adaptiveProfile.learning_style.type}</Badge>
-                                      <p className="text-sm text-muted-foreground mt-2">{adaptiveProfile.learning_style.description}</p>
-                                      {adaptiveProfile.learning_style.tips?.length > 0 && (
-                                        <ul className="mt-2 space-y-1">
-                                          {adaptiveProfile.learning_style.tips.map((tip: string, i: number) => (
-                                            <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                                              <span className="text-primary">•</span> {tip}
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      )}
-                                    </div>
-                                  )}
-                                  {adaptiveProfile.conceptual_gaps?.length > 0 && (
-                                    <div>
-                                      <h4 className="font-semibold mb-2">Conceptual Gaps</h4>
-                                      <div className="space-y-3">
-                                        {adaptiveProfile.conceptual_gaps.map((gap: any, i: number) => (
-                                          <div key={i} className="border rounded-lg p-3">
-                                            <div className="flex items-center gap-2 mb-1">
-                                              <span className="font-medium text-sm">{gap.topic}</span>
-                                              <Badge variant={gap.severity === 'critical' ? 'destructive' : gap.severity === 'moderate' ? 'default' : 'secondary'}>
-                                                {gap.severity}
-                                              </Badge>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground">{gap.description}</p>
-                                            {gap.remediation && <p className="text-sm text-primary mt-1">→ {gap.remediation}</p>}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {adaptiveProfile.preventive_insights?.length > 0 && (
-                                    <div>
-                                      <h4 className="font-semibold mb-2">Preventive Insights</h4>
-                                      <div className="space-y-2">
-                                        {adaptiveProfile.preventive_insights.map((insight: any, i: number) => (
-                                          <div key={i} className="bg-muted rounded-lg p-3">
-                                            <p className="text-sm font-medium">{insight.prediction}</p>
-                                            <p className="text-sm text-muted-foreground mt-1">{insight.suggestion}</p>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {adaptiveProfile.optimized_plan?.length > 0 && (
-                                    <div>
-                                      <h4 className="font-semibold mb-2">Optimized Plan</h4>
-                                      <ol className="space-y-2">
-                                        {adaptiveProfile.optimized_plan.map((step: any, i: number) => (
-                                          <li key={i} className="flex items-start gap-3">
-                                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{i + 1}</span>
-                                            <div>
-                                              <p className="text-sm font-medium">{step.activity}</p>
-                                              <p className="text-xs text-muted-foreground">{step.reason}</p>
-                                            </div>
-                                          </li>
-                                        ))}
-                                      </ol>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="text-center py-12 text-muted-foreground">
-                                  <Brain className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                                  <p>Click "Analyze" to generate this student's adaptive learning profile.</p>
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
+                          <AdaptiveLearningProfile
+                            targetUserId={selectedStudent.student_id}
+                            targetUserName={selectedStudent.profile?.full_name || 'Student'}
+                          />
                         </TabsContent>
 
                         <TabsContent value="paths">
