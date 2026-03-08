@@ -821,6 +821,126 @@ const ClassDetailPage = () => {
                 )}
               </TabsContent>
 
+              {/* ===== ANALYTICS TAB ===== */}
+              <TabsContent value="analytics">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold">{analyticsData.length}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Total Submissions</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold">
+                          {analyticsData.reduce((sum, a) => sum + a.totalSubmissions, 0)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Class Average</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {(() => {
+                          const graded = analyticsData.filter(a => a.avgGrade !== null);
+                          const avg = graded.length > 0
+                            ? Math.round(graded.reduce((sum, a) => sum + a.avgGrade, 0) / graded.length)
+                            : null;
+                          return avg !== null ? (
+                            <div className={`text-3xl font-bold ${avg >= 70 ? 'text-green-600' : 'text-destructive'}`}>
+                              {avg}%
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground">No grades yet</p>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Assignment Performance</CardTitle>
+                      <CardDescription>Average grades and submission stats per assignment</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {analyticsData.length === 0 ? (
+                        <p className="text-center py-8 text-muted-foreground">No assignments yet</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {analyticsData.map(a => (
+                            <div key={a.id} className="border rounded-lg p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <h4 className="font-medium">{a.title}</h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {a.subject} • {a.totalSubmissions} submission{a.totalSubmissions !== 1 ? 's' : ''} • {a.gradedCount} graded
+                                  </p>
+                                </div>
+                                {a.avgGrade !== null && (
+                                  <div className={`text-xl font-bold ${
+                                    a.avgGrade >= 90 ? 'text-green-600' : a.avgGrade >= 70 ? 'text-yellow-600' : 'text-destructive'
+                                  }`}>
+                                    {a.avgGrade}%
+                                  </div>
+                                )}
+                              </div>
+                              {a.avgGrade !== null && (
+                                <div>
+                                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                    <span>Low: {a.lowestGrade}%</span>
+                                    <span>Avg: {a.avgGrade}%</span>
+                                    <span>High: {a.highestGrade}%</span>
+                                  </div>
+                                  <Progress value={a.avgGrade} />
+                                </div>
+                              )}
+                              {a.avgGrade === null && a.totalSubmissions > 0 && (
+                                <p className="text-sm text-muted-foreground italic">Submissions pending grading</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Student rankings */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Students ({students.length})</CardTitle>
+                      <CardDescription>Enrolled students in this class</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {students.length === 0 ? (
+                        <p className="text-center py-8 text-muted-foreground">No students enrolled yet</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {students.map(s => (
+                            <div key={s.student_id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted">
+                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold">
+                                {s.profile?.full_name?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                              <span className="text-sm font-medium">{s.profile?.full_name || 'Unknown'}</span>
+                              {s.profile?.grade_level && (
+                                <Badge variant="secondary" className="text-xs">{s.profile.grade_level}</Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
               {/* ===== LEARNING PATHS TAB ===== */}
               <TabsContent value="learning-paths">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
