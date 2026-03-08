@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users } from 'lucide-react';
+import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users, DollarSign } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const DashboardSidebar = () => {
@@ -35,6 +35,7 @@ const DashboardSidebar = () => {
         { title: "Teaching Plans", href: "/teacher-plan-generator", icon: <Layers className="h-5 w-5" /> },
         { title: "Messages", href: "/messages", icon: <MessageSquare className="h-5 w-5" /> },
         { title: "AI Assistant", href: "/ai-learning-assistant", icon: <Brain className="h-5 w-5" /> },
+        { title: "AI Usage", href: "/ai-usage", icon: <DollarSign className="h-5 w-5" /> },
       ];
     } else {
       return [
