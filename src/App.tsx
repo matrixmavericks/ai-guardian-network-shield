@@ -5,7 +5,6 @@ import Dashboard from './pages/Dashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentInterface from './components/StudentInterface';
 import GradesPage from './pages/GradesPage';
-import AssignmentsPage from './pages/AssignmentsPage';
 import SecurityKeysPage from './pages/SecurityKeysPage';
 import Login from './pages/Login';
 import Index from './pages/Index';
@@ -63,7 +62,6 @@ function App() {
           <Route path="/register" element={<Register />} />
 
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><Dashboard /></ProtectedRoute>} />
-          <Route path="/assignments" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><AssignmentsPage /></ProtectedRoute>} />
           <Route path="/security-keys" element={<ProtectedRoute allowedRoles={['admin']}><SecurityKeysPage /></ProtectedRoute>} />
           <Route path="/teacher-plan-generator" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherPlanGenerator /></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
