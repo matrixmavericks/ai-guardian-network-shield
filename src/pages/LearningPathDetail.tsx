@@ -86,6 +86,33 @@ const LearningPathDetail = () => {
     load();
   }, [id, navigate, toast, user]);
 
+  // Load assigned students for teacher view
+  useEffect(() => {
+    const loadStudents = async () => {
+      if (!isTeacher || !id) return;
+      try {
+        const { data: progressData } = await supabase
+          .from("learning_path_progress")
+          .select("user_id")
+          .eq("path_id", id);
+        if (!progressData || progressData.length === 0) return;
+
+        const studentIds = [...new Set(progressData.map(p => p.user_id))];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", studentIds);
+
+        setAssignedStudents(
+          (profiles || []).map(p => ({ id: p.user_id, name: p.full_name }))
+        );
+      } catch (err) {
+        console.error("Failed to load students:", err);
+      }
+    };
+    loadStudents();
+  }, [isTeacher, id]);
+
   const sortedModules = useMemo(
     () => [...(learningPath?.modules ?? [])].sort((a, b) => a.order - b.order),
     [learningPath],
