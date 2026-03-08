@@ -40,6 +40,7 @@ const DashboardSidebar = () => {
 
     } else {
       return [...baseItems,
+      { title: "Classes", href: "/classes", icon: <Users className="h-5 w-5" /> },
       { title: "Grades", href: "/grades", icon: <GraduationCap className="h-5 w-5" /> },
       { title: "Learning Paths", href: "/learning-paths", icon: <Book className="h-5 w-5" /> },
       { title: "AI Assistant", href: "/ai-learning-assistant", icon: <Brain className="h-5 w-5" /> },
