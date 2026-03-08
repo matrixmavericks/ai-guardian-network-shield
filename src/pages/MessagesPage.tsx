@@ -213,7 +213,16 @@ const MessagesPage = () => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
-                                <p className="font-medium truncate">{contact.full_name}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium truncate">{contact.full_name}</p>
+                                  {contact.role && (
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                      contact.role === 'teacher' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                                    }`}>
+                                      {contact.role}
+                                    </span>
+                                  )}
+                                </div>
                                 {unreadCounts[contact.user_id] > 0 && (
                                   <span className="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center shrink-0">
                                     {unreadCounts[contact.user_id]}
