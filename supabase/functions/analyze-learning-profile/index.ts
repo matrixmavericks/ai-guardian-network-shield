@@ -75,30 +75,87 @@ serve(async (req) => {
     const submissionsData = submissionsRes.data || [];
     const studentDocuments = documentsRes.data || [];
 
-    // Fetch actual content of text-based documents from storage
+    // ─── Helper: OCR via Gemini Vision ───────────────────────────────
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    async function ocrViaVision(blob: Blob, fileName: string): Promise<string> {
+      const arrayBuf = await blob.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+      const mimeType = blob.type || "application/octet-stream";
+
+      console.log(`Running OCR on ${fileName} (${(arrayBuf.byteLength / 1024).toFixed(0)} KB, ${mimeType})`);
+
+      const ocrResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Extract ALL text from this document image. Include every heading, paragraph, grade, score, comment, subject name, date, and table content. Preserve the structure. Return ONLY the extracted text, no commentary.",
+                },
+                {
+                  type: "image_url",
+                  image_url: { url: `data:${mimeType};base64,${base64}` },
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      if (!ocrResponse.ok) {
+        const errText = await ocrResponse.text();
+        console.error(`OCR failed for ${fileName}: ${ocrResponse.status} ${errText}`);
+        return "";
+      }
+
+      const ocrData = await ocrResponse.json();
+      return ocrData.choices?.[0]?.message?.content || "";
+    }
+
+    // ─── Fetch & extract document contents ────────────────────────────
     console.log(`Found ${studentDocuments.length} documents for user ${targetUserId}`);
     const documentContents: { fileName: string; type: string; description: string; content: string; extractedChars: number; status: string }[] = [];
+
+    const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff", ".tif"];
+    const MIN_TEXT_CHARS = 100; // Below this, we consider the PDF "scanned" and fall back to OCR
+
     for (const doc of studentDocuments) {
       try {
-        // Extract the storage path from the file_url
         console.log(`Processing doc: ${doc.file_name}, file_url: ${doc.file_url}`);
         const urlParts = doc.file_url?.split('/student-documents/');
         const rawStoragePath = urlParts && urlParts.length > 1 ? urlParts[1] : null;
         const storagePath = rawStoragePath ? decodeURIComponent(rawStoragePath) : null;
         console.log(`Storage path resolved: ${storagePath}`);
-        
+
         if (storagePath) {
           const { data: fileData, error: fileError } = await supabase
             .storage
             .from('student-documents')
             .download(storagePath);
-          
-          if (!fileError && fileData) {
-            const isPdf = doc.file_name?.toLowerCase().endsWith('.pdf') || doc.document_type?.toLowerCase() === 'pdf';
-            let extractedText = '';
 
-            if (isPdf) {
-              // Lightweight PDF fallback: extract printable text chunks from bytes
+          if (!fileError && fileData) {
+            const lowerName = doc.file_name?.toLowerCase() || "";
+            const isPdf = lowerName.endsWith('.pdf');
+            const isImage = IMAGE_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+            let extractedText = '';
+            let method = 'text';
+
+            if (isImage) {
+              // Images → always OCR
+              method = 'ocr';
+              extractedText = await ocrViaVision(fileData, doc.file_name);
+            } else if (isPdf) {
+              // Try text extraction first
               const bytes = new Uint8Array(await fileData.arrayBuffer());
               const decoded = new TextDecoder('latin1').decode(bytes);
               const printableChunks = decoded
@@ -107,7 +164,19 @@ serve(async (req) => {
                 .filter((chunk) => /[a-zA-Z]{3,}/.test(chunk) && chunk.length > 4)
                 .slice(0, 500);
               extractedText = printableChunks.join(' ').replace(/\s+/g, ' ');
+
+              // If very little text extracted, it's likely a scanned PDF → OCR
+              if (extractedText.length < MIN_TEXT_CHARS) {
+                console.log(`Only ${extractedText.length} chars from text extraction on ${doc.file_name}, falling back to OCR`);
+                method = 'ocr';
+                // Re-download since we consumed the blob
+                const { data: redownload } = await supabase.storage.from('student-documents').download(storagePath);
+                if (redownload) {
+                  extractedText = await ocrViaVision(redownload, doc.file_name);
+                }
+              }
             } else {
+              // Plain text files
               extractedText = await fileData.text();
             }
 
@@ -119,9 +188,9 @@ serve(async (req) => {
               description: doc.description || '',
               content: trimmedContent || '[No extractable text found in file]',
               extractedChars,
-              status: extractedChars > 0 ? 'extracted' : 'no_text',
+              status: extractedChars > 0 ? `extracted_${method}` : 'no_text',
             });
-            console.log(`Extracted ${extractedChars} chars from ${doc.file_name}`);
+            console.log(`Extracted ${extractedChars} chars from ${doc.file_name} via ${method}`);
           } else {
             console.error(`Download failed for ${doc.file_name}:`, fileError?.message);
             documentContents.push({
@@ -218,8 +287,7 @@ serve(async (req) => {
       content: d.content,
     }));
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    // LOVABLE_API_KEY already declared above
 
     const systemPrompt = `You are an expert educational psychologist and adaptive learning specialist. Analyze a student's learning data and produce a comprehensive learning profile.
 
@@ -366,7 +434,7 @@ Analyze this student's learning profile comprehensively.`;
 
     const documentDiagnostics = {
       totalDocuments: studentDocuments.length,
-      analyzedDocuments: documentContents.filter((d) => d.status === "extracted").length,
+      analyzedDocuments: documentContents.filter((d) => d.status.startsWith("extracted")).length,
       extractedCharacters: documentContents.reduce((sum, d) => sum + d.extractedChars, 0),
       documents: documentContents.map((d) => ({
         fileName: d.fileName,

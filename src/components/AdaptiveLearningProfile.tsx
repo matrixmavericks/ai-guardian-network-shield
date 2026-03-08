@@ -401,8 +401,8 @@ const AdaptiveLearningProfile = ({ targetUserId, targetUserName }: AdaptiveLearn
             {documentDiagnostics.documents.map((doc, idx) => (
               <div key={`${doc.fileName}-${idx}`} className="flex items-center justify-between text-sm border rounded-md px-3 py-2">
                 <span className="truncate pr-3">{doc.fileName}</span>
-                <Badge variant={doc.status === "extracted" ? "secondary" : "outline"}>
-                  {doc.status} · {doc.extractedChars} chars
+                <Badge variant={doc.status.startsWith("extracted") ? "secondary" : "outline"}>
+                  {doc.status === "extracted_ocr" ? "OCR" : doc.status === "extracted_text" ? "text" : doc.status} · {doc.extractedChars} chars
                 </Badge>
               </div>
             ))}
