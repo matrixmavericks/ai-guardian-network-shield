@@ -54,8 +54,6 @@ const ClassDetailPage = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [adaptiveProfile, setAdaptiveProfile] = useState<any>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
   const [messageContent, setMessageContent] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [assignPathOpen, setAssignPathOpen] = useState(false);
