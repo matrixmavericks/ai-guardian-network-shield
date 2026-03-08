@@ -74,6 +74,15 @@ const ClassDetailPage = () => {
   const [generatingPath, setGeneratingPath] = useState(false);
   // Grading
   const [gradingAssignment, setGradingAssignment] = useState<ClassAssignment | null>(null);
+  // Analytics
+  const [analyticsData, setAnalyticsData] = useState<any[]>([]);
+  // Student submission
+  const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
+  const [selectedSubmitAssignment, setSelectedSubmitAssignment] = useState<ClassAssignment | null>(null);
+  const [submitText, setSubmitText] = useState('');
+  const [submitFile, setSubmitFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [studentSubmissions, setStudentSubmissions] = useState<any[]>([]);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
