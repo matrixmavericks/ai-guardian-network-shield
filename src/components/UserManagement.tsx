@@ -28,6 +28,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UserWithRole {
   id: string;
@@ -46,6 +47,30 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
+  const isTeacherOrAdmin = currentUser?.role === 'teacher' || currentUser?.role === 'admin';
+
+  const promoteToTeacher = async (targetUserId: string, userName: string) => {
+    try {
+      const { error } = await supabase.from('user_roles').insert({
+        user_id: targetUserId,
+        role: 'teacher' as any,
+      });
+      if (error) {
+        if (error.code === '23505') {
+          toast({ title: "Already a teacher", description: `${userName} already has the teacher role.` });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({ title: "Role updated", description: `${userName} is now a teacher.` });
+        fetchUsers();
+      }
+    } catch (err: any) {
+      console.error('Error promoting user:', err);
+      toast({ title: "Failed to promote user", description: err.message, variant: "destructive" });
+    }
+  };
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -175,6 +200,7 @@ const UserManagement = () => {
                   <TableHead>Department</TableHead>
                   <TableHead>Grade Level</TableHead>
                   <TableHead>Joined</TableHead>
+                  {isTeacherOrAdmin && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -217,6 +243,19 @@ const UserManagement = () => {
                       <TableCell className="text-sm text-slate-500">
                         {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
                       </TableCell>
+                      {isTeacherOrAdmin && (
+                        <TableCell>
+                          {!user.roles.includes('teacher') && !user.roles.includes('admin') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => promoteToTeacher(user.user_id, user.full_name)}
+                            >
+                              <Shield className="h-3 w-3 mr-1" /> Make Teacher
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
