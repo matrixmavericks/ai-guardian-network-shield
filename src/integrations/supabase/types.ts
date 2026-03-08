@@ -569,6 +569,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string | null
           department: string | null
+          email: string | null
           full_name: string
           grade_level: string | null
           id: string
@@ -579,6 +580,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           department?: string | null
+          email?: string | null
           full_name: string
           grade_level?: string | null
           id?: string
@@ -589,6 +591,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           department?: string | null
+          email?: string | null
           full_name?: string
           grade_level?: string | null
           id?: string
