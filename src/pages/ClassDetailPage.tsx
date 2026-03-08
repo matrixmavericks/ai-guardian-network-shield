@@ -143,6 +143,23 @@ const ClassDetailPage = () => {
       if (!cls) { navigate('/classes'); return; }
       setClassInfo(cls);
 
+      // Load grading system for this class
+      if (cls.grading_system_id) {
+        const { data: gs } = await supabase
+          .from('grading_systems')
+          .select('*')
+          .eq('id', cls.grading_system_id)
+          .maybeSingle();
+        if (gs) setClassGradingSystem(gs as unknown as GradingSystem);
+      } else {
+        const { data: defaultGs } = await supabase
+          .from('grading_systems')
+          .select('*')
+          .eq('is_default', true)
+          .maybeSingle();
+        if (defaultGs) setClassGradingSystem(defaultGs as unknown as GradingSystem);
+      }
+
       if (isTeacher) {
         // Fetch members, paths, and assignments in parallel
         const [membersRes, pathsRes, assignmentsRes] = await Promise.all([
