@@ -37,8 +37,10 @@ import {
   GraduationCap, 
   TrendingUp,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Shield
 } from 'lucide-react';
+import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
 import { formatDistanceToNow, format, isAfter, subDays } from 'date-fns';
 import { 
   getCurrentUser, 
