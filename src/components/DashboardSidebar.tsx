@@ -25,6 +25,7 @@ const DashboardSidebar = () => {
 
     if (role === 'admin') {
       return [...baseItems,
+      { title: "Classes", href: "/classes", icon: <Users className="h-5 w-5" /> },
       { title: "User Management", href: "/users", icon: <UserPlus className="h-5 w-5" /> },
       { title: "Security Keys", href: "/security-keys", icon: <Shield className="h-5 w-5" /> },
       { title: "Settings", href: "/settings", icon: <Settings className="h-5 w-5" /> }];
