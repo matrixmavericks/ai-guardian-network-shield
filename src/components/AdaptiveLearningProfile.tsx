@@ -386,6 +386,29 @@ const AdaptiveLearningProfile = ({ targetUserId, targetUserName }: AdaptiveLearn
         </Button>
       </div>
 
+      {documentDiagnostics && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" /> Document Analysis Impact
+            </CardTitle>
+            <CardDescription>
+              {documentDiagnostics.analyzedDocuments}/{documentDiagnostics.totalDocuments} documents analyzed, {documentDiagnostics.extractedCharacters.toLocaleString()} characters extracted
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {documentDiagnostics.documents.map((doc, idx) => (
+              <div key={`${doc.fileName}-${idx}`} className="flex items-center justify-between text-sm border rounded-md px-3 py-2">
+                <span className="truncate pr-3">{doc.fileName}</span>
+                <Badge variant={doc.status === "extracted" ? "secondary" : "outline"}>
+                  {doc.status} · {doc.extractedChars} chars
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Learning Style */}
         <Card>
