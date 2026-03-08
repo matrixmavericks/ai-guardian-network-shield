@@ -544,6 +544,9 @@ const ClassDetailPage = () => {
                 <TabsTrigger value="learning-paths">
                   <Book className="mr-2 h-4 w-4" /> Learning Paths
                 </TabsTrigger>
+                <TabsTrigger value="settings">
+                  <Settings className="mr-2 h-4 w-4" /> Settings
+                </TabsTrigger>
               </TabsList>
 
               {/* ===== STUDENTS TAB ===== */}
