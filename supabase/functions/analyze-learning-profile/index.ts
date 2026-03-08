@@ -434,7 +434,7 @@ Analyze this student's learning profile comprehensively.`;
 
     const documentDiagnostics = {
       totalDocuments: studentDocuments.length,
-      analyzedDocuments: documentContents.filter((d) => d.status === "extracted").length,
+      analyzedDocuments: documentContents.filter((d) => d.status.startsWith("extracted")).length,
       extractedCharacters: documentContents.reduce((sum, d) => sum + d.extractedChars, 0),
       documents: documentContents.map((d) => ({
         fileName: d.fileName,
