@@ -18,41 +18,84 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user from JWT
+    // Get authenticated user from JWT
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
     const { data: { user }, error: authError } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) throw new Error("Unauthorized");
 
-    const userId = user.id;
+    // Check if a target userId was provided (teacher viewing student)
+    let body: any = {};
+    try { body = await req.json(); } catch { /* no body */ }
+    
+    let targetUserId = user.id;
+    
+    if (body.userId && body.userId !== user.id) {
+      // Verify the caller is a teacher or admin
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      
+      const callerRoles = (roles || []).map((r: any) => r.role);
+      if (!callerRoles.includes("teacher") && !callerRoles.includes("admin")) {
+        throw new Error("Only teachers/admins can view other students' profiles");
+      }
+      targetUserId = body.userId;
+    }
 
-    // Fetch chat history (last 100 messages)
-    const { data: chatMessages } = await supabase
-      .from("ai_chat_messages")
-      .select("role, content, created_at, metadata")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(100);
+    // Fetch all data for the target user
+    const [chatRes, progressRes, pathsRes, submissionsRes, documentsRes] = await Promise.all([
+      supabase
+        .from("ai_chat_messages")
+        .select("role, content, created_at, metadata")
+        .eq("user_id", targetUserId)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("learning_path_progress")
+        .select("path_id, progress, completed_modules, bookmarked, started_at, last_accessed_at")
+        .eq("user_id", targetUserId),
+      supabase
+        .from("learning_paths")
+        .select("id, title, subject, difficulty, modules, tags")
+        .eq("created_by", targetUserId),
+      supabase
+        .from("assignment_submissions")
+        .select("assignment_id, content, grade, max_grade, feedback, status, submitted_at, graded_at")
+        .eq("student_id", targetUserId),
+      supabase
+        .from("student_documents")
+        .select("file_name, document_type, description, created_at")
+        .eq("user_id", targetUserId),
+    ]);
 
-    // Fetch learning path progress
-    const { data: progressData } = await supabase
-      .from("learning_path_progress")
-      .select("path_id, progress, completed_modules, bookmarked, started_at, last_accessed_at")
-      .eq("user_id", userId);
+    const chatMessages = chatRes.data || [];
+    const progressData = progressRes.data || [];
+    const userPaths = pathsRes.data || [];
+    const submissionsData = submissionsRes.data || [];
+    const studentDocuments = documentsRes.data || [];
 
-    // Fetch learning paths the user has
-    const { data: userPaths } = await supabase
-      .from("learning_paths")
-      .select("id, title, subject, difficulty, modules, tags")
-      .eq("created_by", userId);
+    // Also check learning paths assigned to the student (not just created by)
+    let assignedPaths: any[] = [];
+    if (progressData.length > 0) {
+      const pathIds = progressData.map((p: any) => p.path_id);
+      const { data: paths } = await supabase
+        .from("learning_paths")
+        .select("id, title, subject, difficulty, modules, tags")
+        .in("id", pathIds);
+      assignedPaths = paths || [];
+    }
 
-    // Fetch assignment submissions and grades
-    const { data: submissionsData } = await supabase
-      .from("assignment_submissions")
-      .select("assignment_id, content, grade, max_grade, feedback, status, submitted_at, graded_at")
-      .eq("student_id", userId);
+    // Combine created and assigned paths
+    const allPaths = [...userPaths];
+    for (const ap of assignedPaths) {
+      if (!allPaths.find((p: any) => p.id === ap.id)) {
+        allPaths.push(ap);
+      }
+    }
 
-    // Fetch assignment details for context
-    const assignmentIds = (submissionsData || []).map((s: any) => s.assignment_id);
+    // Fetch assignment details
+    const assignmentIds = submissionsData.map((s: any) => s.assignment_id);
     let assignmentsData: any[] = [];
     if (assignmentIds.length > 0) {
       const { data: assignments } = await supabase
@@ -62,15 +105,15 @@ serve(async (req) => {
       assignmentsData = assignments || [];
     }
 
-    // Build context for AI analysis
-    const chatSummary = (chatMessages || [])
+    // Build context
+    const chatSummary = chatMessages
       .filter((m: any) => m.role === "user")
       .slice(0, 50)
       .map((m: any) => m.content)
       .join("\n---\n");
 
-    const pathsSummary = (userPaths || []).map((p: any) => {
-      const prog = (progressData || []).find((pr: any) => pr.path_id === p.id);
+    const pathsSummary = allPaths.map((p: any) => {
+      const prog = progressData.find((pr: any) => pr.path_id === p.id);
       return {
         title: p.title,
         subject: p.subject,
@@ -78,16 +121,14 @@ serve(async (req) => {
         totalModules: Array.isArray(p.modules) ? p.modules.length : 0,
         completedModules: prog ? prog.completed_modules?.length || 0 : 0,
         progress: prog ? prog.progress : 0,
-        modules: p.modules,
       };
     });
 
-    // Build assignment grades summary
-    const assignmentsSummary = (submissionsData || []).map((s: any) => {
+    const assignmentsSummary = submissionsData.map((s: any) => {
       const assignment = assignmentsData.find((a: any) => a.id === s.assignment_id);
       return {
-        title: assignment?.title || 'Unknown',
-        subject: assignment?.subject || 'Unknown',
+        title: assignment?.title || "Unknown",
+        subject: assignment?.subject || "Unknown",
         grade: s.grade,
         maxGrade: s.max_grade,
         percentage: s.grade !== null ? Math.round((s.grade / s.max_grade) * 100) : null,
@@ -96,19 +137,25 @@ serve(async (req) => {
       };
     });
 
+    const documentsSummary = studentDocuments.map((d: any) => ({
+      fileName: d.file_name,
+      type: d.document_type,
+      description: d.description,
+    }));
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const systemPrompt = `You are an expert educational psychologist and adaptive learning specialist. Analyze a student's learning data and produce a comprehensive learning profile.
 
 You MUST respond with a tool call using the "learning_profile" function. Analyze carefully:
-1. LEARNING STYLE: Determine from their questions whether they are visual, auditory, reading/writing, or kinesthetic learners. Look at how they phrase questions and what they struggle with.
-2. CONCEPTUAL GAPS: Identify fundamental misunderstandings or knowledge gaps from their questions, learning path progress, AND assignment grades/feedback.
-3. STRENGTH AREAS: What subjects/topics they excel at (use assignment grades as key evidence).
+1. LEARNING STYLE: Determine from their questions whether they are visual, auditory, reading/writing, or kinesthetic learners.
+2. CONCEPTUAL GAPS: Identify fundamental misunderstandings or knowledge gaps from their questions, learning path progress, assignment grades/feedback, AND uploaded documents (syllabi, report cards).
+3. STRENGTH AREAS: What subjects/topics they excel at (use assignment grades and documents as evidence).
 4. PREVENTIVE RECOMMENDATIONS: Predict future mistakes based on current patterns and suggest preemptive lessons.
 5. OPTIMIZED PLAN: Create a personalized micro-learning plan (5-7 focused activities) tailored to their learning style.
 
-Be specific, actionable, and encouraging. Reference actual topics from their data.`;
+Be specific, actionable, and encouraging. Reference actual topics from their data. If student documents like syllabi or report cards are provided, use them to cross-reference performance and identify areas needing attention.`;
 
     const userPrompt = `## Student Chat History (recent questions asked to AI tutor):
 ${chatSummary || "No chat history available yet."}
@@ -118,6 +165,9 @@ ${JSON.stringify(pathsSummary, null, 2)}
 
 ## Assignment Grades & Submissions:
 ${JSON.stringify(assignmentsSummary, null, 2)}
+
+## Uploaded Documents (Syllabi, Report Cards, etc.):
+${documentsSummary.length > 0 ? JSON.stringify(documentsSummary, null, 2) : "No documents uploaded yet."}
 
 Analyze this student's learning profile comprehensively.`;
 
@@ -160,11 +210,10 @@ Analyze this student's learning profile comprehensively.`;
                         topic: { type: "string" },
                         severity: { type: "string", enum: ["minor", "moderate", "critical"] },
                         description: { type: "string" },
-                        remediation: { type: "string", description: "Specific action to fix this gap" },
+                        remediation: { type: "string" },
                       },
                       required: ["topic", "severity", "description", "remediation"],
                     },
-                    description: "Identified conceptual gaps or misunderstandings",
                   },
                   strengths: {
                     type: "array",
@@ -182,8 +231,8 @@ Analyze this student's learning profile comprehensively.`;
                     items: {
                       type: "object",
                       properties: {
-                        prediction: { type: "string", description: "What mistake or struggle is likely coming" },
-                        prevention: { type: "string", description: "What to study now to prevent it" },
+                        prediction: { type: "string" },
+                        prevention: { type: "string" },
                         priority: { type: "string", enum: ["low", "medium", "high"] },
                       },
                       required: ["prediction", "prevention", "priority"],
@@ -196,14 +245,14 @@ Analyze this student's learning profile comprehensively.`;
                       properties: {
                         order: { type: "number" },
                         activity: { type: "string" },
-                        why: { type: "string", description: "Why this activity suits this student's style" },
+                        why: { type: "string" },
                         duration_minutes: { type: "number" },
                         type: { type: "string", enum: ["lesson", "practice", "quiz", "reflection", "project"] },
                       },
                       required: ["order", "activity", "why", "duration_minutes", "type"],
                     },
                   },
-                  overall_summary: { type: "string", description: "An encouraging 2-3 sentence summary of the student's profile" },
+                  overall_summary: { type: "string", description: "An encouraging 2-3 sentence summary" },
                 },
                 required: ["learning_style", "conceptual_gaps", "strengths", "preventive_insights", "optimized_plan", "overall_summary"],
               },

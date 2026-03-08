@@ -3,12 +3,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   Brain, Eye, Ear, BookOpen, Hand, Sparkles, AlertTriangle, CheckCircle2,
   Shield, Lightbulb, Clock, Loader, RefreshCw, Target, TrendingUp, Zap,
+  Upload, FileText, Trash2, Plus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LearningStyle {
   primary: string;
@@ -52,6 +59,15 @@ interface LearningProfile {
   overall_summary: string;
 }
 
+interface StudentDocument {
+  id: string;
+  file_name: string;
+  file_url: string;
+  document_type: string;
+  description: string;
+  created_at: string;
+}
+
 const styleIcons: Record<string, React.ReactNode> = {
   visual: <Eye className="h-5 w-5" />,
   auditory: <Ear className="h-5 w-5" />,
@@ -79,19 +95,50 @@ const priorityColors: Record<string, string> = {
   high: "bg-red-100 text-red-800",
 };
 
-const AdaptiveLearningProfile = () => {
+interface AdaptiveLearningProfileProps {
+  targetUserId?: string; // For teacher viewing a student
+  targetUserName?: string;
+}
+
+const AdaptiveLearningProfile = ({ targetUserId, targetUserName }: AdaptiveLearningProfileProps) => {
+  const { user } = useAuth();
   const [profile, setProfile] = useState<LearningProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [documents, setDocuments] = useState<StudentDocument[]>([]);
+  const [docsLoaded, setDocsLoaded] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [docType, setDocType] = useState("syllabus");
+  const [docDescription, setDocDescription] = useState("");
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+
+  const isViewingOwnProfile = !targetUserId || targetUserId === user?.id;
+  const effectiveUserId = targetUserId || user?.id;
+  const displayName = targetUserName || "Your";
+
+  const fetchDocuments = async () => {
+    if (!effectiveUserId) return;
+    const { data, error } = await supabase
+      .from("student_documents")
+      .select("*")
+      .eq("user_id", effectiveUserId)
+      .order("created_at", { ascending: false });
+    if (!error) setDocuments((data as StudentDocument[]) || []);
+    setDocsLoaded(true);
+  };
 
   const analyzeProfile = async () => {
     setLoading(true);
+    if (!docsLoaded) await fetchDocuments();
     try {
-      const { data, error } = await supabase.functions.invoke("analyze-learning-profile");
+      const { data, error } = await supabase.functions.invoke("analyze-learning-profile", {
+        body: targetUserId ? { userId: targetUserId } : {},
+      });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       setProfile(data.profile);
-      toast({ title: "Analysis Complete", description: "Your adaptive learning profile has been generated." });
+      toast({ title: "Analysis Complete", description: `${isViewingOwnProfile ? "Your" : displayName + "'s"} adaptive learning profile has been generated.` });
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to analyze profile", variant: "destructive" });
     } finally {
@@ -99,29 +146,203 @@ const AdaptiveLearningProfile = () => {
     }
   };
 
+  const handleUploadDocument = async () => {
+    if (!uploadFile || !user) return;
+    setUploading(true);
+    try {
+      const filePath = `${user.id}/${Date.now()}_${uploadFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("student-documents")
+        .upload(filePath, uploadFile, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("student-documents")
+        .getPublicUrl(filePath);
+
+      const { error: dbError } = await supabase.from("student_documents").insert({
+        user_id: user.id,
+        file_url: urlData.publicUrl,
+        file_name: uploadFile.name,
+        document_type: docType,
+        description: docDescription.trim(),
+      });
+      if (dbError) throw dbError;
+
+      toast({ title: "Document Uploaded", description: `${uploadFile.name} has been added to your profile.` });
+      setUploadDialogOpen(false);
+      setUploadFile(null);
+      setDocDescription("");
+      fetchDocuments();
+    } catch (e: any) {
+      toast({ title: "Upload Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const deleteDocument = async (doc: StudentDocument) => {
+    try {
+      await supabase.from("student_documents").delete().eq("id", doc.id);
+      setDocuments(prev => prev.filter(d => d.id !== doc.id));
+      toast({ title: "Document removed" });
+    } catch {
+      toast({ title: "Failed to delete", variant: "destructive" });
+    }
+  };
+
+  // Load documents on mount
+  React.useEffect(() => {
+    if (effectiveUserId && !docsLoaded) fetchDocuments();
+  }, [effectiveUserId]);
+
   if (!profile && !loading) {
     return (
-      <Card className="max-w-2xl mx-auto">
-        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-            <Brain className="h-10 w-10 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Ethical Adaptation Framework</h2>
-          <p className="text-muted-foreground max-w-md mb-2">
-            This AI-powered analysis examines your chat history and learning path activity to build
-            a personalized profile of how you learn best.
-          </p>
-          <ul className="text-sm text-muted-foreground space-y-1 mb-6 text-left">
-            <li className="flex items-center gap-2"><Eye className="h-4 w-4 text-primary" /> Identifies your unique learning style</li>
-            <li className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Detects conceptual gaps before they grow</li>
-            <li className="flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /> Preventive teaching to stop mistakes early</li>
-            <li className="flex items-center gap-2"><Target className="h-4 w-4 text-primary" /> Optimized plan tailored to your style</li>
-          </ul>
-          <Button onClick={analyzeProfile} size="lg" className="gap-2">
-            <Sparkles className="h-5 w-5" /> Analyze My Learning Profile
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        {/* Document Upload Section (only for own profile) */}
+        {isViewingOwnProfile && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <FileText className="h-5 w-5" />
+                    My Documents
+                  </CardTitle>
+                  <CardDescription>Upload syllabi, report cards, transcripts to enhance your profile analysis</CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setUploadDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Upload Document
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {documents.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No documents uploaded yet. Upload syllabi, report cards, or transcripts to get better analysis.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {documents.map(doc => (
+                    <div key={doc.id} className="flex items-center justify-between border rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">{doc.file_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            <Badge variant="secondary" className="mr-1 text-xs">{doc.document_type}</Badge>
+                            {doc.description}
+                          </p>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => deleteDocument(doc)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Documents visible for teacher too (read only) */}
+        {!isViewingOwnProfile && documents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="h-5 w-5" />
+                Student Documents ({documents.length})
+              </CardTitle>
+              <CardDescription>Documents uploaded by {displayName}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {documents.map(doc => (
+                  <div key={doc.id} className="flex items-center gap-3 border rounded-lg p-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">{doc.file_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <Badge variant="secondary" className="mr-1 text-xs">{doc.document_type}</Badge>
+                        {doc.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="max-w-2xl mx-auto">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+              <Brain className="h-10 w-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Ethical Adaptation Framework</h2>
+            <p className="text-muted-foreground max-w-md mb-2">
+              {isViewingOwnProfile
+                ? "This AI-powered analysis examines your chat history, assignments, grades, and uploaded documents to build a personalized profile."
+                : `Analyze ${displayName}'s learning patterns, grades, and documents to generate an adaptive profile.`}
+            </p>
+            <ul className="text-sm text-muted-foreground space-y-1 mb-6 text-left">
+              <li className="flex items-center gap-2"><Eye className="h-4 w-4 text-primary" /> Identifies unique learning style</li>
+              <li className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Detects conceptual gaps before they grow</li>
+              <li className="flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /> Preventive teaching to stop mistakes early</li>
+              <li className="flex items-center gap-2"><Target className="h-4 w-4 text-primary" /> Optimized plan tailored to learning style</li>
+              <li className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Uses uploaded syllabi & report cards</li>
+            </ul>
+            <Button onClick={analyzeProfile} size="lg" className="gap-2">
+              <Sparkles className="h-5 w-5" /> {isViewingOwnProfile ? "Analyze My Learning Profile" : `Analyze ${displayName}'s Profile`}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Upload Dialog */}
+        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upload Document</DialogTitle>
+              <DialogDescription>Upload a syllabus, report card, transcript, or other academic document.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div>
+                <Label>Document Type</Label>
+                <Select value={docType} onValueChange={setDocType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="syllabus">Syllabus</SelectItem>
+                    <SelectItem value="report_card">Report Card</SelectItem>
+                    <SelectItem value="transcript">Transcript</SelectItem>
+                    <SelectItem value="certificate">Certificate</SelectItem>
+                    <SelectItem value="notes">Study Notes</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>File</Label>
+                <Input type="file" onChange={e => setUploadFile(e.target.files?.[0] || null)} className="mt-1" />
+                {uploadFile && <p className="text-xs text-muted-foreground mt-1">{uploadFile.name}</p>}
+              </div>
+              <div>
+                <Label>Description (optional)</Label>
+                <Textarea
+                  placeholder="e.g. Math syllabus for Spring 2026, Grade 10 report card..."
+                  value={docDescription}
+                  onChange={e => setDocDescription(e.target.value)}
+                  rows={2}
+                />
+              </div>
+              <Button onClick={handleUploadDocument} disabled={uploading || !uploadFile} className="w-full">
+                {uploading ? "Uploading..." : "Upload Document"}
+                <Upload className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     );
   }
 
@@ -130,8 +351,8 @@ const AdaptiveLearningProfile = () => {
       <Card className="max-w-2xl mx-auto">
         <CardContent className="flex flex-col items-center justify-center py-20">
           <Loader className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p className="text-lg font-medium">Analyzing your learning patterns...</p>
-          <p className="text-sm text-muted-foreground mt-1">Reviewing chat history, quiz results, and learning paths</p>
+          <p className="text-lg font-medium">Analyzing learning patterns...</p>
+          <p className="text-sm text-muted-foreground mt-1">Reviewing chat history, grades, documents, and learning paths</p>
         </CardContent>
       </Card>
     );
@@ -143,7 +364,7 @@ const AdaptiveLearningProfile = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Brain className="h-6 w-6 text-primary" /> Your Learning Profile
+            <Brain className="h-6 w-6 text-primary" /> {isViewingOwnProfile ? "Your" : `${displayName}'s`} Learning Profile
           </h2>
           <p className="text-muted-foreground text-sm mt-1">{profile!.overall_summary}</p>
         </div>
@@ -160,7 +381,7 @@ const AdaptiveLearningProfile = () => {
               {styleIcons[profile!.learning_style.primary] || <Brain className="h-5 w-5" />}
               Learning Style
             </CardTitle>
-            <CardDescription>How you learn most effectively</CardDescription>
+            <CardDescription>How {isViewingOwnProfile ? "you learn" : "this student learns"} most effectively</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
@@ -175,7 +396,7 @@ const AdaptiveLearningProfile = () => {
             </div>
             <p className="text-sm text-muted-foreground">{profile!.learning_style.description}</p>
             <div>
-              <h4 className="text-sm font-semibold mb-2">Study Tips for You:</h4>
+              <h4 className="text-sm font-semibold mb-2">Study Tips:</h4>
               <ul className="space-y-2">
                 {profile!.learning_style.tips.map((tip, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
@@ -193,9 +414,9 @@ const AdaptiveLearningProfile = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-green-600" />
-              Your Strengths
+              Strengths
             </CardTitle>
-            <CardDescription>Areas where you're excelling</CardDescription>
+            <CardDescription>Areas of excellence</CardDescription>
           </CardHeader>
           <CardContent>
             {profile!.strengths.length > 0 ? (
@@ -211,7 +432,7 @@ const AdaptiveLearningProfile = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Keep learning to build your strength profile!</p>
+              <p className="text-sm text-muted-foreground">Keep learning to build the strength profile!</p>
             )}
           </CardContent>
         </Card>
@@ -224,7 +445,7 @@ const AdaptiveLearningProfile = () => {
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             Conceptual Gaps Detected
           </CardTitle>
-          <CardDescription>Areas that need attention to prevent future difficulties</CardDescription>
+          <CardDescription>Areas that need attention</CardDescription>
         </CardHeader>
         <CardContent>
           {profile!.conceptual_gaps.length > 0 ? (
@@ -261,7 +482,7 @@ const AdaptiveLearningProfile = () => {
             <Shield className="h-5 w-5 text-primary" />
             Preventive Teaching Insights
           </CardTitle>
-          <CardDescription>Predicted challenges and how to prevent them before they happen</CardDescription>
+          <CardDescription>Predicted challenges and how to prevent them</CardDescription>
         </CardHeader>
         <CardContent>
           {profile!.preventive_insights.length > 0 ? (
@@ -295,9 +516,9 @@ const AdaptiveLearningProfile = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5 text-primary" />
-            Your Optimized Learning Plan
+            Optimized Learning Plan
           </CardTitle>
-          <CardDescription>Activities tailored to your learning style and current needs</CardDescription>
+          <CardDescription>Activities tailored to the learning style and current needs</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -326,7 +547,7 @@ const AdaptiveLearningProfile = () => {
           </div>
           <div className="mt-4 p-3 bg-primary/5 rounded-lg text-sm text-muted-foreground flex items-start gap-2">
             <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <span>This plan is personalized based on your <strong>{profile!.learning_style.primary.replace("_", " ")}</strong> learning style and current progress. Re-analyze periodically for updated recommendations.</span>
+            <span>This plan is personalized based on the <strong>{profile!.learning_style.primary.replace("_", " ")}</strong> learning style and current progress. Re-analyze periodically for updated recommendations.</span>
           </div>
         </CardContent>
       </Card>
