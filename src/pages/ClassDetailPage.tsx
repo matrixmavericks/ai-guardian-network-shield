@@ -91,6 +91,33 @@ const ClassDetailPage = () => {
     fetchClassData();
   }, [id, user]);
 
+  useEffect(() => {
+    const loadAssignedPaths = async () => {
+      if (!selectedStudent) {
+        setAssignedPathIds([]);
+        return;
+      }
+
+      setLoadingAssignedPaths(true);
+      try {
+        const { data, error } = await supabase
+          .from('learning_path_progress')
+          .select('path_id')
+          .eq('user_id', selectedStudent.student_id);
+
+        if (error) throw error;
+        setAssignedPathIds((data || []).map((item: { path_id: string }) => item.path_id));
+      } catch (err) {
+        console.error('Failed to load assigned paths', err);
+        setAssignedPathIds([]);
+      } finally {
+        setLoadingAssignedPaths(false);
+      }
+    };
+
+    loadAssignedPaths();
+  }, [selectedStudent?.student_id]);
+
   const fetchClassData = async () => {
     if (!id || !user) return;
     setLoading(true);
