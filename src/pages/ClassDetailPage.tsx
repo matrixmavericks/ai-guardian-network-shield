@@ -230,23 +230,35 @@ const ClassDetailPage = () => {
   const assignLearningPath = async (pathId?: string) => {
     const pid = pathId || selectedPathId;
     if (!pid || !selectedStudent) return;
+
+    if (assignedPathIds.includes(pid)) {
+      toast.info('Student already has this learning path assigned');
+      return;
+    }
+
     try {
       const { error } = await supabase.from('learning_path_progress').insert({
         user_id: selectedStudent.student_id,
         path_id: pid,
         progress: 0,
       });
+
       if (error) {
         if (error.code === '23505') {
           toast.info('Student already has this learning path assigned');
-        } else throw error;
+          setAssignedPathIds((prev) => (prev.includes(pid) ? prev : [...prev, pid]));
+        } else {
+          throw error;
+        }
       } else {
+        setAssignedPathIds((prev) => (prev.includes(pid) ? prev : [...prev, pid]));
         toast.success('Learning path assigned!');
         setAssignPathOpen(false);
         setSelectedPathId('');
       }
     } catch (err: any) {
-      toast.error('Failed to assign learning path');
+      console.error('Failed to assign learning path', err);
+      toast.error(err?.message || 'Failed to assign learning path');
     }
   };
 
