@@ -75,6 +75,51 @@ serve(async (req) => {
     const submissionsData = submissionsRes.data || [];
     const studentDocuments = documentsRes.data || [];
 
+    // Fetch actual content of text-based documents from storage
+    const documentContents: { fileName: string; type: string; description: string; content: string }[] = [];
+    for (const doc of studentDocuments) {
+      try {
+        // Extract the storage path from the file_url
+        // file_url format: .../storage/v1/object/public/student-documents/userId/filename
+        const urlParts = doc.file_url?.split('/student-documents/');
+        const storagePath = urlParts && urlParts.length > 1 ? urlParts[1] : null;
+        
+        if (storagePath) {
+          const { data: fileData, error: fileError } = await supabase
+            .storage
+            .from('student-documents')
+            .download(storagePath);
+          
+          if (!fileError && fileData) {
+            const text = await fileData.text();
+            // Limit content to 6000 chars per document to stay within context limits
+            const trimmedContent = text.substring(0, 6000);
+            documentContents.push({
+              fileName: doc.file_name,
+              type: doc.document_type,
+              description: doc.description || '',
+              content: trimmedContent,
+            });
+          } else {
+            documentContents.push({
+              fileName: doc.file_name,
+              type: doc.document_type,
+              description: doc.description || '',
+              content: '[Could not read file content]',
+            });
+          }
+        }
+      } catch (docErr) {
+        console.error(`Failed to read document ${doc.file_name}:`, docErr);
+        documentContents.push({
+          fileName: doc.file_name,
+          type: doc.document_type,
+          description: doc.description || '',
+          content: '[Error reading file]',
+        });
+      }
+    }
+
     // Also check learning paths assigned to the student (not just created by)
     let assignedPaths: any[] = [];
     if (progressData.length > 0) {
