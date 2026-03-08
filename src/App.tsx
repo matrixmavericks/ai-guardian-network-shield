@@ -80,6 +80,7 @@ function App() {
           <Route path="/model-training" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ModelTrainingPage /></ProtectedRoute>} />
           <Route path="/classes" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><ClassesPage /></ProtectedRoute>} />
           <Route path="/class/:id" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><ClassDetailPage /></ProtectedRoute>} />
+          <Route path="/ai-usage" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><AIUsagePage /></ProtectedRoute>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

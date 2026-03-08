@@ -35,6 +35,7 @@ const DashboardSidebar = () => {
         { title: "Teaching Plans", href: "/teacher-plan-generator", icon: <Layers className="h-5 w-5" /> },
         { title: "Messages", href: "/messages", icon: <MessageSquare className="h-5 w-5" /> },
         { title: "AI Assistant", href: "/ai-learning-assistant", icon: <Brain className="h-5 w-5" /> },
+        { title: "AI Usage", href: "/ai-usage", icon: <DollarSign className="h-5 w-5" /> },
       ];
     } else {
       return [
