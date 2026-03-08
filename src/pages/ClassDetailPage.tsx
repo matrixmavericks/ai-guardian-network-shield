@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import TeacherGradingView from '@/components/TeacherGradingView';
 import { Progress } from '@/components/ui/progress';
+import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
 
 interface Student {
   student_id: string;
