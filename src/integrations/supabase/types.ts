@@ -954,6 +954,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_contacts: {
+        Args: { _user_id: string }
+        Returns: {
+          full_name: string
+          role: string
+          user_id: string
+        }[]
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {

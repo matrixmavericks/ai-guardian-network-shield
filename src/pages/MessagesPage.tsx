@@ -36,22 +36,19 @@ const MessagesPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   
-  // Fetch contacts (all users except current user)
+  // Fetch contacts via class memberships (classmates + teachers + past conversations)
   useEffect(() => {
     if (!user) return;
 
     const fetchContacts = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, full_name')
-        .neq('user_id', user.id);
+      const { data, error } = await supabase.rpc('get_user_contacts', { _user_id: user.id });
 
       if (error) {
         console.error('Error fetching contacts:', error);
         return;
       }
 
-      setContacts(data || []);
+      setContacts((data || []).map((c: any) => ({ user_id: c.user_id, full_name: c.full_name, role: c.role })));
       
       // Fetch unread counts for each contact
       if (data) {
@@ -216,7 +213,16 @@ const MessagesPage = () => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
-                                <p className="font-medium truncate">{contact.full_name}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium truncate">{contact.full_name}</p>
+                                  {contact.role && (
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                      contact.role === 'teacher' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                                    }`}>
+                                      {contact.role}
+                                    </span>
+                                  )}
+                                </div>
                                 {unreadCounts[contact.user_id] > 0 && (
                                   <span className="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center shrink-0">
                                     {unreadCounts[contact.user_id]}

@@ -131,12 +131,9 @@ const StudentDashboard = () => {
           setPathProgress([]);
         }
 
-        // Contacts for messaging
-        const { data: contactData } = await supabase
-          .from('profiles')
-          .select('user_id, full_name')
-          .neq('user_id', user.id);
-        setContacts(contactData || []);
+        // Contacts for messaging — use security definer function for cross-role visibility
+        const { data: contactData } = await supabase.rpc('get_user_contacts', { _user_id: user.id });
+        setContacts((contactData || []).map((c: any) => ({ user_id: c.user_id, full_name: c.full_name })));
 
         // Unread counts
         if (contactData?.length) {
