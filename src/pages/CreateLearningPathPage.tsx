@@ -216,7 +216,6 @@ const CreateLearningPathPage = () => {
     // Auto-generate the full learning path
     setIsGenerating(true);
     try {
-      await ensureValidSession();
       const resolvedSubject = rec.subject || effectiveSubject;
       const { data, error } = await supabase.functions.invoke('generate-learning-path', {
         body: {
