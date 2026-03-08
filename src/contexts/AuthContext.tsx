@@ -44,11 +44,15 @@ async function ensureUserSetup(supabaseUser: User) {
     const { error: profileError } = await supabase.from('profiles').insert({
       user_id: supabaseUser.id,
       full_name: fullName || supabaseUser.email?.split('@')[0] || 'User',
+      email: supabaseUser.email || null,
     });
 
     if (profileError) {
       throw profileError;
     }
+  } else if (!profile.email && supabaseUser.email) {
+    // Backfill email if missing
+    await supabase.from('profiles').update({ email: supabaseUser.email }).eq('user_id', supabaseUser.id);
   }
 
   const { data: roles, error: rolesError } = await supabase
