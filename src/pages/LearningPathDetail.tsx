@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import ResourceViewer from "@/components/learning/ResourceViewer";
 import QuizPlayer from "@/components/learning/QuizPlayer";
+import LearningPathInsights from "@/components/learning/LearningPathInsights";
 import {
   getLearningPathById,
   getPathProgress,
