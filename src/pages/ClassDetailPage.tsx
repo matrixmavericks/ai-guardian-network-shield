@@ -1119,9 +1119,12 @@ const ClassDetailPage = () => {
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-medium">{a.title}</h4>
                                   {isGraded && (
-                                    <Badge variant="default" className="bg-green-600">
+                                    <Badge variant="default" className="bg-emerald-600">
                                       <CheckCircle2 className="mr-1 h-3 w-3" />
-                                      {sub.grade}/{sub.max_grade} ({Math.round((sub.grade / sub.max_grade) * 100)}%)
+                                      {classGradingSystem
+                                        ? convertPercentageToGrade((sub.grade / sub.max_grade) * 100, classGradingSystem)
+                                        : `${sub.grade}/${sub.max_grade}`}
+                                      {' '}({Math.round((sub.grade / sub.max_grade) * 100)}%)
                                     </Badge>
                                   )}
                                   {isSubmitted && !isGraded && (
