@@ -1,22 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowUpRight, 
   Settings, 
-  Users, 
-  Shield, 
-  Server, 
-  Brain, 
-  Network, 
   AlertTriangle, 
-  BarChart3,
-  ListFilter,
-  HelpCircle,
-  Bell
+  RefreshCw
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import DashboardNav from "@/components/DashboardNav";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import NetworkStatus from "@/components/NetworkStatus";
@@ -26,9 +17,61 @@ import UserManagement from "@/components/UserManagement";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import AlertSettings from "@/components/AlertSettings";
 import HelpSupport from "@/components/HelpSupport";
+import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow } from "date-fns";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [stats, setStats] = useState({ totalPrompts: 0, bypassBlocked: 0 });
+  const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch prompt counts
+      const { count: promptCount } = await supabase
+        .from('prompt_logs')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch bypass attempt counts
+      const { count: bypassCount } = await supabase
+        .from('bypass_attempts')
+        .select('*', { count: 'exact', head: true })
+        .eq('blocked', true);
+
+      setStats({
+        totalPrompts: promptCount || 0,
+        bypassBlocked: bypassCount || 0,
+      });
+
+      // Fetch recent bypass attempts for alerts
+      const { data: alerts } = await supabase
+        .from('bypass_attempts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      setRecentAlerts(alerts || []);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return { bg: 'bg-red-50', border: 'border-red-100', title: 'text-red-800', text: 'text-red-600' };
+      case 'high': return { bg: 'bg-red-50', border: 'border-red-100', title: 'text-red-800', text: 'text-red-600' };
+      case 'medium': return { bg: 'bg-amber-50', border: 'border-amber-100', title: 'text-amber-800', text: 'text-amber-600' };
+      default: return { bg: 'bg-blue-50', border: 'border-blue-100', title: 'text-blue-800', text: 'text-blue-600' };
+    }
+  };
 
   return (
     <div className="min-h-screen flex bg-slate-50">
@@ -39,9 +82,9 @@ const Dashboard = () => {
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
-              <Button>
-                <Settings className="h-4 w-4 mr-2" />
-                Configure
+              <Button onClick={fetchDashboardData} variant="outline">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
             </div>
 
@@ -52,10 +95,10 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
-                    <div className="text-3xl font-bold">5,284</div>
+                    <div className="text-3xl font-bold">{stats.totalPrompts.toLocaleString()}</div>
                     <div className="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
                       <ArrowUpRight className="h-3 w-3 mr-1" />
-                      12% from last week
+                      Live
                     </div>
                   </div>
                 </CardContent>
@@ -67,10 +110,10 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
-                    <div className="text-3xl font-bold">217</div>
+                    <div className="text-3xl font-bold">{stats.bypassBlocked.toLocaleString()}</div>
                     <div className="bg-amber-100 text-amber-700 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
                       <ArrowUpRight className="h-3 w-3 mr-1" />
-                      5% from last week
+                      Live
                     </div>
                   </div>
                 </CardContent>
@@ -99,59 +142,51 @@ const Dashboard = () => {
                 <TabsTrigger value="users">Users</TabsTrigger>
                 <TabsTrigger value="analytics">Analytics</TabsTrigger>
                 <TabsTrigger value="alerts">Alerts</TabsTrigger>
-                <TabsTrigger value="training">AI Training</TabsTrigger>
                 <TabsTrigger value="help">Help & Support</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Network Status */}
                   <NetworkStatus />
                   
-                  {/* Recent Activity */}
                   <Card className="col-span-1">
                     <CardHeader>
                       <CardTitle className="flex items-center">
                         <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
                         Alert Activity
                       </CardTitle>
-                      <CardDescription>Recent system alerts and warnings</CardDescription>
+                      <CardDescription>Recent bypass attempts and security alerts</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        <div className="bg-red-50 p-3 rounded-md border border-red-100">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-red-800">VPN Bypass Attempt</p>
-                              <p className="text-sm text-red-600">User attempted to use Cloudflare Warp</p>
-                            </div>
-                            <span className="text-xs text-slate-500">2h ago</span>
-                          </div>
-                        </div>
-                        <div className="bg-amber-50 p-3 rounded-md border border-amber-100">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-amber-800">Custom DNS Detected</p>
-                              <p className="text-sm text-amber-600">DNS settings changed to 8.8.8.8</p>
-                            </div>
-                            <span className="text-xs text-slate-500">5h ago</span>
-                          </div>
-                        </div>
-                        <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-blue-800">System Update</p>
-                              <p className="text-sm text-blue-600">AI filtering rules were updated</p>
-                            </div>
-                            <span className="text-xs text-slate-500">1d ago</span>
-                          </div>
-                        </div>
+                        {recentAlerts.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No recent alerts. System running smoothly.</p>
+                        ) : (
+                          recentAlerts.slice(0, 3).map((alert) => {
+                            const colors = getSeverityColor(alert.severity || 'low');
+                            return (
+                              <div key={alert.id} className={`${colors.bg} p-3 rounded-md border ${colors.border}`}>
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className={`font-medium ${colors.title}`}>{alert.attempt_type}</p>
+                                    <p className={`text-sm ${colors.text}`}>
+                                      {(alert.details as any)?.description || `Severity: ${alert.severity}`}
+                                      {alert.blocked ? ' — Blocked' : ' — Not blocked'}
+                                    </p>
+                                  </div>
+                                  <span className="text-xs text-slate-500">
+                                    {formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                     </CardContent>
                   </Card>
                 </div>
                 
-                {/* Recent Prompts */}
                 <RecentPrompts />
               </TabsContent>
 
@@ -169,141 +204,6 @@ const Dashboard = () => {
               
               <TabsContent value="alerts" className="space-y-6">
                 <AlertSettings />
-              </TabsContent>
-
-              <TabsContent value="training" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>AI Model Training</CardTitle>
-                        <CardDescription>Customize how the AI responds to student prompts</CardDescription>
-                      </div>
-                      <Button>Create New Model</Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-8">
-                      <div>
-                        <h3 className="text-lg font-medium mb-4">Current Models</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <div className="flex justify-between items-center">
-                                <CardTitle>Math Helper</CardTitle>
-                                <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded">Active</div>
-                              </div>
-                              <CardDescription>Guides students through mathematical problem-solving</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-sm text-slate-600 mb-4">
-                                <strong>Examples:</strong> 176 | <strong>Last Updated:</strong> 2 days ago
-                              </div>
-                              <div className="bg-slate-100 p-3 rounded-md mb-4 text-sm">
-                                <p className="font-medium mb-1">Sample Input:</p>
-                                <p className="text-slate-700">What is 7x + 39x?</p>
-                                <p className="font-medium mb-1 mt-3">Sample Output:</p>
-                                <p className="text-slate-700">
-                                  Let me help you solve this step by step:
-                                  <br />
-                                  1. We have 7x + 39x
-                                  <br />
-                                  2. We can combine like terms by adding the coefficients: 7 + 39 = 46
-                                  <br />
-                                  3. So 7x + 39x = 46x
-                                  <br />
-                                  Try using this approach for similar problems!
-                                </p>
-                              </div>
-                              <div className="flex justify-end">
-                                <Button variant="outline" size="sm">Edit Model</Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <div className="flex justify-between items-center">
-                                <CardTitle>Essay Helper</CardTitle>
-                                <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded">Active</div>
-                              </div>
-                              <CardDescription>Provides essay structure and planning guidance</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-sm text-slate-600 mb-4">
-                                <strong>Examples:</strong> 104 | <strong>Last Updated:</strong> 5 days ago
-                              </div>
-                              <div className="bg-slate-100 p-3 rounded-md mb-4 text-sm">
-                                <p className="font-medium mb-1">Sample Input:</p>
-                                <p className="text-slate-700">Write an essay about climate change</p>
-                                <p className="font-medium mb-1 mt-3">Sample Output:</p>
-                                <p className="text-slate-700">
-                                  I can help you plan an essay on climate change. Here's a suggested structure:
-                                  <br /><br />
-                                  1. Introduction: Define climate change and its significance
-                                  <br />
-                                  2. Body paragraphs:
-                                  <br />
-                                  - Causes of climate change
-                                  <br />
-                                  - Effects on ecosystems
-                                  <br />
-                                  - Mitigation strategies
-                                  <br />
-                                  3. Conclusion: Summary and call to action
-                                  <br /><br />
-                                  Would you like help developing any particular section?
-                                </p>
-                              </div>
-                              <div className="flex justify-end">
-                                <Button variant="outline" size="sm">Edit Model</Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-medium mb-4">Train New Responses</h3>
-                        <Card>
-                          <CardContent className="pt-6">
-                            <div className="space-y-4">
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Problem Category</label>
-                                <select className="w-full p-2 border border-slate-300 rounded-md">
-                                  <option>Mathematics</option>
-                                  <option>Science</option>
-                                  <option>Language Arts</option>
-                                  <option>Social Studies</option>
-                                  <option>Computer Science</option>
-                                </select>
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Sample Request (What students might ask)</label>
-                                <textarea 
-                                  className="w-full p-3 border border-slate-300 rounded-md min-h-[100px]" 
-                                  placeholder="E.g., Solve 3x + 5 = 20"
-                                ></textarea>
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Desired Process-Focused Response</label>
-                                <textarea 
-                                  className="w-full p-3 border border-slate-300 rounded-md min-h-[150px]" 
-                                  placeholder="E.g., Let me guide you through solving this equation step by step..."
-                                ></textarea>
-                              </div>
-                              
-                              <div className="flex justify-end">
-                                <Button className="bg-blue-600 hover:bg-blue-700">Add Training Example</Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </TabsContent>
               
               <TabsContent value="help" className="space-y-6">
