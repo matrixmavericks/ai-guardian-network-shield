@@ -355,6 +355,82 @@ const ClassDetailPage = () => {
     }
   };
 
+  const handleStudentSubmit = async () => {
+    if (!selectedSubmitAssignment || !user) return;
+    if (!submitText.trim() && !submitFile) {
+      toast.error('Please provide an answer or upload a file');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      let fileUrl: string | null = null;
+      let fileName: string | null = null;
+
+      if (submitFile) {
+        const filePath = `${user.id}/${selectedSubmitAssignment.id}/${submitFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('submission-files')
+          .upload(filePath, submitFile, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage
+          .from('submission-files')
+          .getPublicUrl(filePath);
+        fileUrl = urlData.publicUrl;
+        fileName = submitFile.name;
+      }
+
+      const existing = studentSubmissions.find((s: any) => s.assignment_id === selectedSubmitAssignment.id);
+      if (existing) {
+        const { error } = await supabase
+          .from('assignment_submissions')
+          .update({
+            content: submitText.trim(),
+            file_url: fileUrl || existing.file_url,
+            file_name: fileName || existing.file_name,
+            submitted_at: new Date().toISOString(),
+            status: 'resubmitted',
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('assignment_submissions')
+          .insert({
+            assignment_id: selectedSubmitAssignment.id,
+            student_id: user.id,
+            content: submitText.trim(),
+            file_url: fileUrl,
+            file_name: fileName,
+            status: 'submitted',
+          });
+        if (error) throw error;
+      }
+
+      toast.success('Assignment submitted!');
+      setSubmitDialogOpen(false);
+      setSubmitText('');
+      setSubmitFile(null);
+      setSelectedSubmitAssignment(null);
+      fetchClassData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Failed to submit');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openStudentSubmitDialog = (assignment: ClassAssignment) => {
+    const existing = studentSubmissions.find((s: any) => s.assignment_id === assignment.id);
+    setSelectedSubmitAssignment(assignment);
+    setSubmitText(existing?.content || '');
+    setSubmitFile(null);
+    setSubmitDialogOpen(true);
+  };
+
+  const getStudentSubmission = (assignmentId: string) =>
+    studentSubmissions.find((s: any) => s.assignment_id === assignmentId);
+
   const copyCode = () => {
     if (classInfo) {
       navigator.clipboard.writeText(classInfo.join_code);
