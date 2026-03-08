@@ -51,7 +51,7 @@ const DashboardSidebar = () => {
       <div className="p-6 border-b">
         <div className="flex items-center">
           <Shield className="h-8 w-8 text-blue-600 mr-2" />
-          <span className="font-bold text-slate-900 text-lg">AI Conditioner</span>
+          <span className="font-bold text-slate-900 text-lg">Refyn Technologies</span>
         </div>
       </div>
       
