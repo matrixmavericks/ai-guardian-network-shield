@@ -45,6 +45,8 @@ const LearningPathDetail = () => {
   const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [assignedStudents, setAssignedStudents] = useState<{ id: string; name: string }[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
