@@ -103,6 +103,7 @@ const CreateLearningPathPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -120,6 +121,50 @@ const CreateLearningPathPage = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [syllabusAnalysis, setSyllabusAnalysis] = useState<any>(null);
+
+  // Resource-based learning path creation
+  const [resourceContext, setResourceContext] = useState<{
+    title: string;
+    description: string;
+    url?: string;
+    fileUrl?: string;
+    fileContent?: string;
+  } | null>(null);
+  const [fetchingContent, setFetchingContent] = useState(false);
+
+  // Pick up resource context from URL params
+  useEffect(() => {
+    const fromResource = searchParams.get('fromResource');
+    if (fromResource === 'true') {
+      const resTitle = searchParams.get('resourceTitle') || '';
+      const resDesc = searchParams.get('resourceDesc') || '';
+      const resUrl = searchParams.get('resourceUrl') || undefined;
+      const resFileUrl = searchParams.get('resourceFileUrl') || undefined;
+
+      setResourceContext({ title: resTitle, description: resDesc, url: resUrl, fileUrl: resFileUrl });
+      setTitle(resTitle);
+      setDescription(resDesc);
+
+      // Clean URL params
+      setSearchParams({}, { replace: true });
+
+      // Try to fetch text content from the file
+      if (resFileUrl) {
+        setFetchingContent(true);
+        fetch(resFileUrl)
+          .then(async (resp) => {
+            const contentType = resp.headers.get('content-type') || '';
+            if (contentType.includes('text/') || contentType.includes('json') || contentType.includes('csv') || contentType.includes('markdown') || contentType.includes('xml')) {
+              const text = await resp.text();
+              setResourceContext(prev => prev ? { ...prev, fileContent: text.slice(0, 8000) } : prev);
+              setSyllabusText(text.slice(0, 8000));
+            }
+          })
+          .catch(() => {})
+          .finally(() => setFetchingContent(false));
+      }
+    }
+  }, []);
 
   const effectiveSubject = subject === 'Other' ? customSubject.trim() : subject;
 
