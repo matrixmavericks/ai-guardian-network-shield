@@ -201,6 +201,10 @@ const StudentDashboard = () => {
                 <Brain className="mr-2 h-4 w-4" />
                 AI Learning
               </TabsTrigger>
+              <TabsTrigger value="adaptive">
+                <Shield className="mr-2 h-4 w-4" />
+                Adaptive Profile
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview">
