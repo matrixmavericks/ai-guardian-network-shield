@@ -287,8 +287,7 @@ serve(async (req) => {
       content: d.content,
     }));
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    // LOVABLE_API_KEY already declared above
 
     const systemPrompt = `You are an expert educational psychologist and adaptive learning specialist. Analyze a student's learning data and produce a comprehensive learning profile.
 
