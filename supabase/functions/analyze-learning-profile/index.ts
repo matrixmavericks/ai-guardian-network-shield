@@ -75,6 +75,51 @@ serve(async (req) => {
     const submissionsData = submissionsRes.data || [];
     const studentDocuments = documentsRes.data || [];
 
+    // Fetch actual content of text-based documents from storage
+    const documentContents: { fileName: string; type: string; description: string; content: string }[] = [];
+    for (const doc of studentDocuments) {
+      try {
+        // Extract the storage path from the file_url
+        // file_url format: .../storage/v1/object/public/student-documents/userId/filename
+        const urlParts = doc.file_url?.split('/student-documents/');
+        const storagePath = urlParts && urlParts.length > 1 ? urlParts[1] : null;
+        
+        if (storagePath) {
+          const { data: fileData, error: fileError } = await supabase
+            .storage
+            .from('student-documents')
+            .download(storagePath);
+          
+          if (!fileError && fileData) {
+            const text = await fileData.text();
+            // Limit content to 6000 chars per document to stay within context limits
+            const trimmedContent = text.substring(0, 6000);
+            documentContents.push({
+              fileName: doc.file_name,
+              type: doc.document_type,
+              description: doc.description || '',
+              content: trimmedContent,
+            });
+          } else {
+            documentContents.push({
+              fileName: doc.file_name,
+              type: doc.document_type,
+              description: doc.description || '',
+              content: '[Could not read file content]',
+            });
+          }
+        }
+      } catch (docErr) {
+        console.error(`Failed to read document ${doc.file_name}:`, docErr);
+        documentContents.push({
+          fileName: doc.file_name,
+          type: doc.document_type,
+          description: doc.description || '',
+          content: '[Error reading file]',
+        });
+      }
+    }
+
     // Also check learning paths assigned to the student (not just created by)
     let assignedPaths: any[] = [];
     if (progressData.length > 0) {
@@ -137,10 +182,11 @@ serve(async (req) => {
       };
     });
 
-    const documentsSummary = studentDocuments.map((d: any) => ({
-      fileName: d.file_name,
-      type: d.document_type,
+    const documentsSummary = documentContents.map((d) => ({
+      fileName: d.fileName,
+      type: d.type,
       description: d.description,
+      content: d.content,
     }));
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -168,8 +214,10 @@ ${JSON.stringify(pathsSummary, null, 2)}
 ## Assignment Grades & Submissions:
 ${JSON.stringify(assignmentsSummary, null, 2)}
 
-## Uploaded Documents (Syllabi, Report Cards, etc.):
+## Uploaded Documents (Syllabi, Report Cards, etc.) — ACTUAL CONTENT:
 ${documentsSummary.length > 0 ? JSON.stringify(documentsSummary, null, 2) : "No documents uploaded yet."}
+
+IMPORTANT: If documents are provided above with actual "content" fields, deeply analyze that content — look for grades, subjects, topics covered, teacher comments, curriculum outlines, etc. Cross-reference document content with chat history and assignment performance to build a comprehensive profile.
 
 Analyze this student's learning profile comprehensively.`;
 
