@@ -858,19 +858,19 @@ const ClassDetailPage = () => {
                                   </p>
                                 </div>
                                 {a.avgGrade !== null && (
-                                  <div className={`text-xl font-bold ${
-                                    a.avgGrade >= 90 ? 'text-green-600' : a.avgGrade >= 70 ? 'text-yellow-600' : 'text-destructive'
-                                  }`}>
-                                    {a.avgGrade}%
+                                  <div className={`text-xl font-bold ${getGradeColor(a.avgGrade)}`}>
+                                    {classGradingSystem
+                                      ? convertPercentageToGrade(a.avgGrade, classGradingSystem)
+                                      : `${a.avgGrade}%`}
                                   </div>
                                 )}
                               </div>
                               {a.avgGrade !== null && (
                                 <div>
                                   <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                    <span>Low: {a.lowestGrade}%</span>
-                                    <span>Avg: {a.avgGrade}%</span>
-                                    <span>High: {a.highestGrade}%</span>
+                                    <span>Low: {classGradingSystem ? convertPercentageToGrade(a.lowestGrade, classGradingSystem) : `${a.lowestGrade}%`}</span>
+                                    <span>Avg: {classGradingSystem ? convertPercentageToGrade(a.avgGrade, classGradingSystem) : `${a.avgGrade}%`}</span>
+                                    <span>High: {classGradingSystem ? convertPercentageToGrade(a.highestGrade, classGradingSystem) : `${a.highestGrade}%`}</span>
                                   </div>
                                   <Progress value={a.avgGrade} />
                                 </div>
