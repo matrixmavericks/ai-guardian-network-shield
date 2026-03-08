@@ -118,7 +118,7 @@ const LearningPathInsights = ({ pathId, pathTitle, pathSubject, pathDifficulty, 
       <Card>
         <CardContent className="flex items-center justify-center gap-3 py-12">
           <Loader className="h-5 w-5 animate-spin text-primary" />
-          <span className="text-muted-foreground">Analyzing your learning history...</span>
+          <span className="text-muted-foreground">{loadingLabel}</span>
         </CardContent>
       </Card>
     );
