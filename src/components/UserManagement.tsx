@@ -243,6 +243,19 @@ const UserManagement = () => {
                       <TableCell className="text-sm text-slate-500">
                         {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
                       </TableCell>
+                      {isTeacherOrAdmin && (
+                        <TableCell>
+                          {!user.roles.includes('teacher') && !user.roles.includes('admin') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => promoteToTeacher(user.user_id, user.full_name)}
+                            >
+                              <Shield className="h-3 w-3 mr-1" /> Make Teacher
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
