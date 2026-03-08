@@ -24,6 +24,7 @@ import AIConfigurationPage from './pages/AIConfigurationPage';
 import ModelTrainingPage from './pages/ModelTrainingPage';
 import ClassesPage from './pages/ClassesPage';
 import ClassDetailPage from './pages/ClassDetailPage';
+import AIUsagePage from './pages/AIUsagePage';
 
 const ProtectedRoute = ({ 
   children, 
