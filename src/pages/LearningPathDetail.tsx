@@ -14,9 +14,11 @@ import {
   CheckCircle,
   ListChecks,
   Play,
+  Sparkles,
 } from "lucide-react";
 import ResourceViewer from "@/components/learning/ResourceViewer";
 import QuizPlayer from "@/components/learning/QuizPlayer";
+import LearningPathInsights from "@/components/learning/LearningPathInsights";
 import {
   getLearningPathById,
   getPathProgress,
@@ -186,6 +188,7 @@ const LearningPathDetail = () => {
           <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
               <TabsTrigger value="overview"><BookOpen className="mr-2 h-4 w-4" />Overview</TabsTrigger>
+              <TabsTrigger value="insights"><Sparkles className="mr-2 h-4 w-4" />My Insights</TabsTrigger>
               <TabsTrigger value="content"><BookOpen className="mr-2 h-4 w-4" />Module Content</TabsTrigger>
               <TabsTrigger value="assessment"><ListChecks className="mr-2 h-4 w-4" />Assessments</TabsTrigger>
             </TabsList>
@@ -227,6 +230,25 @@ const LearningPathDetail = () => {
                     {progressValue > 0 ? "Continue Learning" : "Start Learning"}
                   </Button>
                 </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="insights">
+              {user && (
+                <LearningPathInsights
+                  pathId={learningPath.id}
+                  pathTitle={learningPath.title}
+                  pathSubject={learningPath.subject}
+                  pathDifficulty={learningPath.difficulty}
+                  modules={learningPath.modules.map(m => ({ id: m.id, title: m.title, description: m.description }))}
+                />
+              )}
+              {!user && (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    Please log in to see personalized insights.
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
 
