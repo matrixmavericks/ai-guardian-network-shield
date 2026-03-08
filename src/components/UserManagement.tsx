@@ -200,6 +200,7 @@ const UserManagement = () => {
                   <TableHead>Department</TableHead>
                   <TableHead>Grade Level</TableHead>
                   <TableHead>Joined</TableHead>
+                  {isTeacherOrAdmin && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
