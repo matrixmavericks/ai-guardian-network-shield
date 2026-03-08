@@ -59,6 +59,8 @@ const ClassDetailPage = () => {
   const [assignPathOpen, setAssignPathOpen] = useState(false);
   const [learningPaths, setLearningPaths] = useState<any[]>([]);
   const [selectedPathId, setSelectedPathId] = useState('');
+  const [assignedPathIds, setAssignedPathIds] = useState<string[]>([]);
+  const [loadingAssignedPaths, setLoadingAssignedPaths] = useState(false);
   // Class-level tab
   const [classTab, setClassTab] = useState('students');
   // Assignments
@@ -88,6 +90,33 @@ const ClassDetailPage = () => {
   useEffect(() => {
     fetchClassData();
   }, [id, user]);
+
+  useEffect(() => {
+    const loadAssignedPaths = async () => {
+      if (!selectedStudent) {
+        setAssignedPathIds([]);
+        return;
+      }
+
+      setLoadingAssignedPaths(true);
+      try {
+        const { data, error } = await supabase
+          .from('learning_path_progress')
+          .select('path_id')
+          .eq('user_id', selectedStudent.student_id);
+
+        if (error) throw error;
+        setAssignedPathIds((data || []).map((item: { path_id: string }) => item.path_id));
+      } catch (err) {
+        console.error('Failed to load assigned paths', err);
+        setAssignedPathIds([]);
+      } finally {
+        setLoadingAssignedPaths(false);
+      }
+    };
+
+    loadAssignedPaths();
+  }, [selectedStudent?.student_id]);
 
   const fetchClassData = async () => {
     if (!id || !user) return;
@@ -201,23 +230,35 @@ const ClassDetailPage = () => {
   const assignLearningPath = async (pathId?: string) => {
     const pid = pathId || selectedPathId;
     if (!pid || !selectedStudent) return;
+
+    if (assignedPathIds.includes(pid)) {
+      toast.info('Student already has this learning path assigned');
+      return;
+    }
+
     try {
       const { error } = await supabase.from('learning_path_progress').insert({
         user_id: selectedStudent.student_id,
         path_id: pid,
         progress: 0,
       });
+
       if (error) {
         if (error.code === '23505') {
           toast.info('Student already has this learning path assigned');
-        } else throw error;
+          setAssignedPathIds((prev) => (prev.includes(pid) ? prev : [...prev, pid]));
+        } else {
+          throw error;
+        }
       } else {
+        setAssignedPathIds((prev) => (prev.includes(pid) ? prev : [...prev, pid]));
         toast.success('Learning path assigned!');
         setAssignPathOpen(false);
         setSelectedPathId('');
       }
     } catch (err: any) {
-      toast.error('Failed to assign learning path');
+      console.error('Failed to assign learning path', err);
+      toast.error(err?.message || 'Failed to assign learning path');
     }
   };
 
@@ -570,19 +611,28 @@ const ClassDetailPage = () => {
                                 </p>
                               ) : (
                                 <div className="space-y-3">
-                                  {learningPaths.map(p => (
-                                    <div key={p.id} className="flex items-center justify-between border rounded-lg p-3">
-                                      <div>
-                                        <p className="font-medium text-sm">{p.title}</p>
-                                        <p className="text-xs text-muted-foreground">{p.subject}</p>
+                                  {learningPaths.map(p => {
+                                    const isAssigned = assignedPathIds.includes(p.id);
+
+                                    return (
+                                      <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <p className="text-sm font-medium">{p.title}</p>
+                                            {isAssigned && <Badge variant="secondary">Assigned</Badge>}
+                                          </div>
+                                          <p className="text-xs text-muted-foreground">{p.subject}</p>
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          disabled={isAssigned || loadingAssignedPaths}
+                                          onClick={() => assignLearningPath(p.id)}
+                                        >
+                                          {isAssigned ? 'Assigned' : 'Assign'}
+                                        </Button>
                                       </div>
-                                      <Button size="sm" onClick={() => {
-                                        assignLearningPath(p.id);
-                                      }}>
-                                        Assign
-                                      </Button>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               )}
                             </CardContent>
