@@ -127,6 +127,69 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_logs: {
+        Row: {
+          completion_tokens: number
+          created_at: string
+          estimated_cost_usd: number
+          id: string
+          model: string
+          prompt_tokens: number
+          session_id: string | null
+          total_tokens: number
+          user_id: string
+        }
+        Insert: {
+          completion_tokens?: number
+          created_at?: string
+          estimated_cost_usd?: number
+          id?: string
+          model?: string
+          prompt_tokens?: number
+          session_id?: string | null
+          total_tokens?: number
+          user_id: string
+        }
+        Update: {
+          completion_tokens?: number
+          created_at?: string
+          estimated_cost_usd?: number
+          id?: string
+          model?: string
+          prompt_tokens?: number
+          session_id?: string | null
+          total_tokens?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_usage_quotas: {
+        Row: {
+          created_at: string
+          id: string
+          monthly_limit_usd: number
+          student_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          monthly_limit_usd?: number
+          student_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          monthly_limit_usd?: number
+          student_id?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       assignment_submissions: {
         Row: {
           assignment_id: string
