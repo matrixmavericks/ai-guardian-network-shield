@@ -403,6 +403,7 @@ const CreateLearningPathPage = () => {
               </Alert>
             )}
 
+            <Card>
               <CardHeader>
                 <CardTitle>What do you want to learn?</CardTitle>
                 <CardDescription>Tell us the topic and we'll build a personalized learning journey.</CardDescription>
