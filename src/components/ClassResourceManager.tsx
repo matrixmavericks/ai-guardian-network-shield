@@ -444,10 +444,18 @@ const ClassResourceManager: React.FC<Props> = ({ classId, className, isTeacher, 
                       : <Bookmark className="h-4 w-4 text-muted-foreground" />}
                   </Button>
                   {/* AI integration */}
-                  {onSelectResourceForAI && (
-                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => onSelectResourceForAI(resource)}>
+                  {!isTeacher && (
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => {
+                      const params = new URLSearchParams({
+                        resourceTitle: resource.title,
+                        resourceDesc: resource.description || resource.file_name || "",
+                        ...(resource.external_url ? { resourceUrl: resource.external_url } : {}),
+                      });
+                      navigate(`/ai-learning-assistant?${params.toString()}`);
+                    }}>
                       Use in AI
                     </Button>
+                  )}
                   )}
                   {/* Open/Download */}
                   {resource.resource_type === "link" && resource.external_url && (
