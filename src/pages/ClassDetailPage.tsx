@@ -605,6 +605,13 @@ const ClassDetailPage = () => {
 
               {/* ===== ASSIGNMENTS TAB ===== */}
               <TabsContent value="assignments">
+                {gradingAssignment ? (
+                  <TeacherGradingView
+                    assignmentId={gradingAssignment.id}
+                    assignmentTitle={gradingAssignment.title}
+                    onClose={() => setGradingAssignment(null)}
+                  />
+                ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold">Class Assignments</h2>
@@ -666,9 +673,14 @@ const ClassDetailPage = () => {
                                   {a.due_date && ` • Due ${new Date(a.due_date).toLocaleDateString()}`}
                                 </CardDescription>
                               </div>
-                              <Button variant="ghost" size="icon" onClick={() => deleteAssignment(a.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setGradingAssignment(a)}>
+                                  <ClipboardList className="mr-2 h-4 w-4" /> Submissions
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => deleteAssignment(a.id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
                             </div>
                           </CardHeader>
                           {a.description && (
@@ -681,6 +693,7 @@ const ClassDetailPage = () => {
                     </div>
                   )}
                 </div>
+                )}
               </TabsContent>
 
               {/* ===== LEARNING PATHS TAB ===== */}
