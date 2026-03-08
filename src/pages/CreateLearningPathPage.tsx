@@ -183,6 +183,37 @@ const CreateLearningPathPage = () => {
     }
   };
 
+  const handleAnalyzeSyllabus = async () => {
+    if (!syllabusText.trim()) {
+      toast({ title: 'No syllabus', description: 'Paste or type your syllabus content first.', variant: 'destructive' });
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-syllabus', {
+        body: { syllabusText, subject: effectiveSubject, gradeLevel },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Analysis failed.');
+      setRecommendations(data.recommendations || []);
+      setSyllabusAnalysis(data.syllabusAnalysis || null);
+      toast({ title: 'Syllabus analyzed!', description: `Found ${(data.recommendations || []).length} recommended topics.` });
+    } catch (error: any) {
+      toast({ title: 'Analysis failed', description: error?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const applyRecommendation = (rec: any) => {
+    setTitle(rec.title);
+    setDescription(rec.description);
+    if (rec.subject) setSubject(rec.subject);
+    if (rec.difficulty) setDifficulty(rec.difficulty);
+    if (rec.estimatedHours) setEstimatedHours(rec.estimatedHours);
+    toast({ title: 'Topic applied!', description: 'Click "Generate with AI" to build the full learning path.' });
+  };
+
   const handleSave = async () => {
     if (!user) {
       toast({ title: 'Login required', description: 'Please sign in first.', variant: 'destructive' });
