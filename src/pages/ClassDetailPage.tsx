@@ -259,26 +259,30 @@ const ClassDetailPage = () => {
 
       const res = await supabase.functions.invoke('generate-learning-path', {
         body: {
-          topic: genPathTopic,
-          difficulty: genPathDifficulty,
+          title: genPathTopic,
           subject: classInfo.subject,
+          difficulty: genPathDifficulty,
           gradeLevel: genPathGrade,
+          estimatedHours: 10,
+          description: `AI-generated learning path for ${genPathTopic}`,
         },
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       if (res.error) throw res.error;
       const pathData = res.data;
+      if (!pathData?.success) throw new Error(pathData?.error || 'AI generation failed');
 
+      const pathTitle = `${genPathTopic} - ${classInfo.name}`;
       // Save to learning_paths
       const { data: savedPath, error: saveErr } = await supabase.from('learning_paths').insert({
-        title: pathData.title || `${genPathTopic} - ${classInfo.name}`,
-        description: pathData.description || `AI-generated path for ${genPathTopic}`,
+        title: pathTitle,
+        description: `AI-generated path for ${genPathTopic}`,
         subject: classInfo.subject,
         difficulty: genPathDifficulty,
-        estimated_hours: pathData.estimated_hours || 5,
+        estimated_hours: 10,
         modules: pathData.modules || [],
-        tags: pathData.tags || [genPathTopic],
+        tags: pathData.suggestedTags || [genPathTopic],
         created_by: user!.id,
         is_public: false,
       }).select('id').single();
