@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
+import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft,
   BookOpen,
@@ -15,6 +17,7 @@ import {
   ListChecks,
   Play,
   Sparkles,
+  Users,
 } from "lucide-react";
 import ResourceViewer from "@/components/learning/ResourceViewer";
 import QuizPlayer from "@/components/learning/QuizPlayer";
@@ -34,6 +37,7 @@ const LearningPathDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isTeacher } = useUserRole();
 
   const [learningPath, setLearningPath] = useState<LearningPath | null>(null);
   const [pathProgress, setPathProgress] = useState<PathProgress | null>(null);
@@ -41,6 +45,8 @@ const LearningPathDetail = () => {
   const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [assignedStudents, setAssignedStudents] = useState<{ id: string; name: string }[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -79,6 +85,33 @@ const LearningPathDetail = () => {
 
     load();
   }, [id, navigate, toast, user]);
+
+  // Load assigned students for teacher view
+  useEffect(() => {
+    const loadStudents = async () => {
+      if (!isTeacher || !id) return;
+      try {
+        const { data: progressData } = await supabase
+          .from("learning_path_progress")
+          .select("user_id")
+          .eq("path_id", id);
+        if (!progressData || progressData.length === 0) return;
+
+        const studentIds = [...new Set(progressData.map(p => p.user_id))];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", studentIds);
+
+        setAssignedStudents(
+          (profiles || []).map(p => ({ id: p.user_id, name: p.full_name }))
+        );
+      } catch (err) {
+        console.error("Failed to load students:", err);
+      }
+    };
+    loadStudents();
+  }, [isTeacher, id]);
 
   const sortedModules = useMemo(
     () => [...(learningPath?.modules ?? [])].sort((a, b) => a.order - b.order),
@@ -186,9 +219,12 @@ const LearningPathDetail = () => {
           </div>
 
           <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
+            <TabsList className="mb-6 flex-wrap">
               <TabsTrigger value="overview"><BookOpen className="mr-2 h-4 w-4" />Overview</TabsTrigger>
               <TabsTrigger value="insights"><Sparkles className="mr-2 h-4 w-4" />My Insights</TabsTrigger>
+              {isTeacher && assignedStudents.length > 0 && (
+                <TabsTrigger value="student-insights"><Users className="mr-2 h-4 w-4" />Student Insights</TabsTrigger>
+              )}
               <TabsTrigger value="content"><BookOpen className="mr-2 h-4 w-4" />Module Content</TabsTrigger>
               <TabsTrigger value="assessment"><ListChecks className="mr-2 h-4 w-4" />Assessments</TabsTrigger>
             </TabsList>
@@ -251,6 +287,53 @@ const LearningPathDetail = () => {
                 </Card>
               )}
             </TabsContent>
+
+            {isTeacher && assignedStudents.length > 0 && (
+              <TabsContent value="student-insights">
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Users className="h-5 w-5 text-primary" />
+                        View Student Insights
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="mb-4 text-sm text-muted-foreground">
+                        Select a student to view AI-generated insights about where they might struggle in this learning path.
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+                        {assignedStudents.map((student) => (
+                          <Button
+                            key={student.id}
+                            variant={selectedStudentId === student.id ? "default" : "outline"}
+                            className="justify-start"
+                            onClick={() => setSelectedStudentId(student.id)}
+                          >
+                            <Users className="mr-2 h-4 w-4" />
+                            {student.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {selectedStudentId && (
+                    <LearningPathInsights
+                      key={selectedStudentId}
+                      pathId={learningPath.id}
+                      pathTitle={learningPath.title}
+                      pathSubject={learningPath.subject}
+                      pathDifficulty={learningPath.difficulty}
+                      modules={learningPath.modules.map(m => ({ id: m.id, title: m.title, description: m.description }))}
+                      studentId={selectedStudentId}
+                      studentName={assignedStudents.find(s => s.id === selectedStudentId)?.name}
+                    />
+                  )}
+                </div>
+              </TabsContent>
+            )}
+
 
             <TabsContent value="content">
               {selectedModule && (

@@ -46,6 +46,8 @@ interface LearningPathInsightsProps {
   pathSubject: string;
   pathDifficulty: string;
   modules: { id: string; title: string; description: string }[];
+  studentId?: string;
+  studentName?: string;
 }
 
 const severityConfig = {
@@ -60,17 +62,22 @@ const attentionConfig = {
   critical: { label: "Critical", color: "destructive" as const },
 };
 
-const LearningPathInsights = ({ pathId, pathTitle, pathSubject, pathDifficulty, modules }: LearningPathInsightsProps) => {
+const LearningPathInsights = ({ pathId, pathTitle, pathSubject, pathDifficulty, modules, studentId, studentName }: LearningPathInsightsProps) => {
   const [insights, setInsights] = useState<PathInsights | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isTeacherView = !!studentId;
+  const label = isTeacherView ? `${studentName || "Student"}'s Insights` : "Personalized Insights";
+  const buttonLabel = isTeacherView ? `View ${studentName || "Student"}'s Insights` : "Generate My Insights";
+  const loadingLabel = isTeacherView ? `Analyzing ${studentName || "student"}'s learning history...` : "Analyzing your learning history...";
 
   const loadInsights = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const { data, error: fnError } = await supabase.functions.invoke("generate-path-insights", {
-        body: { pathId, pathTitle, pathSubject, pathDifficulty, modules },
+        body: { pathId, pathTitle, pathSubject, pathDifficulty, modules, ...(studentId ? { studentId } : {}) },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
@@ -90,14 +97,16 @@ const LearningPathInsights = ({ pathId, pathTitle, pathSubject, pathDifficulty, 
             <Sparkles className="h-8 w-8 text-primary" />
           </div>
           <div className="text-center">
-            <h3 className="text-lg font-semibold">Personalized Insights</h3>
+            <h3 className="text-lg font-semibold">{label}</h3>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Get AI-powered recommendations based on your past performance to help you succeed in this learning path.
+              {isTeacherView
+                ? `Get AI-powered analysis of ${studentName || "this student"}'s readiness for this learning path based on their past performance.`
+                : "Get AI-powered recommendations based on your past performance to help you succeed in this learning path."}
             </p>
           </div>
           <Button onClick={loadInsights} className="gap-2">
             <Sparkles className="h-4 w-4" />
-            Generate My Insights
+            {buttonLabel}
           </Button>
         </CardContent>
       </Card>
@@ -109,7 +118,7 @@ const LearningPathInsights = ({ pathId, pathTitle, pathSubject, pathDifficulty, 
       <Card>
         <CardContent className="flex items-center justify-center gap-3 py-12">
           <Loader className="h-5 w-5 animate-spin text-primary" />
-          <span className="text-muted-foreground">Analyzing your learning history...</span>
+          <span className="text-muted-foreground">{loadingLabel}</span>
         </CardContent>
       </Card>
     );

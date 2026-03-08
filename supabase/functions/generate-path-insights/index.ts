@@ -23,26 +23,40 @@ serve(async (req) => {
     if (authError || !user) throw new Error("Unauthorized");
 
     const body = await req.json();
-    const { pathId, pathTitle, pathSubject, pathDifficulty, modules } = body;
+    const { pathId, pathTitle, pathSubject, pathDifficulty, modules, studentId } = body;
     if (!pathId || !pathTitle) throw new Error("Missing path info");
+
+    // Determine target user: if studentId provided, caller must be a teacher
+    let targetUserId = user.id;
+    if (studentId && studentId !== user.id) {
+      // Verify caller is a teacher
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "teacher")
+        .maybeSingle();
+      if (!roleData) throw new Error("Only teachers can view student insights");
+      targetUserId = studentId;
+    }
 
     // Fetch student's past data in parallel
     const [chatRes, submissionsRes, progressRes] = await Promise.all([
       supabase
         .from("ai_chat_messages")
         .select("role, content, created_at")
-        .eq("user_id", user.id)
+        .eq("user_id", targetUserId)
         .eq("role", "user")
         .order("created_at", { ascending: false })
         .limit(60),
       supabase
         .from("assignment_submissions")
         .select("assignment_id, grade, max_grade, feedback, status")
-        .eq("student_id", user.id),
+        .eq("student_id", targetUserId),
       supabase
         .from("learning_path_progress")
         .select("path_id, progress, completed_modules")
-        .eq("user_id", user.id),
+        .eq("user_id", targetUserId),
     ]);
 
     const chatHistory = (chatRes.data || []).map((m: any) => m.content).join("\n---\n");
@@ -77,7 +91,14 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `You are an expert educational coach. A student is about to study a learning path. Analyze their past performance data and provide personalized, actionable insights to help them succeed in this specific path.
+    const isTeacherView = studentId && studentId !== user.id;
+    const systemPrompt = isTeacherView
+      ? `You are an expert educational coach helping a TEACHER understand a specific student's readiness for a learning path. Analyze the student's past performance data and provide insights the teacher can use to support this student.
+
+CRITICAL MATH FORMATTING: NEVER use LaTeX/dollar-sign notation. Use Unicode symbols: × ÷ ² ³ √ π ∑ ≤ ≥ ≠. Write fractions as a/b.
+
+You MUST respond with a tool call using the "path_insights" function. Be specific, reference actual topics, and provide actionable teaching strategies.`
+      : `You are an expert educational coach. A student is about to study a learning path. Analyze their past performance data and provide personalized, actionable insights to help them succeed in this specific path.
 
 CRITICAL MATH FORMATTING: NEVER use LaTeX/dollar-sign notation. Use Unicode symbols: × ÷ ² ³ √ π ∑ ≤ ≥ ≠. Write fractions as a/b.
 
