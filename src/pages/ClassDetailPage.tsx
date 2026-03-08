@@ -59,6 +59,8 @@ const ClassDetailPage = () => {
   const [assignPathOpen, setAssignPathOpen] = useState(false);
   const [learningPaths, setLearningPaths] = useState<any[]>([]);
   const [selectedPathId, setSelectedPathId] = useState('');
+  const [assignedPathIds, setAssignedPathIds] = useState<string[]>([]);
+  const [loadingAssignedPaths, setLoadingAssignedPaths] = useState(false);
   // Class-level tab
   const [classTab, setClassTab] = useState('students');
   // Assignments
