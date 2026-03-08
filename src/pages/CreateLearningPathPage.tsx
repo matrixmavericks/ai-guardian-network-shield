@@ -205,13 +205,52 @@ const CreateLearningPathPage = () => {
     }
   };
 
-  const applyRecommendation = (rec: any) => {
+  const applyRecommendation = async (rec: any) => {
     setTitle(rec.title);
     setDescription(rec.description);
     if (rec.subject) setSubject(rec.subject);
     if (rec.difficulty) setDifficulty(rec.difficulty);
     if (rec.estimatedHours) setEstimatedHours(rec.estimatedHours);
-    toast({ title: 'Topic applied!', description: 'Click "Generate with AI" to build the full learning path.' });
+    toast({ title: 'Generating learning path...', description: `Building modules for "${rec.title}"` });
+
+    // Auto-generate the full learning path
+    setIsGenerating(true);
+    try {
+      const resolvedSubject = rec.subject || effectiveSubject;
+      const { data, error } = await supabase.functions.invoke('generate-learning-path', {
+        body: {
+          title: rec.title,
+          description: rec.description,
+          subject: resolvedSubject,
+          difficulty: rec.difficulty || difficulty,
+          estimatedHours: rec.estimatedHours || estimatedHours,
+          gradeLevel,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'AI generation failed.');
+
+      const generatedModules: LearningModule[] = (data.modules || []).map((mod: any, index: number) => ({
+        id: generateId(),
+        title: mod.title,
+        description: mod.description,
+        resources: Array.isArray(mod.resources) ? mod.resources : [],
+        quizzes: Array.isArray(mod.quizzes) ? mod.quizzes : [],
+        order: index + 1,
+      }));
+
+      setModules(generatedModules);
+      if (Array.isArray(data.suggestedTags) && data.suggestedTags.length > 0) {
+        setTags(data.suggestedTags.map(String));
+      }
+
+      toast({ title: 'Learning path ready!', description: `${generatedModules.length} modules generated. Review and save when ready.` });
+    } catch (error: any) {
+      toast({ title: 'Generation failed', description: error?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSave = async () => {
