@@ -214,8 +214,10 @@ ${JSON.stringify(pathsSummary, null, 2)}
 ## Assignment Grades & Submissions:
 ${JSON.stringify(assignmentsSummary, null, 2)}
 
-## Uploaded Documents (Syllabi, Report Cards, etc.):
+## Uploaded Documents (Syllabi, Report Cards, etc.) — ACTUAL CONTENT:
 ${documentsSummary.length > 0 ? JSON.stringify(documentsSummary, null, 2) : "No documents uploaded yet."}
+
+IMPORTANT: If documents are provided above with actual "content" fields, deeply analyze that content — look for grades, subjects, topics covered, teacher comments, curriculum outlines, etc. Cross-reference document content with chat history and assignment performance to build a comprehensive profile.
 
 Analyze this student's learning profile comprehensively.`;
 
