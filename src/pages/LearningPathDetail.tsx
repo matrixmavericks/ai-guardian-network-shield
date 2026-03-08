@@ -16,6 +16,7 @@ import {
   CheckCircle,
   ListChecks,
   Play,
+  Shield,
   Sparkles,
   Users,
 } from "lucide-react";
