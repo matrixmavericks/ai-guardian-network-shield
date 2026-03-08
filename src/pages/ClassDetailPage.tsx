@@ -577,8 +577,7 @@ const ClassDetailPage = () => {
                                         <p className="text-xs text-muted-foreground">{p.subject}</p>
                                       </div>
                                       <Button size="sm" onClick={() => {
-                                        setSelectedPathId(p.id);
-                                        assignLearningPath();
+                                        assignLearningPath(p.id);
                                       }}>
                                         Assign
                                       </Button>
