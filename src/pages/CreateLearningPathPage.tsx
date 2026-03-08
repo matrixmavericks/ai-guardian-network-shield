@@ -387,7 +387,22 @@ const CreateLearningPathPage = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Resource context indicator */}
+            {resourceContext && (
+              <Alert className="border-primary/30 bg-primary/5">
+                <FileCheck className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                  <span>
+                    Building learning path from: <strong>{resourceContext.title}</strong>
+                    {resourceContext.fileContent ? ' (file content loaded)' : fetchingContent ? ' (loading content...)' : ' (using title & description)'}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => setResourceContext(null)}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
               <CardHeader>
                 <CardTitle>What do you want to learn?</CardTitle>
                 <CardDescription>Tell us the topic and we'll build a personalized learning journey.</CardDescription>
