@@ -198,12 +198,13 @@ const ClassDetailPage = () => {
     }
   };
 
-  const assignLearningPath = async () => {
-    if (!selectedPathId || !selectedStudent) return;
+  const assignLearningPath = async (pathId?: string) => {
+    const pid = pathId || selectedPathId;
+    if (!pid || !selectedStudent) return;
     try {
       const { error } = await supabase.from('learning_path_progress').insert({
         user_id: selectedStudent.student_id,
-        path_id: selectedPathId,
+        path_id: pid,
         progress: 0,
       });
       if (error) {
@@ -576,8 +577,7 @@ const ClassDetailPage = () => {
                                         <p className="text-xs text-muted-foreground">{p.subject}</p>
                                       </div>
                                       <Button size="sm" onClick={() => {
-                                        setSelectedPathId(p.id);
-                                        assignLearningPath();
+                                        assignLearningPath(p.id);
                                       }}>
                                         Assign
                                       </Button>
