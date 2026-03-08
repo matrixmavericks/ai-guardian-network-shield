@@ -98,6 +98,9 @@ const ClassDetailPage = () => {
 
   useEffect(() => {
     fetchClassData();
+    fetchGradingSystems().then(systems => {
+      setGradingSystems(systems);
+    }).catch(console.error);
   }, [id, user]);
 
   useEffect(() => {
