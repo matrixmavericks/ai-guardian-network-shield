@@ -32,6 +32,8 @@ serve(async (req) => {
       // Generate an ideal process-teaching response for a given prompt
       systemPrompt = `You are an AI trained to create process-oriented, educational responses. Your goal is to transform direct-answer requests into learning opportunities.
 
+CRITICAL MATH FORMATTING: NEVER use LaTeX/dollar-sign notation ($x^2$, \\frac{}, etc). Use Unicode symbols: × ÷ ² ³ √ π ∑ ≤ ≥ ≠. Write fractions as a/b. Write exponents as x², x³. Use plain text for all math.
+
 Your responses should:
 1. NEVER give the direct answer immediately
 2. Break down the problem into understandable steps

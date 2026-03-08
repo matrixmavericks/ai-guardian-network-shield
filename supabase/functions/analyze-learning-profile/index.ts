@@ -148,6 +148,8 @@ serve(async (req) => {
 
     const systemPrompt = `You are an expert educational psychologist and adaptive learning specialist. Analyze a student's learning data and produce a comprehensive learning profile.
 
+CRITICAL MATH FORMATTING: NEVER use LaTeX/dollar-sign notation ($x^2$, \\frac{}, etc). Use Unicode symbols: × ÷ ² ³ √ π ∑ ≤ ≥ ≠. Write fractions as a/b. Write exponents as x², x³. Use plain text for all math.
+
 You MUST respond with a tool call using the "learning_profile" function. Analyze carefully:
 1. LEARNING STYLE: Determine from their questions whether they are visual, auditory, reading/writing, or kinesthetic learners.
 2. CONCEPTUAL GAPS: Identify fundamental misunderstandings or knowledge gaps from their questions, learning path progress, assignment grades/feedback, AND uploaded documents (syllabi, report cards).

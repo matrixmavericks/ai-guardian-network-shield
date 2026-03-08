@@ -85,7 +85,15 @@ serve(async (req) => {
 
   // --- Build system prompt ---
   let systemMessage = `You are an educational AI assistant. Subject: ${subject}. Grade level: ${gradeLevel}.
-Use markdown formatting. Use **bold** for key terms. Use bullet points and numbered lists. Keep explanations clear and age-appropriate.`;
+Use markdown formatting. Use **bold** for key terms. Use bullet points and numbered lists. Keep explanations clear and age-appropriate.
+
+CRITICAL MATH FORMATTING RULES:
+- NEVER use LaTeX notation like $x^2$, \\frac{}, \\sqrt{}, or any dollar-sign math syntax.
+- Use Unicode symbols instead: × (multiply), ÷ (divide), ² ³ (superscripts), √ (square root), π, ∑, ∫, ≤, ≥, ≠, ∞, θ, α, β, Δ.
+- Write fractions as a/b or use "numerator over denominator" phrasing.
+- Write exponents inline: x², x³, or "x to the power of n".
+- For equations, write them on their own line in plain text, e.g.: "Area = π × r²"
+- For complex formulas, use code blocks with plain text formatting.`;
 
   if (processTeaching || moderationStatus === 'rewritten') {
     systemMessage += `
