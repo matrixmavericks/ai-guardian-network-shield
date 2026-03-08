@@ -177,25 +177,7 @@ const ClassDetailPage = () => {
     }
   };
 
-  const fetchAdaptiveProfile = async (studentId: string) => {
-    setProfileLoading(true);
-    setAdaptiveProfile(null);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      const res = await supabase.functions.invoke('analyze-learning-profile', {
-        body: { userId: studentId },
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (res.error) throw res.error;
-      setAdaptiveProfile(res.data?.profile || res.data);
-    } catch (err: any) {
-      console.error(err);
-      toast.error('Failed to load adaptive profile');
-    } finally {
-      setProfileLoading(false);
-    }
-  };
+
 
   const sendMessage = async () => {
     if (!messageContent.trim() || !selectedStudent) return;
