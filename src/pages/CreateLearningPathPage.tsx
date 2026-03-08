@@ -201,7 +201,17 @@ const CreateLearningPathPage = () => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-learning-path', {
-        body: { title, description, subject: effectiveSubject, difficulty, estimatedHours, gradeLevel },
+        body: {
+          title,
+          description,
+          subject: effectiveSubject,
+          difficulty,
+          estimatedHours,
+          gradeLevel,
+          resourceContent: resourceContext?.fileContent || syllabusText || undefined,
+          resourceUrl: resourceContext?.url || resourceContext?.fileUrl || undefined,
+          resourceTitle: resourceContext?.title || undefined,
+        },
       });
 
       if (error) throw error;
