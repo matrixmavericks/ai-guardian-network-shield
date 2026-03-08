@@ -296,7 +296,7 @@ const ClassDetailPage = () => {
         .eq('created_by', user!.id);
       setLearningPaths(updatedPaths || []);
 
-      toast.success(`Learning path "${pathData.title || genPathTopic}" created! You can now assign it to students.`);
+      toast.success(`Learning path "${pathTitle}" created! You can now assign it to students.`);
       setGenPathTopic('');
     } catch (err: any) {
       console.error(err);
