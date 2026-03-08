@@ -455,8 +455,7 @@ const ClassResourceManager: React.FC<Props> = ({ classId, className, isTeacher, 
                     }}>
                       Use in AI
                     </Button>
-                  )}
-                  )}
+                  }
                   {/* Open/Download */}
                   {resource.resource_type === "link" && resource.external_url && (
                     <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
