@@ -112,13 +112,16 @@ serve(async (req) => {
             }
 
             const trimmedContent = extractedText.substring(0, 6000);
+            const extractedChars = trimmedContent.length;
             documentContents.push({
               fileName: doc.file_name,
               type: doc.document_type,
               description: doc.description || '',
               content: trimmedContent || '[No extractable text found in file]',
+              extractedChars,
+              status: extractedChars > 0 ? 'extracted' : 'no_text',
             });
-            console.log(`Extracted ${trimmedContent.length} chars from ${doc.file_name}`);
+            console.log(`Extracted ${extractedChars} chars from ${doc.file_name}`);
           } else {
             console.error(`Download failed for ${doc.file_name}:`, fileError?.message);
             documentContents.push({
@@ -126,6 +129,8 @@ serve(async (req) => {
               type: doc.document_type,
               description: doc.description || '',
               content: '[Could not read file content]',
+              extractedChars: 0,
+              status: 'download_failed',
             });
           }
         }
@@ -136,6 +141,8 @@ serve(async (req) => {
           type: doc.document_type,
           description: doc.description || '',
           content: '[Error reading file]',
+          extractedChars: 0,
+          status: 'error',
         });
       }
     }
