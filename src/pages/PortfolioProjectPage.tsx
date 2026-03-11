@@ -46,6 +46,8 @@ interface PortfolioProject {
   capstone_submission_id: string | null;
   created_at: string;
   updated_at: string;
+  user_id: string;
+  invite_code: string | null;
 }
 
 interface Update {
