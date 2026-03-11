@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getPortfolioShareUrl } from "@/lib/publicUrl";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import {
   ArrowLeft,
@@ -29,6 +30,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+
 
 interface PortfolioProject {
   id: string;
@@ -214,7 +216,7 @@ const PortfolioProjectPage = () => {
 
   const copyShareLink = () => {
     if (!project) return;
-    navigator.clipboard.writeText(`${window.location.origin}/portfolio/shared/${project.share_token}`);
+    navigator.clipboard.writeText(getPortfolioShareUrl(project.share_token));
     toast({ title: "Link copied!" });
   };
 
