@@ -756,6 +756,57 @@ const ClassDetailPage = () => {
                             <Input placeholder={classInfo?.subject || 'Subject'} value={newAssignment.subject}
                               onChange={e => setNewAssignment(p => ({ ...p, subject: e.target.value }))} />
                           </div>
+
+                          {/* Group Assignment Toggle */}
+                          <div className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                id="is-group"
+                                checked={newAssignment.is_group}
+                                onChange={e => setNewAssignment(p => ({ ...p, is_group: e.target.checked }))}
+                                className="rounded"
+                              />
+                              <Label htmlFor="is-group" className="cursor-pointer font-medium">Group Assignment</Label>
+                            </div>
+                            {newAssignment.is_group && (
+                              <div className="space-y-3 pl-6 border-l-2">
+                                <div>
+                                  <Label>Group Formation</Label>
+                                  <Select value={newAssignment.formation} onValueChange={v => setNewAssignment(p => ({ ...p, formation: v }))}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="student_choice">Students choose their groups</SelectItem>
+                                      <SelectItem value="teacher_assigned">Teacher assigns groups</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <Label>Min Size</Label>
+                                    <Input type="number" min={2} max={10} value={newAssignment.min_size}
+                                      onChange={e => setNewAssignment(p => ({ ...p, min_size: e.target.value }))} />
+                                  </div>
+                                  <div>
+                                    <Label>Max Size</Label>
+                                    <Input type="number" min={2} max={10} value={newAssignment.max_size}
+                                      onChange={e => setNewAssignment(p => ({ ...p, max_size: e.target.value }))} />
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label>Grading</Label>
+                                  <Select value={newAssignment.grading_type} onValueChange={v => setNewAssignment(p => ({ ...p, grading_type: v }))}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="group">Group grade (same for all)</SelectItem>
+                                      <SelectItem value="individual">Individual grades</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
                           <Button onClick={handleCreateAssignment} disabled={creatingAssignment} className="w-full">
                             {creatingAssignment ? 'Creating...' : 'Create Assignment'}
                           </Button>
