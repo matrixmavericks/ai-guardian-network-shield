@@ -84,6 +84,7 @@ function App() {
           <Route path="/classes" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><ClassesPage /></ProtectedRoute>} />
           <Route path="/class/:id" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><ClassDetailPage /></ProtectedRoute>} />
           <Route path="/ai-usage" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><AIUsagePage /></ProtectedRoute>} />
+          <Route path="/student-portfolios" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><TeacherPortfolioReviewPage /></ProtectedRoute>} />
           <Route path="/portfolio" element={<ProtectedRoute allowedRoles={['student', 'teacher']}><PortfolioPage /></ProtectedRoute>} />
           <Route path="/portfolio/shared/:token" element={<SharedPortfolioPage />} />
           <Route path="/portfolio/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher']}><PortfolioProjectPage /></ProtectedRoute>} />
