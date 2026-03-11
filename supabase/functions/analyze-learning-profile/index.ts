@@ -84,6 +84,8 @@ serve(async (req) => {
     const userPaths = pathsRes.data || [];
     const submissionsData = submissionsRes.data || [];
     const studentDocuments = documentsRes.data || [];
+    const activitiesData = activitiesRes.data || [];
+    const capstoneData = capstoneRes.data || [];
 
     // ─── Helper: OCR via Gemini Vision ───────────────────────────────
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
