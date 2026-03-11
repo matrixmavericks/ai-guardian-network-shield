@@ -327,11 +327,16 @@ const ClassDetailPage = () => {
         description: newAssignment.description.trim(),
         due_date: newAssignment.due_date || null,
         subject: newAssignment.subject || classInfo.subject,
+        is_group_assignment: newAssignment.is_group,
+        group_formation: newAssignment.formation,
+        min_group_size: parseInt(newAssignment.min_size) || 2,
+        max_group_size: parseInt(newAssignment.max_size) || 4,
+        grading_type: newAssignment.grading_type,
       });
       if (error) throw error;
       toast.success('Assignment created!');
       setCreateAssignmentOpen(false);
-      setNewAssignment({ title: '', description: '', due_date: '', subject: '' });
+      setNewAssignment({ title: '', description: '', due_date: '', subject: '', is_group: false, formation: 'student_choice', min_size: '2', max_size: '4', grading_type: 'group' });
       fetchClassData();
     } catch (err: any) {
       console.error(err);
