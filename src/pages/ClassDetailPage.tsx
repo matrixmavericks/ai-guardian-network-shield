@@ -28,6 +28,7 @@ import {
   type GradingSystem,
 } from '@/services/gradingService';
 import ClassResourceManager from '@/components/ClassResourceManager';
+import GroupManager from '@/components/GroupManager';
 
 interface Student {
   student_id: string;
@@ -51,6 +52,11 @@ interface ClassAssignment {
   due_date: string | null;
   subject: string;
   created_at: string;
+  is_group_assignment: boolean;
+  group_formation: string;
+  min_group_size: number;
+  max_group_size: number;
+  grading_type: string;
 }
 
 const ClassDetailPage = () => {
@@ -73,7 +79,7 @@ const ClassDetailPage = () => {
   // Assignments
   const [assignments, setAssignments] = useState<ClassAssignment[]>([]);
   const [createAssignmentOpen, setCreateAssignmentOpen] = useState(false);
-  const [newAssignment, setNewAssignment] = useState({ title: '', description: '', due_date: '', subject: '' });
+  const [newAssignment, setNewAssignment] = useState({ title: '', description: '', due_date: '', subject: '', is_group: false, formation: 'student_choice', min_size: '2', max_size: '4', grading_type: 'group' });
   const [creatingAssignment, setCreatingAssignment] = useState(false);
   // Learning path generation
   const [genPathTopic, setGenPathTopic] = useState('');
@@ -321,11 +327,16 @@ const ClassDetailPage = () => {
         description: newAssignment.description.trim(),
         due_date: newAssignment.due_date || null,
         subject: newAssignment.subject || classInfo.subject,
+        is_group_assignment: newAssignment.is_group,
+        group_formation: newAssignment.formation,
+        min_group_size: parseInt(newAssignment.min_size) || 2,
+        max_group_size: parseInt(newAssignment.max_size) || 4,
+        grading_type: newAssignment.grading_type,
       });
       if (error) throw error;
       toast.success('Assignment created!');
       setCreateAssignmentOpen(false);
-      setNewAssignment({ title: '', description: '', due_date: '', subject: '' });
+      setNewAssignment({ title: '', description: '', due_date: '', subject: '', is_group: false, formation: 'student_choice', min_size: '2', max_size: '4', grading_type: 'group' });
       fetchClassData();
     } catch (err: any) {
       console.error(err);
@@ -745,6 +756,57 @@ const ClassDetailPage = () => {
                             <Input placeholder={classInfo?.subject || 'Subject'} value={newAssignment.subject}
                               onChange={e => setNewAssignment(p => ({ ...p, subject: e.target.value }))} />
                           </div>
+
+                          {/* Group Assignment Toggle */}
+                          <div className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                id="is-group"
+                                checked={newAssignment.is_group}
+                                onChange={e => setNewAssignment(p => ({ ...p, is_group: e.target.checked }))}
+                                className="rounded"
+                              />
+                              <Label htmlFor="is-group" className="cursor-pointer font-medium">Group Assignment</Label>
+                            </div>
+                            {newAssignment.is_group && (
+                              <div className="space-y-3 pl-6 border-l-2">
+                                <div>
+                                  <Label>Group Formation</Label>
+                                  <Select value={newAssignment.formation} onValueChange={v => setNewAssignment(p => ({ ...p, formation: v }))}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="student_choice">Students choose their groups</SelectItem>
+                                      <SelectItem value="teacher_assigned">Teacher assigns groups</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <Label>Min Size</Label>
+                                    <Input type="number" min={2} max={10} value={newAssignment.min_size}
+                                      onChange={e => setNewAssignment(p => ({ ...p, min_size: e.target.value }))} />
+                                  </div>
+                                  <div>
+                                    <Label>Max Size</Label>
+                                    <Input type="number" min={2} max={10} value={newAssignment.max_size}
+                                      onChange={e => setNewAssignment(p => ({ ...p, max_size: e.target.value }))} />
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label>Grading</Label>
+                                  <Select value={newAssignment.grading_type} onValueChange={v => setNewAssignment(p => ({ ...p, grading_type: v }))}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="group">Group grade (same for all)</SelectItem>
+                                      <SelectItem value="individual">Individual grades</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
                           <Button onClick={handleCreateAssignment} disabled={creatingAssignment} className="w-full">
                             {creatingAssignment ? 'Creating...' : 'Create Assignment'}
                           </Button>
@@ -767,10 +829,20 @@ const ClassDetailPage = () => {
                           <CardHeader className="pb-2">
                             <div className="flex items-start justify-between">
                               <div>
-                                <CardTitle className="text-base">{a.title}</CardTitle>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                  {a.title}
+                                  {a.is_group_assignment && (
+                                    <Badge variant="outline" className="text-xs">
+                                      <Users className="mr-1 h-3 w-3" />
+                                      Group ({a.min_group_size}-{a.max_group_size})
+                                    </Badge>
+                                  )}
+                                </CardTitle>
                                 <CardDescription>
                                   {a.subject} • Created {new Date(a.created_at).toLocaleDateString()}
                                   {a.due_date && ` • Due ${new Date(a.due_date).toLocaleDateString()}`}
+                                  {a.is_group_assignment && ` • ${a.group_formation === 'student_choice' ? 'Students choose groups' : 'Teacher assigns groups'}`}
+                                  {a.is_group_assignment && ` • ${a.grading_type === 'group' ? 'Group grade' : 'Individual grades'}`}
                                 </CardDescription>
                               </div>
                               <div className="flex items-center gap-2">
@@ -786,6 +858,19 @@ const ClassDetailPage = () => {
                           {a.description && (
                             <CardContent className="pt-0">
                               <p className="text-sm text-muted-foreground">{a.description}</p>
+                            </CardContent>
+                          )}
+                          {a.is_group_assignment && (
+                            <CardContent className="pt-0">
+                              <GroupManager
+                                assignmentId={a.id}
+                                classId={classInfo!.id}
+                                minSize={a.min_group_size}
+                                maxSize={a.max_group_size}
+                                formation={a.group_formation}
+                                isTeacher={true}
+                                students={students.map(s => ({ id: s.student_id, name: s.profile?.full_name || 'Unknown' }))}
+                              />
                             </CardContent>
                           )}
                         </Card>
@@ -1129,6 +1214,11 @@ const ClassDetailPage = () => {
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-medium">{a.title}</h4>
+                                  {a.is_group_assignment && (
+                                    <Badge variant="outline" className="text-xs">
+                                      <Users className="mr-1 h-3 w-3" /> Group
+                                    </Badge>
+                                  )}
                                   {isGraded && (
                                     <Badge variant="default" className="bg-emerald-600">
                                       <CheckCircle2 className="mr-1 h-3 w-3" />
@@ -1150,6 +1240,18 @@ const ClassDetailPage = () => {
                                   )}
                                 </div>
                                 {a.description && <p className="text-sm text-muted-foreground mt-1">{a.description}</p>}
+                                {a.is_group_assignment && (
+                                  <div className="mt-3" onClick={e => e.stopPropagation()}>
+                                    <GroupManager
+                                      assignmentId={a.id}
+                                      classId={classInfo!.id}
+                                      minSize={a.min_group_size}
+                                      maxSize={a.max_group_size}
+                                      formation={a.group_formation}
+                                      isTeacher={false}
+                                    />
+                                  </div>
+                                )}
                                 {sub?.feedback && (
                                   <div className="mt-2 bg-muted rounded-lg p-2 text-sm">
                                     <span className="font-medium">Feedback:</span> {sub.feedback}

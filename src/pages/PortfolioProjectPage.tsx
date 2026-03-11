@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getPortfolioShareUrl } from "@/lib/publicUrl";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import PortfolioCollaborators from "@/components/PortfolioCollaborators";
 import {
   ArrowLeft,
   Calendar,
@@ -45,6 +46,8 @@ interface PortfolioProject {
   capstone_submission_id: string | null;
   created_at: string;
   updated_at: string;
+  user_id: string;
+  invite_code: string | null;
 }
 
 interface Update {
@@ -354,6 +357,13 @@ const PortfolioProjectPage = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Collaborators */}
+        <PortfolioCollaborators
+          projectId={project.id}
+          isOwner={project.user_id === user?.id}
+          inviteCode={project.invite_code}
+        />
 
         {/* Media Gallery */}
         <Card className="mb-6">
