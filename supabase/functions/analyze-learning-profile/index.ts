@@ -357,7 +357,10 @@ ${quizResults.length > 0 ? JSON.stringify(quizResults, null, 2) : "No quiz resul
 ## Capstone Project Submissions:
 ${capstoneSummary.length > 0 ? JSON.stringify(capstoneSummary, null, 2) : "No capstone submissions yet."}
 
-IMPORTANT: If documents are provided and any has status="extracted", you MUST explicitly reference them by fileName in strengths/conceptual_gaps evidence text and include at least 2 document-based findings. Also use quiz scores and capstone feedback to identify patterns.
+## Portfolio Projects:
+${portfolioSummary.length > 0 ? JSON.stringify(portfolioSummary, null, 2) : "No portfolio projects yet."}
+
+IMPORTANT: If documents are provided and any has status="extracted", you MUST explicitly reference them by fileName in strengths/conceptual_gaps evidence text and include at least 2 document-based findings. Also use quiz scores, capstone feedback, and portfolio projects to identify patterns in the student's interests and growth.
 
 Analyze this student's learning profile comprehensively.`;
 
