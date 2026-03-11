@@ -28,6 +28,7 @@ import {
   type GradingSystem,
 } from '@/services/gradingService';
 import ClassResourceManager from '@/components/ClassResourceManager';
+import GroupManager from '@/components/GroupManager';
 
 interface Student {
   student_id: string;
