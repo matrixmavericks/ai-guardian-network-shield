@@ -891,6 +891,44 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_private: boolean
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_private?: boolean
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_private?: boolean
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portfolio_projects: {
         Row: {
           capstone_submission_id: string | null
