@@ -190,6 +190,70 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          student_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          student_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_groups: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          created_by: string
+          id: string
+          join_code: string
+          name: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          join_code?: string
+          name: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          join_code?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_groups_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "class_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_submissions: {
         Row: {
           assignment_id: string
@@ -353,7 +417,12 @@ export type Database = {
           created_at: string
           description: string | null
           due_date: string | null
+          grading_type: string
+          group_formation: string
           id: string
+          is_group_assignment: boolean
+          max_group_size: number
+          min_group_size: number
           subject: string | null
           teacher_id: string
           title: string
@@ -364,7 +433,12 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          grading_type?: string
+          group_formation?: string
           id?: string
+          is_group_assignment?: boolean
+          max_group_size?: number
+          min_group_size?: number
           subject?: string | null
           teacher_id: string
           title: string
@@ -375,7 +449,12 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          grading_type?: string
+          group_formation?: string
           id?: string
+          is_group_assignment?: boolean
+          max_group_size?: number
+          min_group_size?: number
           subject?: string | null
           teacher_id?: string
           title?: string
@@ -891,6 +970,38 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_collaborators: {
+        Row: {
+          id: string
+          invited_by: string
+          joined_at: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          invited_by: string
+          joined_at?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          invited_by?: string
+          joined_at?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_collaborators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portfolio_comments: {
         Row: {
           content: string
@@ -937,6 +1048,7 @@ export type Database = {
           description: string
           external_links: Json
           id: string
+          invite_code: string | null
           is_published: boolean
           media_urls: string[]
           share_token: string | null
@@ -952,6 +1064,7 @@ export type Database = {
           description?: string
           external_links?: Json
           id?: string
+          invite_code?: string | null
           is_published?: boolean
           media_urls?: string[]
           share_token?: string | null
@@ -967,6 +1080,7 @@ export type Database = {
           description?: string
           external_links?: Json
           id?: string
+          invite_code?: string | null
           is_published?: boolean
           media_urls?: string[]
           share_token?: string | null
