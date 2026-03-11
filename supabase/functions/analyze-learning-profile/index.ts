@@ -286,6 +286,29 @@ serve(async (req) => {
       content: d.content,
     }));
 
+    // Summarize quiz results from learning path activities
+    const quizResults = activitiesData
+      .filter((a: any) => a.activity_type === "quiz_result")
+      .map((a: any) => ({
+        quizTitle: a.activity_key,
+        moduleId: a.module_id,
+        score: a.content?.score,
+        total: a.content?.total,
+        percentage: a.content?.percentage,
+        completedAt: a.content?.completedAt,
+      }));
+
+    // Summarize capstone submissions
+    const capstoneSummary = capstoneData.map((c: any) => ({
+      pathId: c.path_id,
+      status: c.status,
+      aiScore: c.ai_score,
+      teacherScore: c.teacher_score,
+      aiFeedbackSummary: c.ai_feedback?.summary || null,
+      teacherFeedback: c.teacher_feedback,
+      submittedAt: c.created_at,
+    }));
+
     // LOVABLE_API_KEY already declared above
 
     const systemPrompt = `You are an expert educational psychologist and adaptive learning specialist. Analyze a student's learning data and produce a comprehensive learning profile.
