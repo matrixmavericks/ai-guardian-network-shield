@@ -44,7 +44,7 @@ serve(async (req) => {
     }
 
     // Fetch all data for the target user
-    const [chatRes, progressRes, pathsRes, submissionsRes, documentsRes] = await Promise.all([
+    const [chatRes, progressRes, pathsRes, submissionsRes, documentsRes, activitiesRes, capstoneRes] = await Promise.all([
       supabase
         .from("ai_chat_messages")
         .select("role, content, created_at, metadata")
@@ -67,6 +67,16 @@ serve(async (req) => {
         .from("student_documents")
         .select("file_name, document_type, description, file_url, created_at")
         .eq("user_id", targetUserId),
+      supabase
+        .from("learning_path_activities")
+        .select("path_id, module_id, activity_type, activity_key, content, updated_at")
+        .eq("user_id", targetUserId)
+        .order("updated_at", { ascending: false })
+        .limit(200),
+      supabase
+        .from("capstone_submissions")
+        .select("path_id, text_content, external_link, file_name, status, ai_feedback, ai_score, teacher_feedback, teacher_score, created_at")
+        .eq("user_id", targetUserId),
     ]);
 
     const chatMessages = chatRes.data || [];
@@ -74,6 +84,8 @@ serve(async (req) => {
     const userPaths = pathsRes.data || [];
     const submissionsData = submissionsRes.data || [];
     const studentDocuments = documentsRes.data || [];
+    const activitiesData = activitiesRes.data || [];
+    const capstoneData = capstoneRes.data || [];
 
     // ─── Helper: OCR via Gemini Vision ───────────────────────────────
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -274,6 +286,29 @@ serve(async (req) => {
       content: d.content,
     }));
 
+    // Summarize quiz results from learning path activities
+    const quizResults = activitiesData
+      .filter((a: any) => a.activity_type === "quiz_result")
+      .map((a: any) => ({
+        quizTitle: a.activity_key,
+        moduleId: a.module_id,
+        score: a.content?.score,
+        total: a.content?.total,
+        percentage: a.content?.percentage,
+        completedAt: a.content?.completedAt,
+      }));
+
+    // Summarize capstone submissions
+    const capstoneSummary = capstoneData.map((c: any) => ({
+      pathId: c.path_id,
+      status: c.status,
+      aiScore: c.ai_score,
+      teacherScore: c.teacher_score,
+      aiFeedbackSummary: c.ai_feedback?.summary || null,
+      teacherFeedback: c.teacher_feedback,
+      submittedAt: c.created_at,
+    }));
+
     // LOVABLE_API_KEY already declared above
 
     const systemPrompt = `You are an expert educational psychologist and adaptive learning specialist. Analyze a student's learning data and produce a comprehensive learning profile.
@@ -301,7 +336,13 @@ ${JSON.stringify(assignmentsSummary, null, 2)}
 ## Uploaded Documents (Syllabi, Report Cards, etc.) — ACTUAL CONTENT:
 ${documentsSummary.length > 0 ? JSON.stringify(documentsSummary, null, 2) : "No documents uploaded yet."}
 
-IMPORTANT: If documents are provided and any has status="extracted", you MUST explicitly reference them by fileName in strengths/conceptual_gaps evidence text and include at least 2 document-based findings.
+## Quiz Results from Learning Paths:
+${quizResults.length > 0 ? JSON.stringify(quizResults, null, 2) : "No quiz results yet."}
+
+## Capstone Project Submissions:
+${capstoneSummary.length > 0 ? JSON.stringify(capstoneSummary, null, 2) : "No capstone submissions yet."}
+
+IMPORTANT: If documents are provided and any has status="extracted", you MUST explicitly reference them by fileName in strengths/conceptual_gaps evidence text and include at least 2 document-based findings. Also use quiz scores and capstone feedback to identify patterns.
 
 Analyze this student's learning profile comprehensively.`;
 

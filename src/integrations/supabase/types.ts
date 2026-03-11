@@ -665,6 +665,50 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_path_activities: {
+        Row: {
+          activity_key: string
+          activity_type: string
+          content: Json
+          created_at: string
+          id: string
+          module_id: string
+          path_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_key: string
+          activity_type?: string
+          content?: Json
+          created_at?: string
+          id?: string
+          module_id: string
+          path_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_key?: string
+          activity_type?: string
+          content?: Json
+          created_at?: string
+          id?: string
+          module_id?: string
+          path_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_path_activities_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "learning_paths"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       learning_path_progress: {
         Row: {
           bookmarked: boolean

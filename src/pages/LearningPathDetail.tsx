@@ -386,6 +386,8 @@ const LearningPathDetail = () => {
                           moduleTitle={selectedModule.title}
                           moduleDescription={selectedModule.description}
                           difficulty={learningPath.difficulty}
+                          pathId={learningPath.id}
+                          moduleId={selectedModule.id}
                         />
                       ))}
                       {selectedModule.resources.length === 0 && (
@@ -408,6 +410,8 @@ const LearningPathDetail = () => {
                           moduleTitle={selectedModule.title}
                           moduleDescription={selectedModule.description}
                           difficulty={learningPath.difficulty}
+                          pathId={learningPath.id}
+                          moduleId={selectedModule.id}
                         />
                       ))}
                       {selectedModule.quizzes.length === 0 && (
@@ -440,6 +444,8 @@ const LearningPathDetail = () => {
                       moduleTitle={selectedModule.title}
                       moduleDescription={selectedModule.description}
                       difficulty={learningPath.difficulty}
+                      pathId={learningPath.id}
+                      moduleId={selectedModule.id}
                     />
                   ))}
                   {selectedModule.quizzes.length === 0 && (

@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader, ListChecks, CheckCircle, XCircle, ArrowRight, RotateCcw } from "lucide-react";
+import { Loader, ListChecks, CheckCircle, XCircle, ArrowRight, RotateCcw, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 interface QuizQuestion {
@@ -14,26 +15,90 @@ interface QuizQuestion {
   explanation: string;
 }
 
+interface QuizResult {
+  questions: QuizQuestion[];
+  score: number;
+  total: number;
+  percentage: number;
+  completedAt: string;
+}
+
 interface QuizPlayerProps {
   quizTitle: string;
   subject: string;
   moduleTitle: string;
   moduleDescription: string;
   difficulty: string;
+  pathId?: string;
+  moduleId?: string;
 }
 
-const QuizPlayer = ({ quizTitle, subject, moduleTitle, moduleDescription, difficulty }: QuizPlayerProps) => {
+const QuizPlayer = ({ quizTitle, subject, moduleTitle, moduleDescription, difficulty, pathId, moduleId }: QuizPlayerProps) => {
+  const { user } = useAuth();
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingCache, setIsLoadingCache] = useState(!!pathId && !!moduleId && !!user);
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [score, setScore] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const [lastResult, setLastResult] = useState<QuizResult | null>(null);
+
+  // Load cached quiz result on mount
+  useEffect(() => {
+    if (!user || !pathId || !moduleId) { setIsLoadingCache(false); return; }
+    const load = async () => {
+      try {
+        const { data } = await supabase
+          .from("learning_path_activities")
+          .select("content")
+          .eq("user_id", user.id)
+          .eq("path_id", pathId)
+          .eq("module_id", moduleId)
+          .eq("activity_type", "quiz_result")
+          .eq("activity_key", quizTitle)
+          .maybeSingle();
+        if (data?.content) {
+          const result = data.content as unknown as QuizResult;
+          setLastResult(result);
+          setQuestions(result.questions);
+          setScore(result.score);
+          setIsComplete(true);
+        }
+      } catch { /* ignore */ }
+      setIsLoadingCache(false);
+    };
+    load();
+  }, [user, pathId, moduleId, quizTitle]);
+
+  const saveQuizResult = async (finalScore: number, allQuestions: QuizQuestion[]) => {
+    if (!user || !pathId || !moduleId) return;
+    const result: QuizResult = {
+      questions: allQuestions,
+      score: finalScore,
+      total: allQuestions.length,
+      percentage: Math.round((finalScore / allQuestions.length) * 100),
+      completedAt: new Date().toISOString(),
+    };
+    try {
+      await supabase.from("learning_path_activities").upsert({
+        user_id: user.id,
+        path_id: pathId,
+        module_id: moduleId,
+        activity_type: "quiz_result",
+        activity_key: quizTitle,
+        content: result as any,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id,path_id,module_id,activity_type,activity_key" });
+    } catch (err) {
+      console.error("Failed to save quiz result:", err);
+    }
+  };
 
   const loadQuiz = async () => {
-    if (questions.length > 0) return;
+    if (questions.length > 0 && !isComplete) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -46,6 +111,7 @@ const QuizPlayer = ({ quizTitle, subject, moduleTitle, moduleDescription, diffic
       setCurrentIndex(0);
       setScore(0);
       setIsComplete(false);
+      setLastResult(null);
       setSelectedAnswer(null);
       setIsAnswered(false);
     } catch (err: any) {
@@ -70,19 +136,56 @@ const QuizPlayer = ({ quizTitle, subject, moduleTitle, moduleDescription, diffic
       setSelectedAnswer(null);
       setIsAnswered(false);
     } else {
+      const finalScore = selectedAnswer === questions[currentIndex].correctIndex ? score : score; // score already updated in handleAnswer
       setIsComplete(true);
+      // Save after state settles - use current score (already incremented if correct)
+      const actualScore = selectedAnswer === questions[currentIndex].correctIndex ? score : score;
+      saveQuizResult(actualScore, questions);
     }
   };
 
   const handleRetry = () => {
-    setQuestions([]);
-    setCurrentIndex(0);
-    setScore(0);
-    setIsComplete(false);
-    setSelectedAnswer(null);
-    setIsAnswered(false);
     loadQuiz();
   };
+
+  if (isLoadingCache) {
+    return (
+      <Button variant="outline" className="w-full justify-start gap-2" disabled>
+        <Loader className="h-4 w-4 animate-spin text-primary" />
+        <span className="font-medium">{quizTitle}</span>
+      </Button>
+    );
+  }
+
+  // Show last result summary if quiz was previously completed
+  if (isComplete && lastResult) {
+    const percentage = Math.round((score / questions.length) * 100);
+    return (
+      <Card className="border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <span>Quiz Complete: {quizTitle}</span>
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={handleRetry} title="Retake quiz">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-center">
+          <div className="text-5xl font-bold text-primary">{percentage}%</div>
+          <p className="text-muted-foreground">
+            You got {score} out of {questions.length} questions correct.
+          </p>
+          <Progress value={percentage} className="h-3" />
+          <p className="text-sm">
+            {percentage >= 80 ? "🎉 Excellent work!" : percentage >= 60 ? "👍 Good job, keep practicing!" : "📚 Review the material and try again."}
+          </p>
+          <Button variant="outline" onClick={handleRetry}>
+            <RotateCcw className="mr-2 h-4 w-4" /> Retake Quiz
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Initial state - not loaded yet
   if (questions.length === 0 && !isLoading && !error) {
@@ -119,7 +222,7 @@ const QuizPlayer = ({ quizTitle, subject, moduleTitle, moduleDescription, diffic
     );
   }
 
-  // Quiz complete
+  // Quiz complete (fresh completion)
   if (isComplete) {
     const percentage = Math.round((score / questions.length) * 100);
     return (
