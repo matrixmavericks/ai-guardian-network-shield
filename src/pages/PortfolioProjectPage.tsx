@@ -216,7 +216,7 @@ const PortfolioProjectPage = () => {
 
   const copyShareLink = () => {
     if (!project) return;
-    navigator.clipboard.writeText(`${window.location.origin}/portfolio/shared/${project.share_token}`);
+    navigator.clipboard.writeText(getPortfolioShareUrl(project.share_token));
     toast({ title: "Link copied!" });
   };
 

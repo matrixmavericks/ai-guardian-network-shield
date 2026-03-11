@@ -152,7 +152,7 @@ const PortfolioPage = () => {
   };
 
   const copyShareLink = (token: string) => {
-    const url = `${window.location.origin}/portfolio/shared/${token}`;
+    const url = getPortfolioShareUrl(token);
     navigator.clipboard.writeText(url);
     toast({ title: "Link copied!", description: "Share this URL with anyone." });
   };
