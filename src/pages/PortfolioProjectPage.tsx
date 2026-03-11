@@ -426,6 +426,9 @@ const PortfolioProjectPage = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Teacher Comments (public ones visible to student) */}
+        <TeacherComments projectId={project.id} />
       </div>
     </div>
   );
