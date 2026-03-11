@@ -410,6 +410,8 @@ const LearningPathDetail = () => {
                           moduleTitle={selectedModule.title}
                           moduleDescription={selectedModule.description}
                           difficulty={learningPath.difficulty}
+                          pathId={learningPath.id}
+                          moduleId={selectedModule.id}
                         />
                       ))}
                       {selectedModule.quizzes.length === 0 && (
