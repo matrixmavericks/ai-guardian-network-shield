@@ -66,6 +66,52 @@ interface CapstoneInfo {
   external_link: string | null;
 }
 
+interface TeacherComment {
+  id: string;
+  content: string;
+  is_private: boolean;
+  created_at: string;
+}
+
+const TeacherComments: React.FC<{ projectId: string }> = ({ projectId }) => {
+  const [tComments, setTComments] = useState<TeacherComment[]>([]);
+  const [tLoading, setTLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("portfolio_comments")
+        .select("id, content, is_private, created_at")
+        .eq("project_id", projectId)
+        .eq("is_private", false)
+        .order("created_at", { ascending: false });
+      setTComments((data as TeacherComment[]) || []);
+      setTLoading(false);
+    };
+    load();
+  }, [projectId]);
+
+  if (tLoading || tComments.length === 0) return null;
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" /> Teacher Feedback
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {tComments.map(c => (
+          <div key={c.id} className="rounded-lg border p-3">
+            <span className="text-xs text-muted-foreground">{new Date(c.created_at).toLocaleString()}</span>
+            <p className="text-sm whitespace-pre-wrap mt-1">{c.content}</p>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+};
+
 const PortfolioProjectPage = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -426,6 +472,9 @@ const PortfolioProjectPage = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Teacher Comments (public ones visible to student) */}
+        <TeacherComments projectId={project.id} />
       </div>
     </div>
   );
