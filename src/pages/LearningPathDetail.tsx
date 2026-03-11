@@ -24,6 +24,8 @@ import ResourceViewer from "@/components/learning/ResourceViewer";
 import QuizPlayer from "@/components/learning/QuizPlayer";
 import LearningPathInsights from "@/components/learning/LearningPathInsights";
 import ClassRiskSummary from "@/components/learning/ClassRiskSummary";
+import CapstoneSubmission from "@/components/learning/CapstoneSubmission";
+import CapstoneTeacherReview from "@/components/learning/CapstoneTeacherReview";
 import {
   getLearningPathById,
   getPathProgress,
