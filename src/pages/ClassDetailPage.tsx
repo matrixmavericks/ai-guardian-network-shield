@@ -52,6 +52,11 @@ interface ClassAssignment {
   due_date: string | null;
   subject: string;
   created_at: string;
+  is_group_assignment: boolean;
+  group_formation: string;
+  min_group_size: number;
+  max_group_size: number;
+  grading_type: string;
 }
 
 const ClassDetailPage = () => {
