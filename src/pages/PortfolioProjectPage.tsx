@@ -358,6 +358,13 @@ const PortfolioProjectPage = () => {
           </Card>
         )}
 
+        {/* Collaborators */}
+        <PortfolioCollaborators
+          projectId={project.id}
+          isOwner={project.user_id === user?.id}
+          inviteCode={project.invite_code}
+        />
+
         {/* Media Gallery */}
         <Card className="mb-6">
           <CardHeader className="pb-2">
