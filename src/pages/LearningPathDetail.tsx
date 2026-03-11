@@ -452,6 +452,29 @@ const LearningPathDetail = () => {
                 </div>
               )}
             </TabsContent>
+
+            <TabsContent value="capstone">
+              {user && learningPath && (
+                <CapstoneSubmission pathId={learningPath.id} pathTitle={learningPath.title} />
+              )}
+              {!user && (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    Please log in to submit a capstone project.
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {isTeacher && assignedStudents.length > 0 && (
+              <TabsContent value="capstone-review">
+                <CapstoneTeacherReview
+                  pathId={learningPath.id}
+                  pathTitle={learningPath.title}
+                  studentIds={assignedStudents.map(s => s.id)}
+                />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>
