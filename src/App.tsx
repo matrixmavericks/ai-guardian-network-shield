@@ -25,6 +25,9 @@ import ModelTrainingPage from './pages/ModelTrainingPage';
 import ClassesPage from './pages/ClassesPage';
 import ClassDetailPage from './pages/ClassDetailPage';
 import AIUsagePage from './pages/AIUsagePage';
+import PortfolioPage from './pages/PortfolioPage';
+import PortfolioProjectPage from './pages/PortfolioProjectPage';
+import SharedPortfolioPage from './pages/SharedPortfolioPage';
 
 const ProtectedRoute = ({ 
   children, 
