@@ -891,6 +891,100 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_projects: {
+        Row: {
+          capstone_submission_id: string | null
+          cover_image_url: string | null
+          created_at: string
+          description: string
+          external_links: Json
+          id: string
+          is_published: boolean
+          media_urls: string[]
+          share_token: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capstone_submission_id?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string
+          external_links?: Json
+          id?: string
+          is_published?: boolean
+          media_urls?: string[]
+          share_token?: string | null
+          tags?: string[]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capstone_submission_id?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string
+          external_links?: Json
+          id?: string
+          is_published?: boolean
+          media_urls?: string[]
+          share_token?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_projects_capstone_submission_id_fkey"
+            columns: ["capstone_submission_id"]
+            isOneToOne: false
+            referencedRelation: "capstone_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_updates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          media_urls: string[]
+          project_id: string
+          update_type: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          media_urls?: string[]
+          project_id: string
+          update_type?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          media_urls?: string[]
+          project_id?: string
+          update_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
