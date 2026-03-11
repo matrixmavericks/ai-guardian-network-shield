@@ -314,6 +314,16 @@ serve(async (req) => {
       submittedAt: c.created_at,
     }));
 
+    // Summarize portfolio
+    const portfolioSummary = portfolioData.map((p: any) => ({
+      title: p.title,
+      description: p.description?.substring(0, 300),
+      tags: p.tags,
+      mediaCount: (p.media_urls || []).length,
+      linkCount: (p.external_links || []).length,
+      createdAt: p.created_at,
+    }));
+
     // LOVABLE_API_KEY already declared above
 
     const systemPrompt = `You are an expert educational psychologist and adaptive learning specialist. Analyze a student's learning data and produce a comprehensive learning profile.
