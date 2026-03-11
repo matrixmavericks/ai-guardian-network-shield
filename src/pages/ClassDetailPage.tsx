@@ -79,7 +79,7 @@ const ClassDetailPage = () => {
   // Assignments
   const [assignments, setAssignments] = useState<ClassAssignment[]>([]);
   const [createAssignmentOpen, setCreateAssignmentOpen] = useState(false);
-  const [newAssignment, setNewAssignment] = useState({ title: '', description: '', due_date: '', subject: '' });
+  const [newAssignment, setNewAssignment] = useState({ title: '', description: '', due_date: '', subject: '', is_group: false, formation: 'student_choice', min_size: '2', max_size: '4', grading_type: 'group' });
   const [creatingAssignment, setCreatingAssignment] = useState(false);
   // Learning path generation
   const [genPathTopic, setGenPathTopic] = useState('');
