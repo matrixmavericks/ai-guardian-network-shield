@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader, BookOpen, ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
+import { Loader, BookOpen, ChevronDown, ChevronUp, Lightbulb, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import ReactMarkdown from "react-markdown";
 
 interface Section {
@@ -23,16 +24,60 @@ interface ResourceViewerProps {
   moduleTitle: string;
   moduleDescription: string;
   difficulty: string;
+  pathId?: string;
+  moduleId?: string;
 }
 
-const ResourceViewer = ({ resourceTitle, subject, moduleTitle, moduleDescription, difficulty }: ResourceViewerProps) => {
+const ResourceViewer = ({ resourceTitle, subject, moduleTitle, moduleDescription, difficulty, pathId, moduleId }: ResourceViewerProps) => {
+  const { user } = useAuth();
   const [content, setContent] = useState<ResourceContent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingCache, setIsLoadingCache] = useState(!!pathId && !!moduleId && !!user);
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
 
-  const loadContent = async () => {
-    if (content) return; // Already loaded
+  // Load cached content on mount
+  useEffect(() => {
+    if (!user || !pathId || !moduleId) { setIsLoadingCache(false); return; }
+    const load = async () => {
+      try {
+        const { data } = await supabase
+          .from("learning_path_activities")
+          .select("content")
+          .eq("user_id", user.id)
+          .eq("path_id", pathId)
+          .eq("module_id", moduleId)
+          .eq("activity_type", "resource_notes")
+          .eq("activity_key", resourceTitle)
+          .maybeSingle();
+        if (data?.content) {
+          setContent(data.content as unknown as ResourceContent);
+          setExpandedSections(new Set([0]));
+        }
+      } catch { /* ignore */ }
+      setIsLoadingCache(false);
+    };
+    load();
+  }, [user, pathId, moduleId, resourceTitle]);
+
+  const saveContent = async (resourceContent: ResourceContent) => {
+    if (!user || !pathId || !moduleId) return;
+    try {
+      await supabase.from("learning_path_activities").upsert({
+        user_id: user.id,
+        path_id: pathId,
+        module_id: moduleId,
+        activity_type: "resource_notes",
+        activity_key: resourceTitle,
+        content: resourceContent as any,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id,path_id,module_id,activity_type,activity_key" });
+    } catch (err) {
+      console.error("Failed to cache resource content:", err);
+    }
+  };
+
+  const generateContent = async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -43,11 +88,21 @@ const ResourceViewer = ({ resourceTitle, subject, moduleTitle, moduleDescription
       if (!data?.success) throw new Error(data?.error || "Failed to generate content.");
       setContent(data.data);
       setExpandedSections(new Set([0]));
+      await saveContent(data.data);
     } catch (err: any) {
       setError(err?.message || "Could not load content.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadContent = async () => {
+    if (content) return;
+    await generateContent();
+  };
+
+  const handleRegenerate = async () => {
+    await generateContent();
   };
 
   const toggleSection = (index: number) => {
@@ -58,6 +113,15 @@ const ResourceViewer = ({ resourceTitle, subject, moduleTitle, moduleDescription
       return next;
     });
   };
+
+  if (isLoadingCache) {
+    return (
+      <Button variant="outline" className="w-full justify-start gap-2" disabled>
+        <Loader className="h-4 w-4 animate-spin text-primary" />
+        <span className="font-medium">{resourceTitle}</span>
+      </Button>
+    );
+  }
 
   if (!content && !isLoading) {
     return (
@@ -99,6 +163,9 @@ const ResourceViewer = ({ resourceTitle, subject, moduleTitle, moduleDescription
         <CardTitle className="flex items-center gap-2 text-lg">
           <BookOpen className="h-5 w-5 text-primary" />
           {resourceTitle}
+          <Button variant="ghost" size="sm" className="ml-auto" onClick={handleRegenerate} disabled={isLoading} title="Regenerate content">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
