@@ -829,10 +829,20 @@ const ClassDetailPage = () => {
                           <CardHeader className="pb-2">
                             <div className="flex items-start justify-between">
                               <div>
-                                <CardTitle className="text-base">{a.title}</CardTitle>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                  {a.title}
+                                  {a.is_group_assignment && (
+                                    <Badge variant="outline" className="text-xs">
+                                      <Users className="mr-1 h-3 w-3" />
+                                      Group ({a.min_group_size}-{a.max_group_size})
+                                    </Badge>
+                                  )}
+                                </CardTitle>
                                 <CardDescription>
                                   {a.subject} • Created {new Date(a.created_at).toLocaleDateString()}
                                   {a.due_date && ` • Due ${new Date(a.due_date).toLocaleDateString()}`}
+                                  {a.is_group_assignment && ` • ${a.group_formation === 'student_choice' ? 'Students choose groups' : 'Teacher assigns groups'}`}
+                                  {a.is_group_assignment && ` • ${a.grading_type === 'group' ? 'Group grade' : 'Individual grades'}`}
                                 </CardDescription>
                               </div>
                               <div className="flex items-center gap-2">
@@ -848,6 +858,19 @@ const ClassDetailPage = () => {
                           {a.description && (
                             <CardContent className="pt-0">
                               <p className="text-sm text-muted-foreground">{a.description}</p>
+                            </CardContent>
+                          )}
+                          {a.is_group_assignment && (
+                            <CardContent className="pt-0">
+                              <GroupManager
+                                assignmentId={a.id}
+                                classId={classInfo!.id}
+                                minSize={a.min_group_size}
+                                maxSize={a.max_group_size}
+                                formation={a.group_formation}
+                                isTeacher={true}
+                                students={students.map(s => ({ id: s.student_id, name: s.profile?.full_name || 'Unknown' }))}
+                              />
                             </CardContent>
                           )}
                         </Card>
