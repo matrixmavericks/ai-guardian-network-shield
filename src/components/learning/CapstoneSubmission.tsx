@@ -209,10 +209,13 @@ const CapstoneSubmission: React.FC<CapstoneSubmissionProps> = ({ pathId, pathTit
                 </a>
               </div>
             )}
-            {submission.file_name && (
+            {submission.file_name && submission.file_url && (
               <div className="flex items-center gap-2">
                 <FileUp className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{submission.file_name}</span>
+                <a href={submission.file_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                  {submission.file_name}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
             )}
 
