@@ -91,6 +91,7 @@ Rules:
 - Keep each module practical and age-appropriate for the grade level.
 - Resources must be concise learning activities, readings, or exercises (3-5 per module). Each resource string should be a clear topic title that can be expanded into a full lesson.
 - Quizzes must be short assessment topic titles (1-2 per module) that test understanding of the module content.
+- IMPORTANT: The LAST module MUST be a "Capstone Project" module. This module should have a title like "Capstone Project: [topic]", a description that outlines the project requirements and what the student should demonstrate, resources that guide the project (e.g., "Project Planning Guide", "Rubric & Expectations"), and 0 quizzes. Mark it with "isCapstone": true in the module object.
 - suggestedTags should contain 3 to 6 short tags.
 - Tailor language complexity and content depth to the specified grade level and difficulty.
 ${fileContent ? "- IMPORTANT: The user has provided actual document/file content below. Base the learning path heavily on the specific topics, concepts, and material found in this content. Cover the material thoroughly and in a logical teaching order." : ""}`;
