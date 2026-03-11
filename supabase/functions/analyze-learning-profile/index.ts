@@ -44,7 +44,7 @@ serve(async (req) => {
     }
 
     // Fetch all data for the target user
-    const [chatRes, progressRes, pathsRes, submissionsRes, documentsRes, activitiesRes, capstoneRes] = await Promise.all([
+    const [chatRes, progressRes, pathsRes, submissionsRes, documentsRes, activitiesRes, capstoneRes, portfolioRes] = await Promise.all([
       supabase
         .from("ai_chat_messages")
         .select("role, content, created_at, metadata")
@@ -77,6 +77,10 @@ serve(async (req) => {
         .from("capstone_submissions")
         .select("path_id, text_content, external_link, file_name, status, ai_feedback, ai_score, teacher_feedback, teacher_score, created_at")
         .eq("user_id", targetUserId),
+      supabase
+        .from("portfolio_projects")
+        .select("title, description, tags, media_urls, external_links, created_at, updated_at")
+        .eq("user_id", targetUserId),
     ]);
 
     const chatMessages = chatRes.data || [];
@@ -86,6 +90,7 @@ serve(async (req) => {
     const studentDocuments = documentsRes.data || [];
     const activitiesData = activitiesRes.data || [];
     const capstoneData = capstoneRes.data || [];
+    const portfolioData = portfolioRes.data || [];
 
     // ─── Helper: OCR via Gemini Vision ───────────────────────────────
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -309,6 +314,16 @@ serve(async (req) => {
       submittedAt: c.created_at,
     }));
 
+    // Summarize portfolio
+    const portfolioSummary = portfolioData.map((p: any) => ({
+      title: p.title,
+      description: p.description?.substring(0, 300),
+      tags: p.tags,
+      mediaCount: (p.media_urls || []).length,
+      linkCount: (p.external_links || []).length,
+      createdAt: p.created_at,
+    }));
+
     // LOVABLE_API_KEY already declared above
 
     const systemPrompt = `You are an expert educational psychologist and adaptive learning specialist. Analyze a student's learning data and produce a comprehensive learning profile.
@@ -342,7 +357,10 @@ ${quizResults.length > 0 ? JSON.stringify(quizResults, null, 2) : "No quiz resul
 ## Capstone Project Submissions:
 ${capstoneSummary.length > 0 ? JSON.stringify(capstoneSummary, null, 2) : "No capstone submissions yet."}
 
-IMPORTANT: If documents are provided and any has status="extracted", you MUST explicitly reference them by fileName in strengths/conceptual_gaps evidence text and include at least 2 document-based findings. Also use quiz scores and capstone feedback to identify patterns.
+## Portfolio Projects:
+${portfolioSummary.length > 0 ? JSON.stringify(portfolioSummary, null, 2) : "No portfolio projects yet."}
+
+IMPORTANT: If documents are provided and any has status="extracted", you MUST explicitly reference them by fileName in strengths/conceptual_gaps evidence text and include at least 2 document-based findings. Also use quiz scores, capstone feedback, and portfolio projects to identify patterns in the student's interests and growth.
 
 Analyze this student's learning profile comprehensively.`;
 

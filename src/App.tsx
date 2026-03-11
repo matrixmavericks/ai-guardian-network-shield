@@ -25,6 +25,9 @@ import ModelTrainingPage from './pages/ModelTrainingPage';
 import ClassesPage from './pages/ClassesPage';
 import ClassDetailPage from './pages/ClassDetailPage';
 import AIUsagePage from './pages/AIUsagePage';
+import PortfolioPage from './pages/PortfolioPage';
+import PortfolioProjectPage from './pages/PortfolioProjectPage';
+import SharedPortfolioPage from './pages/SharedPortfolioPage';
 
 const ProtectedRoute = ({ 
   children, 
@@ -81,6 +84,9 @@ function App() {
           <Route path="/classes" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><ClassesPage /></ProtectedRoute>} />
           <Route path="/class/:id" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><ClassDetailPage /></ProtectedRoute>} />
           <Route path="/ai-usage" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><AIUsagePage /></ProtectedRoute>} />
+          <Route path="/portfolio" element={<ProtectedRoute allowedRoles={['student', 'teacher']}><PortfolioPage /></ProtectedRoute>} />
+          <Route path="/portfolio/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher']}><PortfolioProjectPage /></ProtectedRoute>} />
+          <Route path="/portfolio/shared/:token" element={<SharedPortfolioPage />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
