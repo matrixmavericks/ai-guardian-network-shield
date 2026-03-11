@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getPortfolioShareUrl } from "@/lib/publicUrl";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import {
   Award,
@@ -26,6 +27,7 @@ import {
   Copy,
   Download,
 } from "lucide-react";
+
 
 interface PortfolioProject {
   id: string;
