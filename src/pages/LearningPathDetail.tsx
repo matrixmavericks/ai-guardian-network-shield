@@ -235,6 +235,10 @@ const LearningPathDetail = () => {
               )}
               <TabsTrigger value="content"><BookOpen className="mr-2 h-4 w-4" />Module Content</TabsTrigger>
               <TabsTrigger value="assessment"><ListChecks className="mr-2 h-4 w-4" />Assessments</TabsTrigger>
+              <TabsTrigger value="capstone"><Award className="mr-2 h-4 w-4" />Capstone</TabsTrigger>
+              {isTeacher && assignedStudents.length > 0 && (
+                <TabsTrigger value="capstone-review"><Award className="mr-2 h-4 w-4" />Review Capstones</TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="overview">
