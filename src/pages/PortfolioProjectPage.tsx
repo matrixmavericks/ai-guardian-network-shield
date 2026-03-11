@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getPortfolioShareUrl } from "@/lib/publicUrl";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import PortfolioCollaborators from "@/components/PortfolioCollaborators";
 import {
   ArrowLeft,
   Calendar,
