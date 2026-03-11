@@ -336,7 +336,13 @@ ${JSON.stringify(assignmentsSummary, null, 2)}
 ## Uploaded Documents (Syllabi, Report Cards, etc.) — ACTUAL CONTENT:
 ${documentsSummary.length > 0 ? JSON.stringify(documentsSummary, null, 2) : "No documents uploaded yet."}
 
-IMPORTANT: If documents are provided and any has status="extracted", you MUST explicitly reference them by fileName in strengths/conceptual_gaps evidence text and include at least 2 document-based findings.
+## Quiz Results from Learning Paths:
+${quizResults.length > 0 ? JSON.stringify(quizResults, null, 2) : "No quiz results yet."}
+
+## Capstone Project Submissions:
+${capstoneSummary.length > 0 ? JSON.stringify(capstoneSummary, null, 2) : "No capstone submissions yet."}
+
+IMPORTANT: If documents are provided and any has status="extracted", you MUST explicitly reference them by fileName in strengths/conceptual_gaps evidence text and include at least 2 document-based findings. Also use quiz scores and capstone feedback to identify patterns.
 
 Analyze this student's learning profile comprehensively.`;
 
