@@ -44,7 +44,7 @@ serve(async (req) => {
     }
 
     // Fetch all data for the target user
-    const [chatRes, progressRes, pathsRes, submissionsRes, documentsRes] = await Promise.all([
+    const [chatRes, progressRes, pathsRes, submissionsRes, documentsRes, activitiesRes, capstoneRes] = await Promise.all([
       supabase
         .from("ai_chat_messages")
         .select("role, content, created_at, metadata")
@@ -66,6 +66,16 @@ serve(async (req) => {
       supabase
         .from("student_documents")
         .select("file_name, document_type, description, file_url, created_at")
+        .eq("user_id", targetUserId),
+      supabase
+        .from("learning_path_activities")
+        .select("path_id, module_id, activity_type, activity_key, content, updated_at")
+        .eq("user_id", targetUserId)
+        .order("updated_at", { ascending: false })
+        .limit(200),
+      supabase
+        .from("capstone_submissions")
+        .select("path_id, text_content, external_link, file_name, status, ai_feedback, ai_score, teacher_feedback, teacher_score, created_at")
         .eq("user_id", targetUserId),
     ]);
 
