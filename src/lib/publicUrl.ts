@@ -4,12 +4,8 @@ export const getPublicAppBaseUrl = (): string => {
 
   if (typeof window === "undefined") return "";
 
-  // Preview URLs require Lovable access, so use published URL for share links
-  if (window.location.hostname.includes("id-preview--")) {
-    return "https://ai-guardian-network-shield.lovable.app";
-  }
-
-  return window.location.origin;
+  // Always use the primary custom domain for share links
+  return "https://refyntech.us";
 };
 
 export const getPortfolioShareUrl = (token: string): string => {
