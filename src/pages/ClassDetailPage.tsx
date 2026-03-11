@@ -1214,6 +1214,11 @@ const ClassDetailPage = () => {
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-medium">{a.title}</h4>
+                                  {a.is_group_assignment && (
+                                    <Badge variant="outline" className="text-xs">
+                                      <Users className="mr-1 h-3 w-3" /> Group
+                                    </Badge>
+                                  )}
                                   {isGraded && (
                                     <Badge variant="default" className="bg-emerald-600">
                                       <CheckCircle2 className="mr-1 h-3 w-3" />
@@ -1235,6 +1240,18 @@ const ClassDetailPage = () => {
                                   )}
                                 </div>
                                 {a.description && <p className="text-sm text-muted-foreground mt-1">{a.description}</p>}
+                                {a.is_group_assignment && (
+                                  <div className="mt-3" onClick={e => e.stopPropagation()}>
+                                    <GroupManager
+                                      assignmentId={a.id}
+                                      classId={classInfo!.id}
+                                      minSize={a.min_group_size}
+                                      maxSize={a.max_group_size}
+                                      formation={a.group_formation}
+                                      isTeacher={false}
+                                    />
+                                  </div>
+                                )}
                                 {sub?.feedback && (
                                   <div className="mt-2 bg-muted rounded-lg p-2 text-sm">
                                     <span className="font-medium">Feedback:</span> {sub.feedback}
