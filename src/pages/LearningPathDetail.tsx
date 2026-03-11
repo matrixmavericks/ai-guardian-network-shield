@@ -11,6 +11,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft,
+  Award,
   BookOpen,
   Calendar,
   CheckCircle,
@@ -24,6 +25,8 @@ import ResourceViewer from "@/components/learning/ResourceViewer";
 import QuizPlayer from "@/components/learning/QuizPlayer";
 import LearningPathInsights from "@/components/learning/LearningPathInsights";
 import ClassRiskSummary from "@/components/learning/ClassRiskSummary";
+import CapstoneSubmission from "@/components/learning/CapstoneSubmission";
+import CapstoneTeacherReview from "@/components/learning/CapstoneTeacherReview";
 import {
   getLearningPathById,
   getPathProgress,
@@ -232,6 +235,10 @@ const LearningPathDetail = () => {
               )}
               <TabsTrigger value="content"><BookOpen className="mr-2 h-4 w-4" />Module Content</TabsTrigger>
               <TabsTrigger value="assessment"><ListChecks className="mr-2 h-4 w-4" />Assessments</TabsTrigger>
+              <TabsTrigger value="capstone"><Award className="mr-2 h-4 w-4" />Capstone</TabsTrigger>
+              {isTeacher && assignedStudents.length > 0 && (
+                <TabsTrigger value="capstone-review"><Award className="mr-2 h-4 w-4" />Review Capstones</TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="overview">
@@ -445,6 +452,29 @@ const LearningPathDetail = () => {
                 </div>
               )}
             </TabsContent>
+
+            <TabsContent value="capstone">
+              {user && learningPath && (
+                <CapstoneSubmission pathId={learningPath.id} pathTitle={learningPath.title} />
+              )}
+              {!user && (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    Please log in to submit a capstone project.
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {isTeacher && assignedStudents.length > 0 && (
+              <TabsContent value="capstone-review">
+                <CapstoneTeacherReview
+                  pathId={learningPath.id}
+                  pathTitle={learningPath.title}
+                  studentIds={assignedStudents.map(s => s.id)}
+                />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>

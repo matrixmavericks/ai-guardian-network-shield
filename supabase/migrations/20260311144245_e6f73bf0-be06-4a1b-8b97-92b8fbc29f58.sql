@@ -1,0 +1,1 @@
+DROP POLICY "System can update AI feedback" ON public.capstone_submissions;

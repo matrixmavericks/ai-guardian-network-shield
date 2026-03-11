@@ -14,3 +14,21 @@ verify_jwt = false
 
 [functions.generate-training-response]
 verify_jwt = false
+
+[functions.evaluate-capstone]
+verify_jwt = false
+
+[functions.generate-module-content]
+verify_jwt = false
+
+[functions.analyze-learning-profile]
+verify_jwt = false
+
+[functions.analyze-syllabus]
+verify_jwt = false
+
+[functions.generate-path-insights]
+verify_jwt = false
+
+[functions.analyze-class-risks]
+verify_jwt = false

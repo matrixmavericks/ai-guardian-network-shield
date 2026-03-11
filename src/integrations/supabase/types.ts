@@ -282,6 +282,71 @@ export type Database = {
         }
         Relationships: []
       }
+      capstone_submissions: {
+        Row: {
+          ai_feedback: Json | null
+          ai_score: number | null
+          created_at: string
+          external_link: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          path_id: string
+          reviewed_at: string | null
+          status: string
+          teacher_feedback: string | null
+          teacher_id: string | null
+          teacher_score: number | null
+          text_content: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_feedback?: Json | null
+          ai_score?: number | null
+          created_at?: string
+          external_link?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          path_id: string
+          reviewed_at?: string | null
+          status?: string
+          teacher_feedback?: string | null
+          teacher_id?: string | null
+          teacher_score?: number | null
+          text_content?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_feedback?: Json | null
+          ai_score?: number | null
+          created_at?: string
+          external_link?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          path_id?: string
+          reviewed_at?: string | null
+          status?: string
+          teacher_feedback?: string | null
+          teacher_id?: string | null
+          teacher_score?: number | null
+          text_content?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capstone_submissions_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "learning_paths"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_assignments: {
         Row: {
           class_id: string
