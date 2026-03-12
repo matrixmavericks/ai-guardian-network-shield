@@ -1338,6 +1338,18 @@ export type Database = {
         Args: { _class_id: string; _user_id: string }
         Returns: boolean
       }
+      is_portfolio_collaborator: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_portfolio_owner: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_portfolio_project_published: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       ai_engine: "openai" | "anthropic" | "google" | "other"
