@@ -1,0 +1,1 @@
+ALTER TABLE public.portfolio_projects ADD COLUMN IF NOT EXISTS theme text NOT NULL DEFAULT 'default';
