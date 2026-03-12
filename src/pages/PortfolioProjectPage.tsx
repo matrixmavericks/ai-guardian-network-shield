@@ -177,10 +177,9 @@ const PortfolioProjectPage = () => {
         setEditDescription(p.description);
         setEditTags((p.tags || []).join(", "));
 
-        // Load saved theme from external_links metadata or localStorage
-        const savedTheme = localStorage.getItem(`portfolio-theme-${p.id}`);
-        if (savedTheme && THEME_PRESETS.some(t => t.id === savedTheme)) {
-          setSelectedTheme(savedTheme);
+        // Load theme from DB
+        if (p.theme && PORTFOLIO_THEMES.some(t => t.id === p.theme)) {
+          setSelectedTheme(p.theme);
         }
 
         if (p.capstone_submission_id) {
