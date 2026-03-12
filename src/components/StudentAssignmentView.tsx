@@ -6,11 +6,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
-import { FileText, Upload, Send, CheckCircle2, Clock, AlertTriangle, Star, MessageSquare } from 'lucide-react';
+import { FileText, Upload, Send, CheckCircle2, Clock, AlertTriangle, Star, MessageSquare, Sparkles, ExternalLink } from 'lucide-react';
 
 interface ClassAssignment {
   id: string;
@@ -36,6 +37,19 @@ interface Submission {
   graded_at: string | null;
 }
 
+interface CapstoneOption {
+  id: string;
+  path_id: string;
+  path_title: string;
+  text_content: string | null;
+  file_url: string | null;
+  file_name: string | null;
+  external_link: string | null;
+  ai_score: number | null;
+  status: string;
+  created_at: string;
+}
+
 const StudentAssignmentView = () => {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<ClassAssignment[]>([]);
@@ -48,6 +62,12 @@ const StudentAssignmentView = () => {
   const [submitting, setSubmitting] = useState(false);
   const [viewSubmission, setViewSubmission] = useState<Submission | null>(null);
 
+  // Capstone submission
+  const [submitTab, setSubmitTab] = useState<string>('manual');
+  const [capstones, setCapstones] = useState<CapstoneOption[]>([]);
+  const [selectedCapstone, setSelectedCapstone] = useState<CapstoneOption | null>(null);
+  const [capstonesLoading, setCapstonesLoading] = useState(false);
+
   useEffect(() => {
     if (user) fetchData();
   }, [user]);
@@ -56,7 +76,6 @@ const StudentAssignmentView = () => {
     if (!user) return;
     setLoading(true);
     try {
-      // Get classes student is in
       const { data: memberships } = await supabase
         .from('class_members')
         .select('class_id')
@@ -93,11 +112,94 @@ const StudentAssignmentView = () => {
     }
   };
 
+  const loadCapstones = async () => {
+    if (!user) return;
+    setCapstonesLoading(true);
+    try {
+      const { data: caps } = await supabase
+        .from('capstone_submissions')
+        .select('id, path_id, text_content, file_url, file_name, external_link, ai_score, status, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (!caps?.length) {
+        setCapstones([]);
+        setCapstonesLoading(false);
+        return;
+      }
+
+      const pathIds = [...new Set(caps.map(c => c.path_id))];
+      const { data: paths } = await supabase
+        .from('learning_paths')
+        .select('id, title')
+        .in('id', pathIds);
+
+      setCapstones(caps.map(c => ({
+        ...c,
+        path_title: paths?.find(p => p.id === c.path_id)?.title || 'Learning Path',
+      })) as CapstoneOption[]);
+    } catch {
+      toast.error('Failed to load capstones');
+    } finally {
+      setCapstonesLoading(false);
+    }
+  };
+
   const getSubmission = (assignmentId: string) =>
     submissions.find(s => s.assignment_id === assignmentId);
 
   const handleSubmit = async () => {
     if (!selectedAssignment || !user) return;
+
+    // Capstone submission
+    if (submitTab === 'capstone' && selectedCapstone) {
+      setSubmitting(true);
+      try {
+        const content = `[Capstone Submission] ${selectedCapstone.path_title}\n\n${selectedCapstone.text_content || ''}${selectedCapstone.external_link ? `\n\nExternal link: ${selectedCapstone.external_link}` : ''}${selectedCapstone.ai_score !== null ? `\n\nAI Score: ${selectedCapstone.ai_score}/100` : ''}`;
+
+        const existing = getSubmission(selectedAssignment.id);
+        if (existing) {
+          const { error } = await supabase
+            .from('assignment_submissions')
+            .update({
+              content,
+              file_url: selectedCapstone.file_url || existing.file_url,
+              file_name: selectedCapstone.file_name || existing.file_name,
+              submitted_at: new Date().toISOString(),
+              status: 'resubmitted',
+            })
+            .eq('id', existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('assignment_submissions')
+            .insert({
+              assignment_id: selectedAssignment.id,
+              student_id: user.id,
+              content,
+              file_url: selectedCapstone.file_url,
+              file_name: selectedCapstone.file_name,
+              status: 'submitted',
+            });
+          if (error) throw error;
+        }
+
+        toast.success('Capstone submitted as assignment!');
+        setSubmitDialogOpen(false);
+        setAnswerText('');
+        setFile(null);
+        setSelectedCapstone(null);
+        setSelectedAssignment(null);
+        fetchData();
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to submit');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Manual submission
     if (!answerText.trim() && !file) {
       toast.error('Please provide an answer or upload a file');
       return;
@@ -167,7 +269,10 @@ const StudentAssignmentView = () => {
     setSelectedAssignment(assignment);
     setAnswerText(existing?.content || '');
     setFile(null);
+    setSelectedCapstone(null);
+    setSubmitTab('manual');
     setSubmitDialogOpen(true);
+    loadCapstones();
   };
 
   const isOverdue = (dueDate: string | null) =>
@@ -341,32 +446,98 @@ const StudentAssignmentView = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Submit: {selectedAssignment?.title}</DialogTitle>
-            <DialogDescription>{selectedAssignment?.description || 'Write your answer or upload a file.'}</DialogDescription>
+            <DialogDescription>{selectedAssignment?.description || 'Write your answer, upload a file, or submit an existing capstone.'}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Your Answer</Label>
-              <Textarea
-                placeholder="Type your answer here..."
-                value={answerText}
-                onChange={e => setAnswerText(e.target.value)}
-                rows={6}
-              />
-            </div>
-            <div>
-              <Label>Attach File (optional)</Label>
-              <Input
-                type="file"
-                onChange={e => setFile(e.target.files?.[0] || null)}
-                className="mt-1"
-              />
-              {file && <p className="text-xs text-muted-foreground mt-1">{file.name}</p>}
-            </div>
-            <Button onClick={handleSubmit} disabled={submitting} className="w-full">
-              {submitting ? 'Submitting...' : 'Submit Assignment'}
-              <Send className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+
+          <Tabs value={submitTab} onValueChange={setSubmitTab}>
+            <TabsList className="w-full">
+              <TabsTrigger value="manual" className="flex-1">Write / Upload</TabsTrigger>
+              <TabsTrigger value="capstone" className="flex-1">
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Use Capstone
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="manual" className="space-y-4 mt-4">
+              <div>
+                <Label>Your Answer</Label>
+                <Textarea
+                  placeholder="Type your answer here..."
+                  value={answerText}
+                  onChange={e => setAnswerText(e.target.value)}
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label>Attach File (optional)</Label>
+                <Input
+                  type="file"
+                  onChange={e => setFile(e.target.files?.[0] || null)}
+                  className="mt-1"
+                />
+                {file && <p className="text-xs text-muted-foreground mt-1">{file.name}</p>}
+              </div>
+              <Button onClick={handleSubmit} disabled={submitting} className="w-full">
+                {submitting ? 'Submitting...' : 'Submit Assignment'}
+                <Send className="ml-2 h-4 w-4" />
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="capstone" className="space-y-4 mt-4">
+              {capstonesLoading ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Loading capstones...</p>
+              ) : capstones.length === 0 ? (
+                <div className="text-center py-6">
+                  <Sparkles className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No capstone submissions found.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Complete a learning path capstone first.</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">Select a capstone project to submit:</p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {capstones.map(cap => (
+                      <div
+                        key={cap.id}
+                        onClick={() => setSelectedCapstone(cap)}
+                        className={`rounded-lg border p-3 cursor-pointer transition-colors ${
+                          selectedCapstone?.id === cap.id
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                            : 'hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{cap.path_title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {new Date(cap.created_at).toLocaleDateString()} · {cap.status}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {cap.ai_score !== null && (
+                              <Badge variant="outline" className="text-xs">AI: {cap.ai_score}/100</Badge>
+                            )}
+                            {cap.file_name && <FileText className="h-3.5 w-3.5 text-muted-foreground" />}
+                            {cap.external_link && <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />}
+                          </div>
+                        </div>
+                        {cap.text_content && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cap.text_content}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={submitting || !selectedCapstone}
+                    className="w-full"
+                  >
+                    {submitting ? 'Submitting...' : 'Submit Capstone'}
+                    <Sparkles className="ml-2 h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
