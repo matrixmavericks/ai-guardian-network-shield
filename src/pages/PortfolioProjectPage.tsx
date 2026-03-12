@@ -156,7 +156,7 @@ const PortfolioProjectPage = () => {
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
 
-  const theme = THEME_PRESETS.find(t => t.id === selectedTheme) || THEME_PRESETS[0];
+  const theme = getTheme(selectedTheme);
 
   useEffect(() => {
     if (!id || !user) return;
