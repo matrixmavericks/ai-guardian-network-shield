@@ -499,7 +499,7 @@ const PortfolioProjectPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                  {THEME_PRESETS.map(t => (
+                  {PORTFOLIO_THEMES.map(t => (
                     <button
                       key={t.id}
                       onClick={() => handleThemeChange(t.id)}
