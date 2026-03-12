@@ -197,10 +197,10 @@ const PortfolioProjectPage = () => {
     load();
   }, [id, user]);
 
-  const handleThemeChange = (themeId: string) => {
+  const handleThemeChange = async (themeId: string) => {
     setSelectedTheme(themeId);
     if (project) {
-      localStorage.setItem(`portfolio-theme-${project.id}`, themeId);
+      await supabase.from("portfolio_projects").update({ theme: themeId } as any).eq("id", project.id);
     }
   };
 
