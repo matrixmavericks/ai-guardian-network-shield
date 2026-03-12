@@ -1053,6 +1053,7 @@ export type Database = {
           media_urls: string[]
           share_token: string | null
           tags: string[]
+          theme: string
           title: string
           updated_at: string
           user_id: string
@@ -1069,6 +1070,7 @@ export type Database = {
           media_urls?: string[]
           share_token?: string | null
           tags?: string[]
+          theme?: string
           title: string
           updated_at?: string
           user_id: string
@@ -1085,6 +1087,7 @@ export type Database = {
           media_urls?: string[]
           share_token?: string | null
           tags?: string[]
+          theme?: string
           title?: string
           updated_at?: string
           user_id?: string
