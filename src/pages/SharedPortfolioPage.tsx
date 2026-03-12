@@ -3,17 +3,15 @@ import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { getTheme } from "@/lib/portfolioThemes";
 import {
-  Award,
   Calendar,
-  Download,
   ExternalLink,
   FileUp,
   Image,
   Link2,
   Loader2,
   MessageSquare,
-  Sparkles,
 } from "lucide-react";
 
 interface PortfolioProject {
@@ -28,6 +26,7 @@ interface PortfolioProject {
   capstone_submission_id: string | null;
   created_at: string;
   user_id: string;
+  theme: string;
 }
 
 interface Update {
@@ -84,26 +83,41 @@ const SharedPortfolioPage = () => {
     );
   }
 
+  const theme = getTheme(project.theme || "default");
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen ${theme.bg} ${theme.textClass}`}>
       {/* Hero */}
-      {project.cover_image_url && (
-        <div className="h-64 overflow-hidden">
+      {project.cover_image_url ? (
+        <div className="relative h-64 md:h-80 overflow-hidden">
           <img src={project.cover_image_url} alt={project.title} className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute bottom-6 left-6 right-6 max-w-3xl mx-auto">
+            <h1 className="text-4xl font-bold text-white mb-1">{project.title}</h1>
+            <p className="text-white/80 text-lg">by {authorName}</p>
+          </div>
+        </div>
+      ) : (
+        <div className={`${theme.headerBg || 'bg-gradient-to-br from-primary/10 to-primary/5'} py-16`}>
+          <div className="mx-auto max-w-3xl px-6">
+            <h1 className="text-4xl font-bold mb-2">{project.title}</h1>
+            <p className="text-muted-foreground text-lg">by {authorName}</p>
+          </div>
         </div>
       )}
 
       <div className="mx-auto max-w-3xl px-6 py-8">
-        <h1 className="text-4xl font-bold mb-2">{project.title}</h1>
-        <p className="text-muted-foreground text-lg mb-4">by {authorName}</p>
-        <div className="flex flex-wrap gap-1 mb-4">
+        {/* Only show title again if no cover (already shown in hero with cover) */}
+        {project.cover_image_url && null}
+
+        <div className="flex flex-wrap gap-1.5 mb-4">
           {project.tags.map((tag, i) => <Badge key={i} variant="secondary">{tag}</Badge>)}
         </div>
-        <p className="text-muted-foreground mb-8">{project.description}</p>
+        <p className="text-muted-foreground mb-8 text-base leading-relaxed">{project.description}</p>
 
         {/* Media */}
         {project.media_urls.length > 0 && (
-          <Card className="mb-6">
+          <Card className={`mb-6 ${theme.accent}`}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2"><Image className="h-4 w-4" /> Project Media</CardTitle>
             </CardHeader>
@@ -128,7 +142,7 @@ const SharedPortfolioPage = () => {
 
         {/* External Links */}
         {project.external_links.length > 0 && (
-          <Card className="mb-6">
+          <Card className={`mb-6 ${theme.accent}`}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2"><Link2 className="h-4 w-4" /> Links</CardTitle>
             </CardHeader>
@@ -144,7 +158,7 @@ const SharedPortfolioPage = () => {
 
         {/* Updates */}
         {updates.length > 0 && (
-          <Card>
+          <Card className={theme.accent}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Project Journey</CardTitle>
             </CardHeader>
