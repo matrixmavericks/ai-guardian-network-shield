@@ -1,30 +1,26 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Server, Users, Brain } from "lucide-react";
+import { Shield, Server, Brain, Palette, FolderOpen, GraduationCap } from "lucide-react";
 import HeroSection from "@/components/HeroSection";
 import FeatureCards from "@/components/FeatureCards";
 import Testimonials from "@/components/Testimonials";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm py-4 px-6 md:px-10 flex justify-between items-center">
+      <nav className="bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 py-4 px-6 md:px-10 flex justify-between items-center sticky top-0 z-50">
         <div className="flex items-center">
-          <Shield className="h-8 w-8 text-blue-600 mr-2" />
-          <span className="text-xl font-bold text-slate-800">Refyn Technologies
-
-          </span>
+          <Shield className="h-7 w-7 text-blue-400 mr-2" />
+          <span className="text-xl font-bold text-white">Refyn Technologies</span>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-3">
           <Link to="/login">
-            <Button variant="outline">Login</Button>
+            <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800">Login</Button>
           </Link>
           <Link to="/signup">
-            <Button className="bg-blue-600 hover:bg-blue-700">Sign Up</Button>
+            <Button className="bg-blue-500 hover:bg-blue-600 text-white">Sign Up</Button>
           </Link>
         </div>
       </nav>
@@ -36,31 +32,46 @@ const Index = () => {
       <FeatureCards />
 
       {/* How It Works */}
-      <section className="py-16 px-6 md:px-10 bg-white">
+      <section className="py-20 px-6 md:px-10 bg-gradient-to-b from-white to-slate-50">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12 text-slate-800">How AI Conditioner Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="bg-blue-50 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
-                <Server className="h-8 w-8 text-blue-600" />
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">How It Works</h2>
+            <p className="text-slate-600 max-w-2xl mx-auto">From setup to student success in three simple steps.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {[
+              {
+                icon: Server,
+                step: "01",
+                title: "Deploy & Configure",
+                desc: "Integrate with your school network. Set AI filtering policies, create classes, and invite teachers and students.",
+              },
+              {
+                icon: Brain,
+                step: "02",
+                title: "Learn & Create",
+                desc: "Students engage with AI-guided learning paths, complete capstone projects, and submit work — all ethically filtered.",
+              },
+              {
+                icon: FolderOpen,
+                step: "03",
+                title: "Showcase & Share",
+                desc: "Students build themed portfolios with their best work and share them via public links with parents, peers, or colleges.",
+              },
+            ].map((item) => (
+              <div key={item.step} className="text-center group">
+                <div className="relative mx-auto mb-6">
+                  <div className="bg-blue-500/10 rounded-2xl h-16 w-16 flex items-center justify-center mx-auto group-hover:bg-blue-500/20 transition-colors">
+                    <item.icon className="h-7 w-7 text-blue-600" />
+                  </div>
+                  <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                    {item.step}
+                  </span>
+                </div>
+                <h3 className="font-bold text-lg mb-2 text-slate-900">{item.title}</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">{item.desc}</p>
               </div>
-              <h3 className="font-bold text-lg mb-2">1. Network Integration</h3>
-              <p className="text-slate-600">Seamlessly integrates with your network infrastructure to monitor all AI traffic.</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-blue-50 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
-                <Brain className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">2. AI Prompt Analysis</h3>
-              <p className="text-slate-600">Intelligently analyzes prompts to ensure they promote learning processes, not just answers.</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-blue-50 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">3. Administrative Control</h3>
-              <p className="text-slate-600">Provides administrators with complete control over AI usage policies and monitoring.</p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -69,58 +80,68 @@ const Index = () => {
       <Testimonials />
 
       {/* CTA Section */}
-      <section className="py-16 px-6 md:px-10 bg-blue-600 text-white text-center">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold mb-4">Ready to Transform AI Usage in Your Institution?</h2>
-          <p className="mb-8 text-blue-100">Join educational institutions worldwide in promoting ethical AI use.</p>
+      <section className="py-20 px-6 md:px-10 bg-gradient-to-br from-blue-600 to-indigo-700 text-white text-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-1/4 w-64 h-64 bg-white rounded-full blur-[100px]" />
+          <div className="absolute bottom-10 right-1/4 w-48 h-48 bg-cyan-300 rounded-full blur-[80px]" />
+        </div>
+        <div className="max-w-3xl mx-auto relative z-10">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform AI Learning?</h2>
+          <p className="mb-8 text-blue-100 text-lg">
+            Join educational institutions worldwide in promoting ethical AI use, building student portfolios, and enabling smarter learning.
+          </p>
           <Link to="/signup">
-            <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50">Get Started for Free</Button>
+            <Button size="lg" className="bg-white text-blue-700 hover:bg-blue-50 text-base px-8 font-semibold">
+              Get Started for Free
+            </Button>
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-300 py-12 px-6 md:px-10">
+      <footer className="bg-slate-950 text-slate-400 py-14 px-6 md:px-10">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center mb-4">
               <Shield className="h-6 w-6 text-blue-400 mr-2" />
-              <span className="text-lg font-bold text-white">AI Conditioner</span>
+              <span className="text-lg font-bold text-white">Refyn Technologies</span>
             </div>
-            <p className="text-sm">Ensuring ethical AI use in educational environments through advanced filtering and monitoring.</p>
+            <p className="text-sm leading-relaxed">Ethical AI usage, adaptive learning, and student portfolios — the complete educational AI platform.</p>
           </div>
           <div>
-            <h3 className="font-bold mb-4 text-white">Product</h3>
+            <h3 className="font-semibold mb-4 text-white text-sm uppercase tracking-wider">Platform</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white">Features</a></li>
-              <li><a href="#" className="hover:text-white">Pricing</a></li>
-              <li><a href="#" className="hover:text-white">Case Studies</a></li>
-              <li><a href="#" className="hover:text-white">Documentation</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">AI Filtering</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Learning Paths</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Student Portfolios</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
             </ul>
           </div>
           <div>
-            <h3 className="font-bold mb-4 text-white">Resources</h3>
+            <h3 className="font-semibold mb-4 text-white text-sm uppercase tracking-wider">Resources</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white">Blog</a></li>
-              <li><a href="#" className="hover:text-white">Support Center</a></li>
-              <li><a href="#" className="hover:text-white">Webinars</a></li>
-              <li><a href="#" className="hover:text-white">Partners</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Support Center</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Webinars</a></li>
             </ul>
           </div>
           <div>
-            <h3 className="font-bold mb-4 text-white">Company</h3>
+            <h3 className="font-semibold mb-4 text-white text-sm uppercase tracking-wider">Company</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white">About Us</a></li>
-              <li><a href="#" className="hover:text-white">Careers</a></li>
-              <li><a href="#" className="hover:text-white">Contact</a></li>
-              <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
             </ul>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto pt-8 mt-8 border-t border-slate-800 text-sm text-center">
-          &copy; {new Date().getFullYear()} AI Conditioner. All rights reserved.
+        <div className="max-w-6xl mx-auto pt-8 mt-8 border-t border-slate-800/50 text-sm text-center text-slate-500">
+          &copy; {new Date().getFullYear()} Refyn Technologies. All rights reserved.
         </div>
       </footer>
-    </div>);};
+    </div>
+  );
+};
 
 export default Index;
