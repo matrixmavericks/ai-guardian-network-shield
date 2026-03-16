@@ -346,7 +346,7 @@ IMPORTANT: You are in Process Teaching Mode.
         completion_tokens: completionTokens,
         total_tokens: totalTokens,
         estimated_cost_usd: estimatedCost,
-        model: 'google/gemini-3-flash-preview',
+        model: (schoolSettings?.allowed_ai_models?.length > 0 ? schoolSettings.allowed_ai_models[0] : 'google/gemini-3-flash-preview'),
       });
 
       // Log prompt
