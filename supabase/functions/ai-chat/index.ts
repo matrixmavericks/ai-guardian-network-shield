@@ -62,6 +62,43 @@ async function checkQuota(userId: string): Promise<{ allowed: boolean; reason?: 
   return { allowed: true };
 }
 
+async function getSchoolSettings(userId: string): Promise<any | null> {
+  const adminClient = getAdminClient();
+  
+  // Find user's school via school_members
+  const { data: membership } = await adminClient
+    .from('school_members')
+    .select('school_id')
+    .eq('user_id', userId)
+    .limit(1);
+  
+  if (!membership || membership.length === 0) return null;
+  
+  const { data: settings } = await adminClient
+    .from('school_ai_settings')
+    .select('*')
+    .eq('school_id', membership[0].school_id)
+    .maybeSingle();
+  
+  return settings;
+}
+
+async function getSchoolTrainingExamples(trainingDataIds: string[]): Promise<string> {
+  if (!trainingDataIds || trainingDataIds.length === 0) return '';
+  const adminClient = getAdminClient();
+  
+  const { data } = await adminClient
+    .from('model_training_data')
+    .select('input_prompt, ideal_response, subject, grade_level')
+    .in('id', trainingDataIds)
+    .eq('approved', true);
+  
+  if (!data || data.length === 0) return '';
+  
+  return '\n\nSCHOOL TRAINING EXAMPLES (use these as reference for tone and style):\n' +
+    data.map((d: any) => `- Student asks: "${d.input_prompt}"\n  Ideal response: "${d.ideal_response}"`).join('\n');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -137,8 +174,54 @@ serve(async (req) => {
     effectivePrompt = `The student asked: "${prompt}". Instead of giving them the direct answer, guide them through the thinking process step by step. Ask them guiding questions to help them discover the answer themselves. Focus on teaching the underlying concepts.`;
   }
 
+  // --- School settings enforcement ---
+  let schoolSettings: any = null;
+  let schoolTrainingContext = '';
+  
+  if (userId) {
+    try {
+      schoolSettings = await getSchoolSettings(userId);
+      if (schoolSettings) {
+        // Check if student chat is allowed
+        if (schoolSettings.allow_student_chat === false) {
+          return json({ success: false, reply: 'AI chat is not enabled for your school. Please contact your administrator.', error: 'school_chat_disabled', meta: null }, 403);
+        }
+        
+        // Check subject restrictions
+        if (schoolSettings.subject_restrictions && schoolSettings.subject_restrictions.length > 0) {
+          if (!schoolSettings.subject_restrictions.includes(subject)) {
+            return json({ success: false, reply: `AI chat is only available for the following subjects at your school: ${schoolSettings.subject_restrictions.join(', ')}. You selected "${subject}".`, error: 'subject_restricted', meta: null }, 403);
+          }
+        }
+        
+        // Check school-level blocked keywords
+        if (schoolSettings.blocked_keywords && schoolSettings.blocked_keywords.length > 0) {
+          const schoolFlagged = schoolSettings.blocked_keywords.filter((kw: string) => lowerPrompt.includes(kw.toLowerCase()));
+          if (schoolFlagged.length > 0) {
+            moderationStatus = 'rewritten';
+            severity = 'high';
+            effectivePrompt = `The student asked: "${prompt}". This prompt contains restricted content per school policy. Instead of giving them the direct answer, guide them through the thinking process step by step.`;
+          }
+        }
+        
+        // Load school training examples
+        if (schoolSettings.custom_model_training_data_ids && schoolSettings.custom_model_training_data_ids.length > 0) {
+          schoolTrainingContext = await getSchoolTrainingExamples(schoolSettings.custom_model_training_data_ids);
+        }
+      }
+    } catch (e) {
+      console.error('School settings check failed (non-fatal):', e);
+    }
+  }
+
+  // --- Moderation (keyword-based, after school check) ---
+
   // --- Build system prompt ---
-  let systemMessage = `You are an educational AI assistant. Subject: ${subject}. Grade level: ${gradeLevel}.
+  let systemMessage = schoolSettings?.custom_system_prompt 
+    ? `${schoolSettings.custom_system_prompt}\n\nSubject: ${subject}. Grade level: ${gradeLevel}.`
+    : `You are an educational AI assistant. Subject: ${subject}. Grade level: ${gradeLevel}.`;
+  
+  systemMessage += `
 Use markdown formatting. Use **bold** for key terms. Use bullet points and numbered lists. Keep explanations clear and age-appropriate.
 
 CRITICAL MATH FORMATTING RULES:
@@ -149,7 +232,8 @@ CRITICAL MATH FORMATTING RULES:
 - For equations, write them on their own line in plain text, e.g.: "Area = π × r²"
 - For complex formulas, use code blocks with plain text formatting.`;
 
-  if (processTeaching || moderationStatus === 'rewritten') {
+  const forceProcessMode = schoolSettings?.process_mode_enabled === true;
+  if (processTeaching || forceProcessMode || moderationStatus === 'rewritten') {
     systemMessage += `
 IMPORTANT: You are in Process Teaching Mode.
 1. NEVER give direct answers
@@ -176,6 +260,11 @@ IMPORTANT: You are in Process Teaching Mode.
     systemMessage += `\n\nThe student is referencing the following class resource:\n${resourceContext}\nUse this context to provide more relevant and targeted assistance.`;
   }
 
+  // Add school training examples
+  if (schoolTrainingContext) {
+    systemMessage += schoolTrainingContext;
+  }
+
   // --- Call AI with timeout ---
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!lovableApiKey) {
@@ -197,7 +286,7 @@ IMPORTANT: You are in Process Teaching Mode.
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: (schoolSettings?.allowed_ai_models?.length > 0 ? schoolSettings.allowed_ai_models[0] : 'google/gemini-3-flash-preview'),
         messages: [
           { role: 'system', content: systemMessage },
           { role: 'user', content: effectivePrompt },
@@ -257,7 +346,7 @@ IMPORTANT: You are in Process Teaching Mode.
         completion_tokens: completionTokens,
         total_tokens: totalTokens,
         estimated_cost_usd: estimatedCost,
-        model: 'google/gemini-3-flash-preview',
+        model: (schoolSettings?.allowed_ai_models?.length > 0 ? schoolSettings.allowed_ai_models[0] : 'google/gemini-3-flash-preview'),
       });
 
       // Log prompt

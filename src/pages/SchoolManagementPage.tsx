@@ -216,19 +216,22 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
   const [addMemberEmail, setAddMemberEmail] = useState('');
   const [addMemberRole, setAddMemberRole] = useState('member');
   const [newKeyword, setNewKeyword] = useState('');
+  const [newSubject, setNewSubject] = useState('');
   const [assignClassId, setAssignClassId] = useState('');
   const [unassignedClasses, setUnassignedClasses] = useState<any[]>([]);
+  const [trainingData, setTrainingData] = useState<any[]>([]);
 
   useEffect(() => { fetchDetail(); }, [school.id]);
 
   const fetchDetail = async () => {
     setLoading(true);
-    const [{ data: mems }, { data: cls }, { data: settings }, { data: profiles }, { data: allCls }] = await Promise.all([
+    const [{ data: mems }, { data: cls }, { data: settings }, { data: profiles }, { data: allCls }, { data: tData }] = await Promise.all([
       supabase.from('school_members').select('*').eq('school_id', school.id),
       supabase.from('classes').select('*').eq('school_id', school.id),
       supabase.from('school_ai_settings').select('*').eq('school_id', school.id).maybeSingle(),
       supabase.from('profiles').select('user_id, full_name, email'),
       supabase.from('classes').select('*'),
+      supabase.from('model_training_data').select('*').order('created_at', { ascending: false }),
     ]);
 
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
@@ -236,6 +239,7 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
     setClasses(cls || []);
     setAllProfiles(profiles || []);
     setUnassignedClasses((allCls || []).filter((c: any) => !c.school_id));
+    setTrainingData(tData || []);
 
     if (settings) {
       setAiSettings(settings as any);
@@ -306,6 +310,25 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
   const removeBlockedKeyword = (kw: string) => {
     if (!aiSettings) return;
     updateAISettings({ blocked_keywords: aiSettings.blocked_keywords.filter(k => k !== kw) });
+  };
+
+  const addSubjectRestriction = () => {
+    if (!newSubject.trim() || !aiSettings) return;
+    const updated = [...(aiSettings.subject_restrictions || []), newSubject.trim().toLowerCase()];
+    updateAISettings({ subject_restrictions: updated });
+    setNewSubject('');
+  };
+
+  const removeSubjectRestriction = (subj: string) => {
+    if (!aiSettings) return;
+    updateAISettings({ subject_restrictions: aiSettings.subject_restrictions.filter(s => s !== subj) });
+  };
+
+  const toggleTrainingData = (tdId: string) => {
+    if (!aiSettings) return;
+    const current = (aiSettings as any).custom_model_training_data_ids || [];
+    const updated = current.includes(tdId) ? current.filter((id: string) => id !== tdId) : [...current, tdId];
+    updateAISettings({ custom_model_training_data_ids: updated } as any);
   };
 
   const toggleModel = (model: string) => {
@@ -502,6 +525,34 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
               <Card>
                 <CardHeader>
+                  <CardTitle className="text-base">Subject-Specific Filtering</CardTitle>
+                  <CardDescription>Restrict AI usage to specific subjects only. Leave empty to allow all subjects.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2 mb-3">
+                    <Select value={newSubject} onValueChange={setNewSubject}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Select subject..." /></SelectTrigger>
+                      <SelectContent>
+                        {['math', 'science', 'english', 'history', 'programming', 'writing', 'languages', 'art', 'music', 'geography'].filter(s => !(aiSettings.subject_restrictions || []).includes(s)).map(s => (
+                          <SelectItem key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={addSubjectRestriction} size="sm" disabled={!newSubject}>Add</Button>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {(aiSettings.subject_restrictions || []).map((subj: string) => (
+                      <Badge key={subj} variant="secondary" className="gap-1 cursor-pointer capitalize" onClick={() => removeSubjectRestriction(subj)}>
+                        {subj} ×
+                      </Badge>
+                    ))}
+                    {(aiSettings.subject_restrictions || []).length === 0 && <p className="text-sm text-muted-foreground">All subjects allowed.</p>}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
                   <CardTitle className="text-base">Custom System Prompt</CardTitle>
                   <CardDescription>Override the default AI system prompt for this school's students</CardDescription>
                 </CardHeader>
@@ -546,17 +597,34 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Custom Trained Models</CardTitle>
-              <CardDescription>School-specific training data that shapes AI responses for this ecosystem</CardDescription>
+              <CardTitle className="text-base">School Training Datasets</CardTitle>
+              <CardDescription>Link approved training data to this school. The AI will use these examples to customize responses for students.</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Training data created by teachers in this school will be used to customize AI behavior.
-                Visit the <strong>Model Training</strong> page to add prompt-response pairs that fine-tune the AI for this school's curriculum.
-              </p>
+              {trainingData.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No training data available. Visit the <strong>Model Training</strong> page to create prompt-response pairs.</p>
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {trainingData.map((td: any) => {
+                    const isLinked = ((aiSettings as any)?.custom_model_training_data_ids || []).includes(td.id);
+                    return (
+                      <div key={td.id} className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${isLinked ? 'bg-primary/5 border-primary/30' : 'hover:bg-muted/50'}`}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="capitalize text-xs">{td.subject}</Badge>
+                            {td.grade_level && <Badge variant="outline" className="text-xs">{td.grade_level}</Badge>}
+                            {td.approved ? <Badge className="text-xs bg-green-100 text-green-700">Approved</Badge> : <Badge variant="secondary" className="text-xs">Pending</Badge>}
+                          </div>
+                          <p className="text-sm truncate">{td.input_prompt}</p>
+                        </div>
+                        <Switch checked={isLinked} onCheckedChange={() => toggleTrainingData(td.id)} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               <div className="mt-3 p-3 bg-muted rounded-lg text-sm">
-                <strong>How it works:</strong> Teachers create training examples (input prompt → ideal response) that are linked to this school.
-                The AI uses these examples to better understand the school's teaching style, curriculum focus, and educational standards.
+                <strong>How it works:</strong> Linked training examples shape the AI's teaching style, curriculum focus, and response patterns specifically for this school's students.
               </div>
             </CardContent>
           </Card>
