@@ -312,6 +312,25 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
     updateAISettings({ blocked_keywords: aiSettings.blocked_keywords.filter(k => k !== kw) });
   };
 
+  const addSubjectRestriction = () => {
+    if (!newSubject.trim() || !aiSettings) return;
+    const updated = [...(aiSettings.subject_restrictions || []), newSubject.trim().toLowerCase()];
+    updateAISettings({ subject_restrictions: updated });
+    setNewSubject('');
+  };
+
+  const removeSubjectRestriction = (subj: string) => {
+    if (!aiSettings) return;
+    updateAISettings({ subject_restrictions: aiSettings.subject_restrictions.filter(s => s !== subj) });
+  };
+
+  const toggleTrainingData = (tdId: string) => {
+    if (!aiSettings) return;
+    const current = (aiSettings as any).custom_model_training_data_ids || [];
+    const updated = current.includes(tdId) ? current.filter((id: string) => id !== tdId) : [...current, tdId];
+    updateAISettings({ custom_model_training_data_ids: updated } as any);
+  };
+
   const toggleModel = (model: string) => {
     if (!aiSettings) return;
     const current = aiSettings.allowed_ai_models || [];
