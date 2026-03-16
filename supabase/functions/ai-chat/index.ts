@@ -232,7 +232,8 @@ CRITICAL MATH FORMATTING RULES:
 - For equations, write them on their own line in plain text, e.g.: "Area = π × r²"
 - For complex formulas, use code blocks with plain text formatting.`;
 
-  if (processTeaching || moderationStatus === 'rewritten') {
+  const forceProcessMode = schoolSettings?.process_mode_enabled === true;
+  if (processTeaching || forceProcessMode || moderationStatus === 'rewritten') {
     systemMessage += `
 IMPORTANT: You are in Process Teaching Mode.
 1. NEVER give direct answers
