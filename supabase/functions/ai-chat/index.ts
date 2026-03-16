@@ -260,6 +260,11 @@ IMPORTANT: You are in Process Teaching Mode.
     systemMessage += `\n\nThe student is referencing the following class resource:\n${resourceContext}\nUse this context to provide more relevant and targeted assistance.`;
   }
 
+  // Add school training examples
+  if (schoolTrainingContext) {
+    systemMessage += schoolTrainingContext;
+  }
+
   // --- Call AI with timeout ---
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!lovableApiKey) {
