@@ -621,6 +621,7 @@ export type Database = {
           id: string
           join_code: string
           name: string
+          school_id: string | null
           subject: string
           teacher_id: string
           updated_at: string
@@ -632,6 +633,7 @@ export type Database = {
           id?: string
           join_code?: string
           name: string
+          school_id?: string | null
           subject?: string
           teacher_id: string
           updated_at?: string
@@ -643,6 +645,7 @@ export type Database = {
           id?: string
           join_code?: string
           name?: string
+          school_id?: string | null
           subject?: string
           teacher_id?: string
           updated_at?: string
@@ -653,6 +656,13 @@ export type Database = {
             columns: ["grading_system_id"]
             isOneToOne: false
             referencedRelation: "grading_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
         ]
@@ -1224,6 +1234,142 @@ export type Database = {
         }
         Relationships: []
       }
+      school_ai_settings: {
+        Row: {
+          allow_capstone_ai_grading: boolean | null
+          allow_learning_path_generation: boolean | null
+          allow_student_chat: boolean | null
+          allowed_ai_models: string[] | null
+          blocked_keywords: string[] | null
+          created_at: string
+          custom_model_training_data_ids: string[] | null
+          custom_system_prompt: string | null
+          grade_level_restrictions: string[] | null
+          id: string
+          max_daily_prompts_per_student: number | null
+          max_monthly_cost_usd: number | null
+          process_mode_enabled: boolean | null
+          school_id: string
+          subject_restrictions: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          allow_capstone_ai_grading?: boolean | null
+          allow_learning_path_generation?: boolean | null
+          allow_student_chat?: boolean | null
+          allowed_ai_models?: string[] | null
+          blocked_keywords?: string[] | null
+          created_at?: string
+          custom_model_training_data_ids?: string[] | null
+          custom_system_prompt?: string | null
+          grade_level_restrictions?: string[] | null
+          id?: string
+          max_daily_prompts_per_student?: number | null
+          max_monthly_cost_usd?: number | null
+          process_mode_enabled?: boolean | null
+          school_id: string
+          subject_restrictions?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          allow_capstone_ai_grading?: boolean | null
+          allow_learning_path_generation?: boolean | null
+          allow_student_chat?: boolean | null
+          allowed_ai_models?: string[] | null
+          blocked_keywords?: string[] | null
+          created_at?: string
+          custom_model_training_data_ids?: string[] | null
+          custom_system_prompt?: string | null
+          grade_level_restrictions?: string[] | null
+          id?: string
+          max_daily_prompts_per_student?: number | null
+          max_monthly_cost_usd?: number | null
+          process_mode_enabled?: boolean | null
+          school_id?: string
+          subject_restrictions?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_ai_settings_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: true
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_members: {
+        Row: {
+          id: string
+          joined_at: string
+          school_id: string
+          school_role: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          school_id: string
+          school_role?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          school_id?: string
+          school_role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_members_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schools: {
+        Row: {
+          address: string | null
+          contact_email: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          domain: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          domain?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          domain?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       student_documents: {
         Row: {
           created_at: string
@@ -1351,6 +1497,10 @@ export type Database = {
       }
       is_portfolio_project_published: {
         Args: { _project_id: string }
+        Returns: boolean
+      }
+      is_school_member: {
+        Args: { _school_id: string; _user_id: string }
         Returns: boolean
       }
     }
