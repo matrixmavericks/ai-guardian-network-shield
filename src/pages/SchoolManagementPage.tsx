@@ -225,12 +225,13 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
   const fetchDetail = async () => {
     setLoading(true);
-    const [{ data: mems }, { data: cls }, { data: settings }, { data: profiles }, { data: allCls }] = await Promise.all([
+    const [{ data: mems }, { data: cls }, { data: settings }, { data: profiles }, { data: allCls }, { data: tData }] = await Promise.all([
       supabase.from('school_members').select('*').eq('school_id', school.id),
       supabase.from('classes').select('*').eq('school_id', school.id),
       supabase.from('school_ai_settings').select('*').eq('school_id', school.id).maybeSingle(),
       supabase.from('profiles').select('user_id, full_name, email'),
       supabase.from('classes').select('*'),
+      supabase.from('model_training_data').select('*').order('created_at', { ascending: false }),
     ]);
 
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
