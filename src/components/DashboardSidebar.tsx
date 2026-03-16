@@ -23,6 +23,7 @@ const DashboardSidebar = () => {
         { title: "Overview", href: "/dashboard", icon: <TrendingUp className="h-5 w-5" /> },
         { title: "Admin Center", href: "/admin-overview", icon: <Shield className="h-5 w-5" /> },
         { title: "Monitoring", href: "/admin-monitoring", icon: <Activity className="h-5 w-5" /> },
+        { title: "Schools", href: "/school-management", icon: <Building2 className="h-5 w-5" /> },
         { title: "Classes", href: "/classes", icon: <Users className="h-5 w-5" /> },
         { title: "User Management", href: "/users", icon: <UserPlus className="h-5 w-5" /> },
         { title: "AI Config", href: "/ai-configuration", icon: <Brain className="h-5 w-5" /> },
