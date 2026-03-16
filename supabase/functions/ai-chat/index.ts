@@ -62,6 +62,43 @@ async function checkQuota(userId: string): Promise<{ allowed: boolean; reason?: 
   return { allowed: true };
 }
 
+async function getSchoolSettings(userId: string): Promise<any | null> {
+  const adminClient = getAdminClient();
+  
+  // Find user's school via school_members
+  const { data: membership } = await adminClient
+    .from('school_members')
+    .select('school_id')
+    .eq('user_id', userId)
+    .limit(1);
+  
+  if (!membership || membership.length === 0) return null;
+  
+  const { data: settings } = await adminClient
+    .from('school_ai_settings')
+    .select('*')
+    .eq('school_id', membership[0].school_id)
+    .maybeSingle();
+  
+  return settings;
+}
+
+async function getSchoolTrainingExamples(trainingDataIds: string[]): Promise<string> {
+  if (!trainingDataIds || trainingDataIds.length === 0) return '';
+  const adminClient = getAdminClient();
+  
+  const { data } = await adminClient
+    .from('model_training_data')
+    .select('input_prompt, ideal_response, subject, grade_level')
+    .in('id', trainingDataIds)
+    .eq('approved', true);
+  
+  if (!data || data.length === 0) return '';
+  
+  return '\n\nSCHOOL TRAINING EXAMPLES (use these as reference for tone and style):\n' +
+    data.map((d: any) => `- Student asks: "${d.input_prompt}"\n  Ideal response: "${d.ideal_response}"`).join('\n');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
