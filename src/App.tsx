@@ -29,6 +29,7 @@ import PortfolioPage from './pages/PortfolioPage';
 import PortfolioProjectPage from './pages/PortfolioProjectPage';
 import SharedPortfolioPage from './pages/SharedPortfolioPage';
 import TeacherPortfolioReviewPage from './pages/TeacherPortfolioReviewPage';
+import AdminOverviewPage from './pages/AdminOverviewPage';
 
 const ProtectedRoute = ({ 
   children, 
@@ -67,6 +68,7 @@ function App() {
           <Route path="/register" element={<Register />} />
 
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/admin-overview" element={<ProtectedRoute allowedRoles={['admin']}><AdminOverviewPage /></ProtectedRoute>} />
           <Route path="/security-keys" element={<ProtectedRoute allowedRoles={['admin']}><SecurityKeysPage /></ProtectedRoute>} />
           <Route path="/teacher-plan-generator" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherPlanGenerator /></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
