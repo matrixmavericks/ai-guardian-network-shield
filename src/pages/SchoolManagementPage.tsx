@@ -525,6 +525,34 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
               <Card>
                 <CardHeader>
+                  <CardTitle className="text-base">Subject-Specific Filtering</CardTitle>
+                  <CardDescription>Restrict AI usage to specific subjects only. Leave empty to allow all subjects.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2 mb-3">
+                    <Select value={newSubject} onValueChange={setNewSubject}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Select subject..." /></SelectTrigger>
+                      <SelectContent>
+                        {['math', 'science', 'english', 'history', 'programming', 'writing', 'languages', 'art', 'music', 'geography'].filter(s => !(aiSettings.subject_restrictions || []).includes(s)).map(s => (
+                          <SelectItem key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={addSubjectRestriction} size="sm" disabled={!newSubject}>Add</Button>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {(aiSettings.subject_restrictions || []).map((subj: string) => (
+                      <Badge key={subj} variant="secondary" className="gap-1 cursor-pointer capitalize" onClick={() => removeSubjectRestriction(subj)}>
+                        {subj} ×
+                      </Badge>
+                    ))}
+                    {(aiSettings.subject_restrictions || []).length === 0 && <p className="text-sm text-muted-foreground">All subjects allowed.</p>}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
                   <CardTitle className="text-base">Custom System Prompt</CardTitle>
                   <CardDescription>Override the default AI system prompt for this school's students</CardDescription>
                 </CardHeader>
