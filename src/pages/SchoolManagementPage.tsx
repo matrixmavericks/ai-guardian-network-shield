@@ -216,8 +216,10 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
   const [addMemberEmail, setAddMemberEmail] = useState('');
   const [addMemberRole, setAddMemberRole] = useState('member');
   const [newKeyword, setNewKeyword] = useState('');
+  const [newSubject, setNewSubject] = useState('');
   const [assignClassId, setAssignClassId] = useState('');
   const [unassignedClasses, setUnassignedClasses] = useState<any[]>([]);
+  const [trainingData, setTrainingData] = useState<any[]>([]);
 
   useEffect(() => { fetchDetail(); }, [school.id]);
 
