@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users, DollarSign, Briefcase, Activity } from 'lucide-react';
+import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users, DollarSign, Briefcase, Activity, Building2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const DashboardSidebar = () => {
@@ -23,6 +23,7 @@ const DashboardSidebar = () => {
         { title: "Overview", href: "/dashboard", icon: <TrendingUp className="h-5 w-5" /> },
         { title: "Admin Center", href: "/admin-overview", icon: <Shield className="h-5 w-5" /> },
         { title: "Monitoring", href: "/admin-monitoring", icon: <Activity className="h-5 w-5" /> },
+        { title: "Schools", href: "/school-management", icon: <Building2 className="h-5 w-5" /> },
         { title: "Classes", href: "/classes", icon: <Users className="h-5 w-5" /> },
         { title: "User Management", href: "/users", icon: <UserPlus className="h-5 w-5" /> },
         { title: "AI Config", href: "/ai-configuration", icon: <Brain className="h-5 w-5" /> },
