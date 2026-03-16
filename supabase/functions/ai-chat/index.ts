@@ -286,7 +286,7 @@ IMPORTANT: You are in Process Teaching Mode.
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: (schoolSettings?.allowed_ai_models?.length > 0 ? schoolSettings.allowed_ai_models[0] : 'google/gemini-3-flash-preview'),
         messages: [
           { role: 'system', content: systemMessage },
           { role: 'user', content: effectivePrompt },
