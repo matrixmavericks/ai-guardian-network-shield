@@ -597,17 +597,34 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Custom Trained Models</CardTitle>
-              <CardDescription>School-specific training data that shapes AI responses for this ecosystem</CardDescription>
+              <CardTitle className="text-base">School Training Datasets</CardTitle>
+              <CardDescription>Link approved training data to this school. The AI will use these examples to customize responses for students.</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Training data created by teachers in this school will be used to customize AI behavior.
-                Visit the <strong>Model Training</strong> page to add prompt-response pairs that fine-tune the AI for this school's curriculum.
-              </p>
+              {trainingData.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No training data available. Visit the <strong>Model Training</strong> page to create prompt-response pairs.</p>
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {trainingData.map((td: any) => {
+                    const isLinked = ((aiSettings as any)?.custom_model_training_data_ids || []).includes(td.id);
+                    return (
+                      <div key={td.id} className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${isLinked ? 'bg-primary/5 border-primary/30' : 'hover:bg-muted/50'}`}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="capitalize text-xs">{td.subject}</Badge>
+                            {td.grade_level && <Badge variant="outline" className="text-xs">{td.grade_level}</Badge>}
+                            {td.approved ? <Badge className="text-xs bg-green-100 text-green-700">Approved</Badge> : <Badge variant="secondary" className="text-xs">Pending</Badge>}
+                          </div>
+                          <p className="text-sm truncate">{td.input_prompt}</p>
+                        </div>
+                        <Switch checked={isLinked} onCheckedChange={() => toggleTrainingData(td.id)} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               <div className="mt-3 p-3 bg-muted rounded-lg text-sm">
-                <strong>How it works:</strong> Teachers create training examples (input prompt → ideal response) that are linked to this school.
-                The AI uses these examples to better understand the school's teaching style, curriculum focus, and educational standards.
+                <strong>How it works:</strong> Linked training examples shape the AI's teaching style, curriculum focus, and response patterns specifically for this school's students.
               </div>
             </CardContent>
           </Card>
