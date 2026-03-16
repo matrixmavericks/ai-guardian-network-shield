@@ -174,8 +174,54 @@ serve(async (req) => {
     effectivePrompt = `The student asked: "${prompt}". Instead of giving them the direct answer, guide them through the thinking process step by step. Ask them guiding questions to help them discover the answer themselves. Focus on teaching the underlying concepts.`;
   }
 
+  // --- School settings enforcement ---
+  let schoolSettings: any = null;
+  let schoolTrainingContext = '';
+  
+  if (userId) {
+    try {
+      schoolSettings = await getSchoolSettings(userId);
+      if (schoolSettings) {
+        // Check if student chat is allowed
+        if (schoolSettings.allow_student_chat === false) {
+          return json({ success: false, reply: 'AI chat is not enabled for your school. Please contact your administrator.', error: 'school_chat_disabled', meta: null }, 403);
+        }
+        
+        // Check subject restrictions
+        if (schoolSettings.subject_restrictions && schoolSettings.subject_restrictions.length > 0) {
+          if (!schoolSettings.subject_restrictions.includes(subject)) {
+            return json({ success: false, reply: `AI chat is only available for the following subjects at your school: ${schoolSettings.subject_restrictions.join(', ')}. You selected "${subject}".`, error: 'subject_restricted', meta: null }, 403);
+          }
+        }
+        
+        // Check school-level blocked keywords
+        if (schoolSettings.blocked_keywords && schoolSettings.blocked_keywords.length > 0) {
+          const schoolFlagged = schoolSettings.blocked_keywords.filter((kw: string) => lowerPrompt.includes(kw.toLowerCase()));
+          if (schoolFlagged.length > 0) {
+            moderationStatus = 'rewritten';
+            severity = 'high';
+            effectivePrompt = `The student asked: "${prompt}". This prompt contains restricted content per school policy. Instead of giving them the direct answer, guide them through the thinking process step by step.`;
+          }
+        }
+        
+        // Load school training examples
+        if (schoolSettings.custom_model_training_data_ids && schoolSettings.custom_model_training_data_ids.length > 0) {
+          schoolTrainingContext = await getSchoolTrainingExamples(schoolSettings.custom_model_training_data_ids);
+        }
+      }
+    } catch (e) {
+      console.error('School settings check failed (non-fatal):', e);
+    }
+  }
+
+  // --- Moderation (keyword-based, after school check) ---
+
   // --- Build system prompt ---
-  let systemMessage = `You are an educational AI assistant. Subject: ${subject}. Grade level: ${gradeLevel}.
+  let systemMessage = schoolSettings?.custom_system_prompt 
+    ? `${schoolSettings.custom_system_prompt}\n\nSubject: ${subject}. Grade level: ${gradeLevel}.`
+    : `You are an educational AI assistant. Subject: ${subject}. Grade level: ${gradeLevel}.`;
+  
+  systemMessage += `
 Use markdown formatting. Use **bold** for key terms. Use bullet points and numbered lists. Keep explanations clear and age-appropriate.
 
 CRITICAL MATH FORMATTING RULES:
