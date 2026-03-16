@@ -239,6 +239,7 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
     setClasses(cls || []);
     setAllProfiles(profiles || []);
     setUnassignedClasses((allCls || []).filter((c: any) => !c.school_id));
+    setTrainingData(tData || []);
 
     if (settings) {
       setAiSettings(settings as any);
