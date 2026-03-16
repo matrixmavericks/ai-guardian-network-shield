@@ -29,6 +29,7 @@ import PortfolioPage from './pages/PortfolioPage';
 import PortfolioProjectPage from './pages/PortfolioProjectPage';
 import SharedPortfolioPage from './pages/SharedPortfolioPage';
 import TeacherPortfolioReviewPage from './pages/TeacherPortfolioReviewPage';
+import AdminOverviewPage from './pages/AdminOverviewPage';
 
 const ProtectedRoute = ({ 
   children, 
