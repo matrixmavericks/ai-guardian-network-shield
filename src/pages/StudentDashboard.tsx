@@ -20,6 +20,8 @@ import StudentAssignmentView from '@/components/StudentAssignmentView';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import QuizLibrary from '@/components/livequiz/QuizLibrary';
+import LiveQuizPlayer from '@/components/livequiz/LiveQuizPlayer';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 interface ClassAssignment {
