@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Copy, Users, Brain, MessageSquare, Book, Send, UserCircle, Shield,
   Plus, FileText, Calendar, Sparkles, RefreshCw, Trash2, CheckCircle2, ClipboardList,
-  BarChart3, Upload, Clock, AlertTriangle, GraduationCap, Settings,
+  BarChart3, Upload, Clock, AlertTriangle, GraduationCap, Settings, Trophy,
 } from 'lucide-react';
 import TeacherGradingView from '@/components/TeacherGradingView';
 import { Progress } from '@/components/ui/progress';
@@ -29,6 +29,10 @@ import {
 } from '@/services/gradingService';
 import ClassResourceManager from '@/components/ClassResourceManager';
 import GroupManager from '@/components/GroupManager';
+import LiveQuizList from '@/components/livequiz/LiveQuizList';
+import CreateLiveQuiz from '@/components/livequiz/CreateLiveQuiz';
+import LiveQuizPlayer from '@/components/livequiz/LiveQuizPlayer';
+import QuizResults from '@/components/livequiz/QuizResults';
 
 interface Student {
   student_id: string;
