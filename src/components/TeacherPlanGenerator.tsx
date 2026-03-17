@@ -508,6 +508,11 @@ const TeacherPlanGenerator = () => {
                               <Book className="mr-1 h-3 w-3" /> Create Paths
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => {
+                              navigate(`/classes?generateQuiz=true&topic=${encodeURIComponent(plan.title)}&subject=${encodeURIComponent(plan.subject)}`);
+                            }}>
+                              <Trophy className="mr-1 h-3 w-3" /> Generate Quiz
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => {
                               setGeneratedPlan(plan.content);
                               setTitle(plan.title);
                               setSubject(plan.subject);
