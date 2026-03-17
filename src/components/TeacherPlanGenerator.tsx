@@ -82,6 +82,7 @@ const TeacherPlanGenerator = () => {
   const [savedPlans, setSavedPlans] = useState<TeacherPlan[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Learning path generation from plan
   const [createPathDialogOpen, setCreatePathDialogOpen] = useState(false);
