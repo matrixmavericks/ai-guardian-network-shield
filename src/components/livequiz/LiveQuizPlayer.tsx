@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { quizThemes, POWERUP_DEFS, type PowerupId } from '@/lib/quizThemes';
+import { fromTable } from '@/lib/supabaseHelper';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -61,15 +62,15 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
       if (!user) return;
       try {
         const [{ data: sess }, { data: qs }] = await Promise.all([
-          supabase.from('live_quiz_sessions').select('*').eq('id', sessionId).single(),
-          supabase.from('live_quiz_questions').select('*').eq('session_id', sessionId).order('question_order'),
+          fromTable('live_quiz_sessions').select('*').eq('id', sessionId).single(),
+          fromTable('live_quiz_questions').select('*').eq('session_id', sessionId).order('question_order'),
         ]);
         if (!sess) { toast.error('Session not found'); onExit(); return; }
         setSession(sess as any);
         setQuestions((qs || []) as any);
 
         // Load players
-        const { data: ps } = await supabase.from('live_quiz_players').select('*').eq('session_id', sessionId);
+        const { data: ps } = await fromTable('live_quiz_players').select('*').eq('session_id', sessionId);
         setPlayers((ps || []) as any);
 
         // Join as player if student
@@ -81,12 +82,12 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
             const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', user.id).maybeSingle();
             const powerupsAvail: Record<string, number> = {};
             ((sess as any).enabled_powerups || []).forEach((p: string) => { powerupsAvail[p] = 1; });
-            const { data: newPlayer, error } = await supabase.from('live_quiz_players').insert({
+            const { data: newPlayer, error } = await fromTable('live_quiz_players').insert({
               session_id: sessionId,
               user_id: user.id,
               nickname: profile?.full_name || 'Player',
               powerups_available: powerupsAvail,
-            } as any).select().single();
+            }).select().single();
             if (!error && newPlayer) setMyPlayer(newPlayer as any);
           }
         }
@@ -160,7 +161,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
     setAnswerResult({ correct: false, points: 0, explanation: currentQuestion?.explanation || '' });
     // Reset streak
     if (myPlayer) {
-      supabase.from('live_quiz_players').update({ streak: 0 } as any).eq('id', myPlayer.id).then();
+      fromTable('live_quiz_players').update({ streak: 0 }).eq('id', myPlayer.id).then();
     }
   };
 
@@ -197,18 +198,18 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
         points += Math.min(newStreak * 50, 500);
       }
 
-      await supabase.from('live_quiz_players').update({
+      await fromTable('live_quiz_players').update({
         score: (myPlayer.score || 0) + points,
         streak: newStreak,
-      } as any).eq('id', myPlayer.id);
+      }).eq('id', myPlayer.id);
     } else {
       // Check streak freeze
       const newStreak = activePowerup === 'streak_freeze' ? myPlayer.streak : 0;
-      await supabase.from('live_quiz_players').update({ streak: newStreak } as any).eq('id', myPlayer.id);
+      await fromTable('live_quiz_players').update({ streak: newStreak }).eq('id', myPlayer.id);
     }
 
     // Record answer
-    await supabase.from('live_quiz_answers').insert({
+    await fromTable('live_quiz_answers').insert({
       session_id: sessionId,
       question_id: currentQuestion.id,
       player_id: myPlayer.id,
@@ -218,7 +219,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
       points_earned: points,
       time_taken_ms: timeTaken,
       powerup_used: activePowerup,
-    } as any);
+    });
 
     setAnswerResult({ correct: isCorrect, points, explanation: currentQuestion.explanation });
     setActivePowerup(null);
@@ -245,27 +246,27 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
     setActivePowerup(id);
     // Deduct powerup
     const updated = { ...myPlayer.powerups_available, [id]: available - 1 };
-    supabase.from('live_quiz_players').update({ powerups_available: updated } as any).eq('id', myPlayer.id).then();
+    fromTable('live_quiz_players').update({ powerups_available: updated }).eq('id', myPlayer.id).then();
     setMyPlayer(prev => prev ? { ...prev, powerups_available: updated } : null);
   };
 
   // Teacher controls
   const startGame = async () => {
-    await supabase.from('live_quiz_sessions').update({ status: 'lobby' } as any).eq('id', sessionId);
+    await fromTable('live_quiz_sessions').update({ status: 'lobby' }).eq('id', sessionId);
   };
 
   const openLobby = async () => {
-    await supabase.from('live_quiz_sessions').update({ status: 'lobby' } as any).eq('id', sessionId);
+    await fromTable('live_quiz_sessions').update({ status: 'lobby' }).eq('id', sessionId);
   };
 
   const nextQuestion = async () => {
     if (!session) return;
     const nextIdx = session.current_question_index + 1;
     if (nextIdx >= questions.length) {
-      await supabase.from('live_quiz_sessions').update({ status: 'completed', completed_at: new Date().toISOString() } as any).eq('id', sessionId);
+      await fromTable('live_quiz_sessions').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', sessionId);
     } else {
       setShowLeaderboard(false);
-      await supabase.from('live_quiz_sessions').update({ status: 'active', current_question_index: nextIdx } as any).eq('id', sessionId);
+      await fromTable('live_quiz_sessions').update({ status: 'active', current_question_index: nextIdx }).eq('id', sessionId);
     }
   };
 

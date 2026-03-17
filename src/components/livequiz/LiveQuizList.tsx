@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { fromTable } from '@/lib/supabaseHelper';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -34,8 +35,7 @@ const LiveQuizList: React.FC<LiveQuizListProps> = ({ classId, isTeacher, onCreat
 
   const loadSessions = async () => {
     try {
-      const { data, error } = await supabase
-        .from('live_quiz_sessions')
+      const { data, error } = await fromTable('live_quiz_sessions')
         .select('*')
         .eq('class_id', classId)
         .order('created_at', { ascending: false });
@@ -50,15 +50,14 @@ const LiveQuizList: React.FC<LiveQuizListProps> = ({ classId, isTeacher, onCreat
 
   const deleteSession = async (id: string) => {
     if (!confirm('Delete this quiz?')) return;
-    await supabase.from('live_quiz_sessions').delete().eq('id', id);
+    await fromTable('live_quiz_sessions').delete().eq('id', id);
     setSessions(prev => prev.filter(s => s.id !== id));
     toast.success('Quiz deleted');
   };
 
   const joinByCode = async () => {
     if (!joinCode.trim()) return;
-    const { data } = await supabase
-      .from('live_quiz_sessions')
+    const { data } = await fromTable('live_quiz_sessions')
       .select('id')
       .eq('join_code', joinCode.trim().toLowerCase())
       .eq('class_id', classId)
