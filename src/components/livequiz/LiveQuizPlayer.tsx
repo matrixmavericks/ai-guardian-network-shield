@@ -82,12 +82,12 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
             const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', user.id).maybeSingle();
             const powerupsAvail: Record<string, number> = {};
             ((sess as any).enabled_powerups || []).forEach((p: string) => { powerupsAvail[p] = 1; });
-            const { data: newPlayer, error } = await supabase.from('live_quiz_players').insert({
+            const { data: newPlayer, error } = await fromTable('live_quiz_players').insert({
               session_id: sessionId,
               user_id: user.id,
               nickname: profile?.full_name || 'Player',
               powerups_available: powerupsAvail,
-            } as any).select().single();
+            }).select().single();
             if (!error && newPlayer) setMyPlayer(newPlayer as any);
           }
         }
