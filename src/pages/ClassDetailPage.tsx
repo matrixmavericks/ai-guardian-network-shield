@@ -1194,6 +1194,7 @@ const ClassDetailPage = () => {
                     classSubject={classInfo.subject}
                     onCreated={(id) => { setQuizView('play'); setActiveQuizSessionId(id); }}
                     onCancel={() => setQuizView('list')}
+                    initialTopic={searchParams.get('topic') || undefined}
                   />
                 ) : quizView === 'results' && activeQuizSessionId ? (
                   <QuizResults sessionId={activeQuizSessionId} onBack={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
