@@ -28,6 +28,7 @@ interface ClassItem {
 const ClassesPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
