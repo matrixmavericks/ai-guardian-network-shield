@@ -252,7 +252,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
 
   // Teacher controls
   const startGame = async () => {
-    await supabase.from('live_quiz_sessions').update({ status: 'lobby' } as any).eq('id', sessionId);
+    await fromTable('live_quiz_sessions').update({ status: 'lobby' }).eq('id', sessionId);
   };
 
   const openLobby = async () => {
