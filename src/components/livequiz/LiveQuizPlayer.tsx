@@ -161,7 +161,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
     setAnswerResult({ correct: false, points: 0, explanation: currentQuestion?.explanation || '' });
     // Reset streak
     if (myPlayer) {
-      supabase.from('live_quiz_players').update({ streak: 0 } as any).eq('id', myPlayer.id).then();
+      fromTable('live_quiz_players').update({ streak: 0 }).eq('id', myPlayer.id).then();
     }
   };
 
