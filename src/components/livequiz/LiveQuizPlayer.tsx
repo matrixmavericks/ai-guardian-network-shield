@@ -227,7 +227,21 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
 
     setAnswerResult({ correct: isCorrect, points, explanation: currentQuestion.explanation });
     setActivePowerup(null);
-  };
+
+    // Sound + confetti effects
+    if (isCorrect) {
+      playCorrectSound();
+      const newStreak = (myPlayer.streak || 0) + 1;
+      if (newStreak > 2) playStreakSound();
+      confetti({
+        particleCount: points > 500 ? 150 : 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'],
+      });
+    } else {
+      playWrongSound();
+    }
 
   const usePowerup = (id: string) => {
     if (!myPlayer || isAnswered) return;
