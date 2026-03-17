@@ -104,6 +104,9 @@ const ClassDetailPage = () => {
   const [gradingSystems, setGradingSystems] = useState<GradingSystem[]>([]);
   const [classGradingSystem, setClassGradingSystem] = useState<GradingSystem | null>(null);
   const [savingGradingSystem, setSavingGradingSystem] = useState(false);
+  // Live Quiz state
+  const [quizView, setQuizView] = useState<'list' | 'create' | 'play' | 'results'>('list');
+  const [activeQuizSessionId, setActiveQuizSessionId] = useState<string | null>(null);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
