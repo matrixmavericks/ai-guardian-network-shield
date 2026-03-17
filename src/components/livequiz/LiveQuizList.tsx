@@ -50,7 +50,7 @@ const LiveQuizList: React.FC<LiveQuizListProps> = ({ classId, isTeacher, onCreat
 
   const deleteSession = async (id: string) => {
     if (!confirm('Delete this quiz?')) return;
-    await supabase.from('live_quiz_sessions').delete().eq('id', id);
+    await fromTable('live_quiz_sessions').delete().eq('id', id);
     setSessions(prev => prev.filter(s => s.id !== id));
     toast.success('Quiz deleted');
   };
