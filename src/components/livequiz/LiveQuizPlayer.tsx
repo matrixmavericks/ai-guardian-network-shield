@@ -198,10 +198,10 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
         points += Math.min(newStreak * 50, 500);
       }
 
-      await supabase.from('live_quiz_players').update({
+      await fromTable('live_quiz_players').update({
         score: (myPlayer.score || 0) + points,
         streak: newStreak,
-      } as any).eq('id', myPlayer.id);
+      }).eq('id', myPlayer.id);
     } else {
       // Check streak freeze
       const newStreak = activePowerup === 'streak_freeze' ? myPlayer.streak : 0;
