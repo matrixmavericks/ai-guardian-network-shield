@@ -35,8 +35,7 @@ const LiveQuizList: React.FC<LiveQuizListProps> = ({ classId, isTeacher, onCreat
 
   const loadSessions = async () => {
     try {
-      const { data, error } = await supabase
-        .from('live_quiz_sessions')
+      const { data, error } = await fromTable('live_quiz_sessions')
         .select('*')
         .eq('class_id', classId)
         .order('created_at', { ascending: false });
