@@ -145,6 +145,8 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
       if (!isAnswered) handleTimeout();
       return;
     }
+    // Play warning beep at 5 seconds
+    if (timeLeft === 5) playTimerWarningSound();
     const interval = setInterval(() => setTimeLeft(t => Math.max(0, t - 1)), 1000);
     return () => clearInterval(interval);
   }, [timeLeft, session?.status, session?.current_question_index, isAnswered]);
