@@ -782,6 +782,15 @@ const StudentDashboard = () => {
             <TabsContent value="adaptive">
               <AdaptiveLearningProfile />
             </TabsContent>
+
+            {/* ═══════════ QUIZ LIBRARY ═══════════ */}
+            <TabsContent value="quizzes">
+              {practiceSessionId ? (
+                <LiveQuizPlayer sessionId={practiceSessionId} onExit={() => setPracticeSessionId(null)} />
+              ) : (
+                <QuizLibrary onStartPractice={(id) => setPracticeSessionId(id)} />
+              )}
+            </TabsContent>
           </Tabs>
         </div>
       </div>
