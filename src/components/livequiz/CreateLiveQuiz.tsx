@@ -138,11 +138,10 @@ const CreateLiveQuiz: React.FC<CreateLiveQuizProps> = ({ classId, classSubject, 
         enabled_powerups: enabledPowerups,
       };
       
-      const { data: session, error: sessionErr } = await (supabase
-        .from('live_quiz_sessions' as any)
+      const { data: session, error: sessionErr } = await fromTable('live_quiz_sessions')
         .insert(insertPayload)
         .select('id')
-        .single() as any);
+        .single();
       
       if (sessionErr) {
         console.error('Session create error:', sessionErr);
@@ -160,9 +159,7 @@ const CreateLiveQuiz: React.FC<CreateLiveQuizProps> = ({ classId, classSubject, 
         ai_generated: true,
       }));
 
-      const { error: qErr } = await (supabase
-        .from('live_quiz_questions' as any)
-        .insert(questionRows) as any);
+      const { error: qErr } = await fromTable('live_quiz_questions').insert(questionRows);
       
       if (qErr) {
         console.error('Questions insert error:', qErr);
