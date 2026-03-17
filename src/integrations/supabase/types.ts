@@ -899,6 +899,259 @@ export type Database = {
         }
         Relationships: []
       }
+      live_quiz_answers: {
+        Row: {
+          answered_at: string
+          id: string
+          is_correct: boolean | null
+          player_id: string
+          points_earned: number | null
+          powerup_used: string | null
+          question_id: string
+          selected_index: number | null
+          session_id: string
+          time_taken_ms: number | null
+          user_id: string
+        }
+        Insert: {
+          answered_at?: string
+          id?: string
+          is_correct?: boolean | null
+          player_id: string
+          points_earned?: number | null
+          powerup_used?: string | null
+          question_id: string
+          selected_index?: number | null
+          session_id: string
+          time_taken_ms?: number | null
+          user_id: string
+        }
+        Update: {
+          answered_at?: string
+          id?: string
+          is_correct?: boolean | null
+          player_id?: string
+          points_earned?: number | null
+          powerup_used?: string | null
+          question_id?: string
+          selected_index?: number | null
+          session_id?: string
+          time_taken_ms?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_quiz_answers_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "live_quiz_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_quiz_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "live_quiz_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_quiz_answers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_quiz_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_quiz_players: {
+        Row: {
+          avatar: string | null
+          id: string
+          is_connected: boolean | null
+          joined_at: string
+          nickname: string
+          powerups_available: Json
+          powerups_used: Json
+          score: number
+          session_id: string
+          streak: number
+          user_id: string
+        }
+        Insert: {
+          avatar?: string | null
+          id?: string
+          is_connected?: boolean | null
+          joined_at?: string
+          nickname?: string
+          powerups_available?: Json
+          powerups_used?: Json
+          score?: number
+          session_id: string
+          streak?: number
+          user_id: string
+        }
+        Update: {
+          avatar?: string | null
+          id?: string
+          is_connected?: boolean | null
+          joined_at?: string
+          nickname?: string
+          powerups_available?: Json
+          powerups_used?: Json
+          score?: number
+          session_id?: string
+          streak?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_quiz_players_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_quiz_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_quiz_questions: {
+        Row: {
+          ai_generated: boolean | null
+          correct_index: number
+          created_at: string
+          explanation: string | null
+          id: string
+          image_url: string | null
+          options: Json
+          points: number | null
+          question_order: number
+          question_text: string
+          question_type: string
+          session_id: string
+          time_seconds: number | null
+        }
+        Insert: {
+          ai_generated?: boolean | null
+          correct_index?: number
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          image_url?: string | null
+          options?: Json
+          points?: number | null
+          question_order?: number
+          question_text: string
+          question_type?: string
+          session_id: string
+          time_seconds?: number | null
+        }
+        Update: {
+          ai_generated?: boolean | null
+          correct_index?: number
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          image_url?: string | null
+          options?: Json
+          points?: number | null
+          question_order?: number
+          question_text?: string
+          question_type?: string
+          session_id?: string
+          time_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_quiz_questions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_quiz_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_quiz_sessions: {
+        Row: {
+          class_id: string
+          completed_at: string | null
+          created_at: string
+          current_question_index: number | null
+          description: string | null
+          enabled_powerups: string[] | null
+          id: string
+          join_code: string
+          mode: string
+          points_per_question: number | null
+          question_time_seconds: number | null
+          redemption_round_enabled: boolean | null
+          show_leaderboard_after_each: boolean | null
+          shuffle_answers: boolean | null
+          shuffle_questions: boolean | null
+          started_at: string | null
+          status: string
+          streak_bonus: boolean | null
+          teacher_id: string
+          theme: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          completed_at?: string | null
+          created_at?: string
+          current_question_index?: number | null
+          description?: string | null
+          enabled_powerups?: string[] | null
+          id?: string
+          join_code?: string
+          mode?: string
+          points_per_question?: number | null
+          question_time_seconds?: number | null
+          redemption_round_enabled?: boolean | null
+          show_leaderboard_after_each?: boolean | null
+          shuffle_answers?: boolean | null
+          shuffle_questions?: boolean | null
+          started_at?: string | null
+          status?: string
+          streak_bonus?: boolean | null
+          teacher_id: string
+          theme?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          completed_at?: string | null
+          created_at?: string
+          current_question_index?: number | null
+          description?: string | null
+          enabled_powerups?: string[] | null
+          id?: string
+          join_code?: string
+          mode?: string
+          points_per_question?: number | null
+          question_time_seconds?: number | null
+          redemption_round_enabled?: boolean | null
+          show_leaderboard_after_each?: boolean | null
+          shuffle_answers?: boolean | null
+          shuffle_questions?: boolean | null
+          started_at?: string | null
+          status?: string
+          streak_bonus?: boolean | null
+          teacher_id?: string
+          theme?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_quiz_sessions_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
