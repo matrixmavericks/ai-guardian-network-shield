@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Brain, Save, Copy, RefreshCw, Sparkles, BookOpen, Trash2, Book, Users, Send, Plus } from "lucide-react";
+import { Brain, Save, Copy, RefreshCw, Sparkles, BookOpen, Trash2, Book, Users, Send, Plus, Trophy } from "lucide-react";
 import { TeacherPlan, saveTeacherPlan, getTeacherPlans, deleteTeacherPlan, generateId } from "@/services/localStorageService";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,6 +82,7 @@ const TeacherPlanGenerator = () => {
   const [savedPlans, setSavedPlans] = useState<TeacherPlan[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Learning path generation from plan
   const [createPathDialogOpen, setCreatePathDialogOpen] = useState(false);
@@ -506,6 +508,11 @@ const TeacherPlanGenerator = () => {
                           <div className="flex items-center gap-2">
                             <Button variant="outline" size="sm" onClick={() => openCreatePathsDialog(plan)}>
                               <Book className="mr-1 h-3 w-3" /> Create Paths
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => {
+                              navigate(`/classes?generateQuiz=true&topic=${encodeURIComponent(plan.title)}&subject=${encodeURIComponent(plan.subject)}`);
+                            }}>
+                              <Trophy className="mr-1 h-3 w-3" /> Generate Quiz
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => {
                               setGeneratedPlan(plan.content);

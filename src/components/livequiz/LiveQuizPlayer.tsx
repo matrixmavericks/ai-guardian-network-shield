@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Trophy, Clock, Zap, Users, Crown, ArrowRight, Loader } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { playCorrectSound, playWrongSound, playTimerWarningSound, playStreakSound } from '@/lib/quizSounds';
 
 interface LiveQuizPlayerProps {
   sessionId: string;
@@ -143,6 +145,8 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
       if (!isAnswered) handleTimeout();
       return;
     }
+    // Play warning beep at 5 seconds
+    if (timeLeft === 5) playTimerWarningSound();
     const interval = setInterval(() => setTimeLeft(t => Math.max(0, t - 1)), 1000);
     return () => clearInterval(interval);
   }, [timeLeft, session?.status, session?.current_question_index, isAnswered]);
@@ -223,6 +227,21 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
 
     setAnswerResult({ correct: isCorrect, points, explanation: currentQuestion.explanation });
     setActivePowerup(null);
+
+    // Sound + confetti effects
+    if (isCorrect) {
+      playCorrectSound();
+      const newStreak = (myPlayer.streak || 0) + 1;
+      if (newStreak > 2) playStreakSound();
+      confetti({
+        particleCount: points > 500 ? 150 : 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'],
+      });
+    } else {
+      playWrongSound();
+    }
   };
 
   const usePowerup = (id: string) => {

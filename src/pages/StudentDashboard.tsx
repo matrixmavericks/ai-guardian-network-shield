@@ -13,13 +13,15 @@ import {
 import DashboardSidebar from '@/components/DashboardSidebar';
 import {
   Book, Brain, Calendar, Clock, FileText, GraduationCap, TrendingUp,
-  CheckCircle2, AlertTriangle, Shield, MessageSquare, Send, Search, Loader,
+  CheckCircle2, AlertTriangle, Shield, MessageSquare, Send, Search, Loader, Trophy,
 } from 'lucide-react';
 import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
 import StudentAssignmentView from '@/components/StudentAssignmentView';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import QuizLibrary from '@/components/livequiz/QuizLibrary';
+import LiveQuizPlayer from '@/components/livequiz/LiveQuizPlayer';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 interface ClassAssignment {
@@ -73,6 +75,7 @@ const StudentDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const displayName = user?.fullName || user?.email?.split('@')[0] || 'Student';
+  const [practiceSessionId, setPracticeSessionId] = useState<string | null>(null);
 
   // ─── Data state ──────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
@@ -329,6 +332,7 @@ const StudentDashboard = () => {
                 )}
               </TabsTrigger>
               <TabsTrigger value="adaptive"><Shield className="mr-2 h-4 w-4" />Adaptive Profile</TabsTrigger>
+              <TabsTrigger value="quizzes"><Trophy className="mr-2 h-4 w-4" />Quiz Library</TabsTrigger>
             </TabsList>
 
             {/* ═══════════ OVERVIEW ═══════════ */}
@@ -777,6 +781,15 @@ const StudentDashboard = () => {
             {/* ═══════════ ADAPTIVE PROFILE ═══════════ */}
             <TabsContent value="adaptive">
               <AdaptiveLearningProfile />
+            </TabsContent>
+
+            {/* ═══════════ QUIZ LIBRARY ═══════════ */}
+            <TabsContent value="quizzes">
+              {practiceSessionId ? (
+                <LiveQuizPlayer sessionId={practiceSessionId} onExit={() => setPracticeSessionId(null)} />
+              ) : (
+                <QuizLibrary onStartPractice={(id) => setPracticeSessionId(id)} />
+              )}
             </TabsContent>
           </Tabs>
         </div>
