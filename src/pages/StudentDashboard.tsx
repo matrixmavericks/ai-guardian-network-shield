@@ -332,6 +332,7 @@ const StudentDashboard = () => {
                 )}
               </TabsTrigger>
               <TabsTrigger value="adaptive"><Shield className="mr-2 h-4 w-4" />Adaptive Profile</TabsTrigger>
+              <TabsTrigger value="quizzes"><Trophy className="mr-2 h-4 w-4" />Quiz Library</TabsTrigger>
             </TabsList>
 
             {/* ═══════════ OVERVIEW ═══════════ */}
