@@ -242,6 +242,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
     } else {
       playWrongSound();
     }
+  };
 
   const usePowerup = (id: string) => {
     if (!myPlayer || isAnswered) return;
