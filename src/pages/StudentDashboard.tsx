@@ -13,7 +13,7 @@ import {
 import DashboardSidebar from '@/components/DashboardSidebar';
 import {
   Book, Brain, Calendar, Clock, FileText, GraduationCap, TrendingUp,
-  CheckCircle2, AlertTriangle, Shield, MessageSquare, Send, Search, Loader,
+  CheckCircle2, AlertTriangle, Shield, MessageSquare, Send, Search, Loader, Trophy,
 } from 'lucide-react';
 import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
 import StudentAssignmentView from '@/components/StudentAssignmentView';
