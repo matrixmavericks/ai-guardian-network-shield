@@ -209,7 +209,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
     }
 
     // Record answer
-    await supabase.from('live_quiz_answers').insert({
+    await fromTable('live_quiz_answers').insert({
       session_id: sessionId,
       question_id: currentQuestion.id,
       player_id: myPlayer.id,
@@ -219,7 +219,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
       points_earned: points,
       time_taken_ms: timeTaken,
       powerup_used: activePowerup,
-    } as any);
+    });
 
     setAnswerResult({ correct: isCorrect, points, explanation: currentQuestion.explanation });
     setActivePowerup(null);
