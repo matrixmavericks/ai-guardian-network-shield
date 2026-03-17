@@ -28,10 +28,10 @@ const QuizResults: React.FC<QuizResultsProps> = ({ sessionId, onBack }) => {
     const load = async () => {
       try {
         const [sessRes, qRes, pRes, aRes] = await Promise.all([
-          supabase.from('live_quiz_sessions').select('*').eq('id', sessionId).single(),
-          supabase.from('live_quiz_questions').select('*').eq('session_id', sessionId).order('question_order'),
-          supabase.from('live_quiz_players').select('*').eq('session_id', sessionId),
-          supabase.from('live_quiz_answers').select('*').eq('session_id', sessionId),
+          fromTable('live_quiz_sessions').select('*').eq('id', sessionId).single(),
+          fromTable('live_quiz_questions').select('*').eq('session_id', sessionId).order('question_order'),
+          fromTable('live_quiz_players').select('*').eq('session_id', sessionId),
+          fromTable('live_quiz_answers').select('*').eq('session_id', sessionId),
         ]);
         setSession(sessRes.data);
         setQuestions(qRes.data || []);
