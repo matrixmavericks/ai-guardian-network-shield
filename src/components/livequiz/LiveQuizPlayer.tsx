@@ -246,7 +246,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
     setActivePowerup(id);
     // Deduct powerup
     const updated = { ...myPlayer.powerups_available, [id]: available - 1 };
-    supabase.from('live_quiz_players').update({ powerups_available: updated } as any).eq('id', myPlayer.id).then();
+    fromTable('live_quiz_players').update({ powerups_available: updated }).eq('id', myPlayer.id).then();
     setMyPlayer(prev => prev ? { ...prev, powerups_available: updated } : null);
   };
 
