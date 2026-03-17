@@ -205,7 +205,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
     } else {
       // Check streak freeze
       const newStreak = activePowerup === 'streak_freeze' ? myPlayer.streak : 0;
-      await supabase.from('live_quiz_players').update({ streak: newStreak } as any).eq('id', myPlayer.id);
+      await fromTable('live_quiz_players').update({ streak: newStreak }).eq('id', myPlayer.id);
     }
 
     // Record answer
