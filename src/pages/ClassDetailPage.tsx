@@ -1332,6 +1332,31 @@ const ClassDetailPage = () => {
                   />
                 </CardContent>
               </Card>
+
+              {/* Live Quizzes for students */}
+              {quizView === 'play' && activeQuizSessionId ? (
+                <LiveQuizPlayer sessionId={activeQuizSessionId} onExit={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
+              ) : quizView === 'results' && activeQuizSessionId ? (
+                <QuizResults sessionId={activeQuizSessionId} onBack={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5" /> Live Quizzes
+                    </CardTitle>
+                    <CardDescription>Join live quiz games and compete with classmates</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <LiveQuizList
+                      classId={classInfo.id}
+                      isTeacher={false}
+                      onCreateNew={() => {}}
+                      onJoinSession={(id) => { setQuizView('play'); setActiveQuizSessionId(id); }}
+                      onViewResults={(id) => { setQuizView('results'); setActiveQuizSessionId(id); }}
+                    />
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
 
