@@ -567,6 +567,9 @@ const ClassDetailPage = () => {
                 <TabsTrigger value="settings">
                   <Settings className="mr-2 h-4 w-4" /> Settings
                 </TabsTrigger>
+                <TabsTrigger value="live-quiz">
+                  <Trophy className="mr-2 h-4 w-4" /> Live Quiz
+                </TabsTrigger>
               </TabsList>
 
               {/* ===== STUDENTS TAB ===== */}
