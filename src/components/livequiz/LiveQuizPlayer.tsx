@@ -70,7 +70,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
         setQuestions((qs || []) as any);
 
         // Load players
-        const { data: ps } = await supabase.from('live_quiz_players').select('*').eq('session_id', sessionId);
+        const { data: ps } = await fromTable('live_quiz_players').select('*').eq('session_id', sessionId);
         setPlayers((ps || []) as any);
 
         // Join as player if student
