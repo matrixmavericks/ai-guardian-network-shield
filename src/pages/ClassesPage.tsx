@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ interface ClassItem {
 const ClassesPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -264,7 +265,16 @@ const ClassesPage = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {classes.map(cls => (
-                <Card key={cls.id} className="hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate(`/class/${cls.id}`)}>
+                <Card key={cls.id} className="hover:shadow-md transition-shadow cursor-pointer group" onClick={() => {
+                  const generateQuiz = searchParams.get('generateQuiz');
+                  const topic = searchParams.get('topic');
+                  const subject = searchParams.get('subject');
+                  if (generateQuiz) {
+                    navigate(`/class/${cls.id}?tab=live-quiz&generateQuiz=true&topic=${encodeURIComponent(topic || '')}&subject=${encodeURIComponent(subject || '')}`);
+                  } else {
+                    navigate(`/class/${cls.id}`);
+                  }
+                }}>
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <div>

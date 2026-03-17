@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +67,7 @@ const ClassDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,6 +110,14 @@ const ClassDetailPage = () => {
   const [activeQuizSessionId, setActiveQuizSessionId] = useState<string | null>(null);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
+
+  // Handle generateQuiz query param from teaching plans
+  useEffect(() => {
+    if (searchParams.get('generateQuiz') === 'true') {
+      setClassTab('live-quiz');
+      setQuizView('create');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchClassData();
@@ -1185,6 +1194,7 @@ const ClassDetailPage = () => {
                     classSubject={classInfo.subject}
                     onCreated={(id) => { setQuizView('play'); setActiveQuizSessionId(id); }}
                     onCancel={() => setQuizView('list')}
+                    initialTopic={searchParams.get('topic') || undefined}
                   />
                 ) : quizView === 'results' && activeQuizSessionId ? (
                   <QuizResults sessionId={activeQuizSessionId} onBack={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />

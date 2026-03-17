@@ -28,12 +28,13 @@ interface CreateLiveQuizProps {
   classSubject: string;
   onCreated: (sessionId: string) => void;
   onCancel: () => void;
+  initialTopic?: string;
 }
 
-const CreateLiveQuiz: React.FC<CreateLiveQuizProps> = ({ classId, classSubject, onCreated, onCancel }) => {
+const CreateLiveQuiz: React.FC<CreateLiveQuizProps> = ({ classId, classSubject, onCreated, onCancel, initialTopic }) => {
   const { user } = useAuth();
   const [step, setStep] = useState<'config' | 'questions' | 'review'>('config');
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(initialTopic ? `${initialTopic} Quiz` : '');
   const [description, setDescription] = useState('');
   const [mode, setMode] = useState<'teacher_paced' | 'self_paced'>('teacher_paced');
   const [theme, setTheme] = useState('arcade');
@@ -47,7 +48,7 @@ const CreateLiveQuiz: React.FC<CreateLiveQuizProps> = ({ classId, classSubject, 
   const [enabledPowerups, setEnabledPowerups] = useState<PowerupId[]>(Object.keys(POWERUP_DEFS) as PowerupId[]);
   const [questions, setQuestions] = useState<QuestionDraft[]>([]);
   const [generating, setGenerating] = useState(false);
-  const [aiTopic, setAiTopic] = useState('');
+  const [aiTopic, setAiTopic] = useState(initialTopic || '');
   const [aiDifficulty, setAiDifficulty] = useState('beginner');
   const [aiCount, setAiCount] = useState(10);
   const [saving, setSaving] = useState(false);
