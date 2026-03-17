@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Copy, Users, Brain, MessageSquare, Book, Send, UserCircle, Shield,
   Plus, FileText, Calendar, Sparkles, RefreshCw, Trash2, CheckCircle2, ClipboardList,
-  BarChart3, Upload, Clock, AlertTriangle, GraduationCap, Settings,
+  BarChart3, Upload, Clock, AlertTriangle, GraduationCap, Settings, Trophy,
 } from 'lucide-react';
 import TeacherGradingView from '@/components/TeacherGradingView';
 import { Progress } from '@/components/ui/progress';
@@ -29,6 +29,10 @@ import {
 } from '@/services/gradingService';
 import ClassResourceManager from '@/components/ClassResourceManager';
 import GroupManager from '@/components/GroupManager';
+import LiveQuizList from '@/components/livequiz/LiveQuizList';
+import CreateLiveQuiz from '@/components/livequiz/CreateLiveQuiz';
+import LiveQuizPlayer from '@/components/livequiz/LiveQuizPlayer';
+import QuizResults from '@/components/livequiz/QuizResults';
 
 interface Student {
   student_id: string;
@@ -100,6 +104,9 @@ const ClassDetailPage = () => {
   const [gradingSystems, setGradingSystems] = useState<GradingSystem[]>([]);
   const [classGradingSystem, setClassGradingSystem] = useState<GradingSystem | null>(null);
   const [savingGradingSystem, setSavingGradingSystem] = useState(false);
+  // Live Quiz state
+  const [quizView, setQuizView] = useState<'list' | 'create' | 'play' | 'results'>('list');
+  const [activeQuizSessionId, setActiveQuizSessionId] = useState<string | null>(null);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
@@ -559,6 +566,9 @@ const ClassDetailPage = () => {
                 </TabsTrigger>
                 <TabsTrigger value="settings">
                   <Settings className="mr-2 h-4 w-4" /> Settings
+                </TabsTrigger>
+                <TabsTrigger value="live-quiz">
+                  <Trophy className="mr-2 h-4 w-4" /> Live Quiz
                 </TabsTrigger>
               </TabsList>
 
@@ -1164,6 +1174,30 @@ const ClassDetailPage = () => {
                   </Card>
                 </div>
               </TabsContent>
+
+              {/* ===== LIVE QUIZ TAB ===== */}
+              <TabsContent value="live-quiz">
+                {quizView === 'play' && activeQuizSessionId ? (
+                  <LiveQuizPlayer sessionId={activeQuizSessionId} onExit={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
+                ) : quizView === 'create' ? (
+                  <CreateLiveQuiz
+                    classId={classInfo.id}
+                    classSubject={classInfo.subject}
+                    onCreated={(id) => { setQuizView('play'); setActiveQuizSessionId(id); }}
+                    onCancel={() => setQuizView('list')}
+                  />
+                ) : quizView === 'results' && activeQuizSessionId ? (
+                  <QuizResults sessionId={activeQuizSessionId} onBack={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
+                ) : (
+                  <LiveQuizList
+                    classId={classInfo.id}
+                    isTeacher={isTeacher}
+                    onCreateNew={() => setQuizView('create')}
+                    onJoinSession={(id) => { setQuizView('play'); setActiveQuizSessionId(id); }}
+                    onViewResults={(id) => { setQuizView('results'); setActiveQuizSessionId(id); }}
+                  />
+                )}
+              </TabsContent>
             </Tabs>
           ) : (
             /* ===== STUDENT VIEW ===== */
@@ -1298,6 +1332,31 @@ const ClassDetailPage = () => {
                   />
                 </CardContent>
               </Card>
+
+              {/* Live Quizzes for students */}
+              {quizView === 'play' && activeQuizSessionId ? (
+                <LiveQuizPlayer sessionId={activeQuizSessionId} onExit={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
+              ) : quizView === 'results' && activeQuizSessionId ? (
+                <QuizResults sessionId={activeQuizSessionId} onBack={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5" /> Live Quizzes
+                    </CardTitle>
+                    <CardDescription>Join live quiz games and compete with classmates</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <LiveQuizList
+                      classId={classInfo.id}
+                      isTeacher={false}
+                      onCreateNew={() => {}}
+                      onJoinSession={(id) => { setQuizView('play'); setActiveQuizSessionId(id); }}
+                      onViewResults={(id) => { setQuizView('results'); setActiveQuizSessionId(id); }}
+                    />
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
 
