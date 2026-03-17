@@ -111,6 +111,14 @@ const ClassDetailPage = () => {
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
+  // Handle generateQuiz query param from teaching plans
+  useEffect(() => {
+    if (searchParams.get('generateQuiz') === 'true') {
+      setClassTab('live-quiz');
+      setQuizView('create');
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     fetchClassData();
     fetchGradingSystems().then(systems => {
