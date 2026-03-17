@@ -1174,6 +1174,30 @@ const ClassDetailPage = () => {
                   </Card>
                 </div>
               </TabsContent>
+
+              {/* ===== LIVE QUIZ TAB ===== */}
+              <TabsContent value="live-quiz">
+                {quizView === 'play' && activeQuizSessionId ? (
+                  <LiveQuizPlayer sessionId={activeQuizSessionId} onExit={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
+                ) : quizView === 'create' ? (
+                  <CreateLiveQuiz
+                    classId={classInfo.id}
+                    classSubject={classInfo.subject}
+                    onCreated={(id) => { setQuizView('play'); setActiveQuizSessionId(id); }}
+                    onCancel={() => setQuizView('list')}
+                  />
+                ) : quizView === 'results' && activeQuizSessionId ? (
+                  <QuizResults sessionId={activeQuizSessionId} onBack={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
+                ) : (
+                  <LiveQuizList
+                    classId={classInfo.id}
+                    isTeacher={isTeacher}
+                    onCreateNew={() => setQuizView('create')}
+                    onJoinSession={(id) => { setQuizView('play'); setActiveQuizSessionId(id); }}
+                    onViewResults={(id) => { setQuizView('results'); setActiveQuizSessionId(id); }}
+                  />
+                )}
+              </TabsContent>
             </Tabs>
           ) : (
             /* ===== STUDENT VIEW ===== */
