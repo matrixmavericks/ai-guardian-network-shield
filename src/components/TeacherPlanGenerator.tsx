@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Brain, Save, Copy, RefreshCw, Sparkles, BookOpen, Trash2, Book, Users, Send, Plus } from "lucide-react";
+import { Brain, Save, Copy, RefreshCw, Sparkles, BookOpen, Trash2, Book, Users, Send, Plus, Trophy } from "lucide-react";
 import { TeacherPlan, saveTeacherPlan, getTeacherPlans, deleteTeacherPlan, generateId } from "@/services/localStorageService";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
