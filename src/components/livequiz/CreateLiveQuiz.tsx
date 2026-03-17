@@ -115,32 +115,38 @@ const CreateLiveQuiz: React.FC<CreateLiveQuizProps> = ({ classId, classSubject, 
   const removeQuestion = (idx: number) => setQuestions(prev => prev.filter((_, i) => i !== idx));
 
   const saveQuiz = async () => {
-    if (!title.trim()) { toast.error('Enter a title'); return; }
-    if (questions.length === 0) { toast.error('Add at least 1 question'); return; }
-    if (!user) return;
+    if (!title.trim()) { toast.error('Please enter a quiz title in the Settings tab'); setStep('config'); return; }
+    if (questions.length === 0) { toast.error('Add at least 1 question'); setStep('questions'); return; }
+    if (!user) { toast.error('You must be logged in'); return; }
     setSaving(true);
     try {
-      const { data: session, error: sessionErr } = await supabase
-        .from('live_quiz_sessions')
-        .insert({
-          class_id: classId,
-          teacher_id: user.id,
-          title: title.trim(),
-          description: description.trim(),
-          mode,
-          theme,
-          question_time_seconds: timePerQuestion,
-          points_per_question: pointsPerQuestion,
-          streak_bonus: streakBonus,
-          show_leaderboard_after_each: showLeaderboard,
-          shuffle_questions: shuffleQuestions,
-          shuffle_answers: shuffleAnswers,
-          redemption_round_enabled: redemptionEnabled,
-          enabled_powerups: enabledPowerups,
-        } as any)
+      const insertPayload: Record<string, any> = {
+        class_id: classId,
+        teacher_id: user.id,
+        title: title.trim(),
+        description: description.trim(),
+        mode,
+        theme,
+        question_time_seconds: timePerQuestion,
+        points_per_question: pointsPerQuestion,
+        streak_bonus: streakBonus,
+        show_leaderboard_after_each: showLeaderboard,
+        shuffle_questions: shuffleQuestions,
+        shuffle_answers: shuffleAnswers,
+        redemption_round_enabled: redemptionEnabled,
+        enabled_powerups: enabledPowerups,
+      };
+      
+      const { data: session, error: sessionErr } = await (supabase
+        .from('live_quiz_sessions' as any)
+        .insert(insertPayload)
         .select('id')
-        .single();
-      if (sessionErr) throw sessionErr;
+        .single() as any);
+      
+      if (sessionErr) {
+        console.error('Session create error:', sessionErr);
+        throw sessionErr;
+      }
 
       const questionRows = questions.map((q, i) => ({
         session_id: session.id,
@@ -153,8 +159,14 @@ const CreateLiveQuiz: React.FC<CreateLiveQuizProps> = ({ classId, classSubject, 
         ai_generated: true,
       }));
 
-      const { error: qErr } = await supabase.from('live_quiz_questions').insert(questionRows as any);
-      if (qErr) throw qErr;
+      const { error: qErr } = await (supabase
+        .from('live_quiz_questions' as any)
+        .insert(questionRows) as any);
+      
+      if (qErr) {
+        console.error('Questions insert error:', qErr);
+        throw qErr;
+      }
 
       toast.success('Quiz created!');
       onCreated(session.id);
