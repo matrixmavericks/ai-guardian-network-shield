@@ -263,10 +263,10 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
     if (!session) return;
     const nextIdx = session.current_question_index + 1;
     if (nextIdx >= questions.length) {
-      await supabase.from('live_quiz_sessions').update({ status: 'completed', completed_at: new Date().toISOString() } as any).eq('id', sessionId);
+      await fromTable('live_quiz_sessions').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', sessionId);
     } else {
       setShowLeaderboard(false);
-      await supabase.from('live_quiz_sessions').update({ status: 'active', current_question_index: nextIdx } as any).eq('id', sessionId);
+      await fromTable('live_quiz_sessions').update({ status: 'active', current_question_index: nextIdx }).eq('id', sessionId);
     }
   };
 
