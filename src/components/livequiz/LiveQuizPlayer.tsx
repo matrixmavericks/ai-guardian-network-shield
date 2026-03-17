@@ -62,8 +62,8 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
       if (!user) return;
       try {
         const [{ data: sess }, { data: qs }] = await Promise.all([
-          supabase.from('live_quiz_sessions').select('*').eq('id', sessionId).single(),
-          supabase.from('live_quiz_questions').select('*').eq('session_id', sessionId).order('question_order'),
+          fromTable('live_quiz_sessions').select('*').eq('id', sessionId).single(),
+          fromTable('live_quiz_questions').select('*').eq('session_id', sessionId).order('question_order'),
         ]);
         if (!sess) { toast.error('Session not found'); onExit(); return; }
         setSession(sess as any);
