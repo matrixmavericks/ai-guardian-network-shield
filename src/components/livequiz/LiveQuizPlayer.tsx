@@ -256,7 +256,7 @@ const LiveQuizPlayer: React.FC<LiveQuizPlayerProps> = ({ sessionId, onExit }) =>
   };
 
   const openLobby = async () => {
-    await supabase.from('live_quiz_sessions').update({ status: 'lobby' } as any).eq('id', sessionId);
+    await fromTable('live_quiz_sessions').update({ status: 'lobby' }).eq('id', sessionId);
   };
 
   const nextQuestion = async () => {
