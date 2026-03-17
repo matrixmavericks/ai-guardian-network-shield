@@ -57,8 +57,7 @@ const LiveQuizList: React.FC<LiveQuizListProps> = ({ classId, isTeacher, onCreat
 
   const joinByCode = async () => {
     if (!joinCode.trim()) return;
-    const { data } = await supabase
-      .from('live_quiz_sessions')
+    const { data } = await fromTable('live_quiz_sessions')
       .select('id')
       .eq('join_code', joinCode.trim().toLowerCase())
       .eq('class_id', classId)
