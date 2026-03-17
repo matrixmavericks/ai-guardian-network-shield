@@ -75,6 +75,7 @@ const StudentDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const displayName = user?.fullName || user?.email?.split('@')[0] || 'Student';
+  const [practiceSessionId, setPracticeSessionId] = useState<string | null>(null);
 
   // ─── Data state ──────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
