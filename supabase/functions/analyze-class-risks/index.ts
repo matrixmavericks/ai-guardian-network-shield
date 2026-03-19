@@ -1,11 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logAiUsage } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const MODEL = "google/gemini-2.5-flash";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -22,7 +25,6 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) throw new Error("Unauthorized");
 
-    // Verify caller is a teacher
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
@@ -35,14 +37,12 @@ serve(async (req) => {
     const { pathId, pathTitle, pathSubject, pathDifficulty, modules, studentIds } = body;
     if (!pathId || !pathTitle || !studentIds?.length) throw new Error("Missing required fields");
 
-    // Fetch profiles
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id, full_name")
       .in("user_id", studentIds);
     const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p.full_name]));
 
-    // Fetch all students' data in parallel
     const [submissionsRes, progressRes, chatRes] = await Promise.all([
       supabase
         .from("assignment_submissions")
@@ -62,7 +62,6 @@ serve(async (req) => {
         .limit(200),
     ]);
 
-    // Get assignment details
     const allSubmissions = submissionsRes.data || [];
     let assignmentDetails: any[] = [];
     if (allSubmissions.length > 0) {
@@ -71,7 +70,6 @@ serve(async (req) => {
       assignmentDetails = data || [];
     }
 
-    // Build per-student summaries
     const studentSummaries = studentIds.map((sid: string) => {
       const submissions = allSubmissions.filter((s: any) => s.student_id === sid);
       const avgScore = submissions.length > 0
@@ -95,24 +93,11 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert educational analyst. A teacher wants a quick risk overview of ALL their students for a specific learning path. Analyze each student's academic data and classify their readiness.
+    const systemPrompt = `You are an expert educational analyst. A teacher wants a quick risk overview of ALL their students for a specific learning path. Analyze each student's academic data and classify their readiness.
 
-You MUST respond with a tool call using the "class_risk_summary" function. Be specific and actionable.`,
-          },
-          {
-            role: "user",
-            content: `## Learning Path
+You MUST respond with a tool call using the "class_risk_summary" function. Be specific and actionable.`;
+
+    const userPrompt = `## Learning Path
 Title: ${pathTitle}
 Subject: ${pathSubject}
 Difficulty: ${pathDifficulty}
@@ -122,7 +107,24 @@ ${modulesList}
 ## Students Data
 ${JSON.stringify(studentSummaries, null, 2)}
 
-For each student, assess their risk level for THIS specific learning path based on their grades, activity, and the path difficulty. Also provide a brief recommendation.`,
+For each student, assess their risk level for THIS specific learning path based on their grades, activity, and the path difficulty. Also provide a brief recommendation.`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: userPrompt,
           },
         ],
         tools: [
@@ -172,9 +174,15 @@ For each student, assess their risk level for THIS specific learning path based 
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) throw new Error("No analysis returned");
 
-    const result = JSON.parse(toolCall.function.arguments);
+    await logAiUsage({
+      userId: user.id,
+      model: MODEL,
+      aiData,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: toolCall.function.arguments,
+    });
 
-    // Merge names into results
+    const result = JSON.parse(toolCall.function.arguments);
     result.students = result.students.map((s: any) => ({
       ...s,
       name: profileMap[s.student_id] || "Unknown",

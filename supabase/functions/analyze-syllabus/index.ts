@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getUserIdFromAuthHeader, logAiUsage } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+const MODEL = "google/gemini-2.5-flash";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,6 +14,7 @@ serve(async (req) => {
   }
 
   try {
+    const requesterUserId = await getUserIdFromAuthHeader(req.headers.get("Authorization"));
     const { syllabusText, subject, gradeLevel } = await req.json();
 
     if (!syllabusText?.trim()) {
@@ -74,7 +78,7 @@ ${syllabusText.substring(0, 8000)}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -92,6 +96,12 @@ ${syllabusText.substring(0, 8000)}`;
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'AI credits are required for syllabus analysis.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
@@ -103,6 +113,14 @@ ${syllabusText.substring(0, 8000)}`;
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    await logAiUsage({
+      userId: requesterUserId,
+      model: MODEL,
+      aiData: data,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: content,
+    });
 
     const parsed = JSON.parse(content);
 
