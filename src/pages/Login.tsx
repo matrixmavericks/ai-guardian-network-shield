@@ -47,7 +47,9 @@ const Login = () => {
       });
       navigateByRole(loggedInUser.role);
     } catch (err: any) {
-      setError(err.message || "Invalid email or password.");
+      const message = err?.message || "Invalid email or password.";
+      setError(message);
+    
     } finally {
       setIsLoading(false);
     }
