@@ -24,6 +24,8 @@ function chunkedBtoa(bytes: Uint8Array): string {
 }
 
 async function ocrViaVision(fileBytes: Uint8Array, mimeType: string, apiKey: string): Promise<string> {
+const MODEL = "google/gemini-3-flash-preview";
+
   const b64 = chunkedBtoa(fileBytes);
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
