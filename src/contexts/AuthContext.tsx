@@ -55,17 +55,60 @@ const isNetworkError = (error: unknown) => {
 };
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const AUTH_STORAGE_KEY_PREFIX = `sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}`;
+const AUTH_STORAGE_LEGACY_KEY = 'supabase.auth.token';
+
+const clearStaleAuthStorage = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const keysToRemove: string[] = [];
+
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+
+    if (!key) {
+      continue;
+    }
+
+    if (key.startsWith(AUTH_STORAGE_KEY_PREFIX) || key === AUTH_STORAGE_LEGACY_KEY) {
+      keysToRemove.push(key);
+    }
+  }
+
+  keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+};
 
 async function recoverSessionAfterNetworkError() {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      return session;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        return session;
+      }
+    } catch (error) {
+      if (!isNetworkError(error)) {
+        throw error;
+      }
     }
+
     await wait(300);
   }
 
   return null;
+}
+
+async function resetAuthClientState() {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (error) {
+    if (!isNetworkError(error)) {
+      throw error;
+    }
+  }
+
+  clearStaleAuthStorage();
 }
 
 async function ensureUserSetup(supabaseUser: User) {
