@@ -53,6 +53,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    const authUserId = await getUserIdFromAuthHeader(authHeader);
     const { submissionId } = await req.json();
     if (!submissionId) return json({ success: false, error: "submissionId required" }, 400);
 
