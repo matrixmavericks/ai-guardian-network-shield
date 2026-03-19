@@ -183,7 +183,14 @@ Be thorough but encouraging. Identify specific strengths and actionable improvem
     const content = aiData?.choices?.[0]?.message?.content;
     const feedback = JSON.parse(content);
 
-    // Update submission with AI feedback
+    await logAiUsage({
+      userId: authUserId || submission.user_id,
+      model: MODEL,
+      aiData,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: content,
+    });
+
     await sb
       .from("capstone_submissions")
       .update({
