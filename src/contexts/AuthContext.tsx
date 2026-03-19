@@ -247,33 +247,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      if (!isNetworkError(error)) {
+        throw error;
+      }
+
+      await resetAuthClientState();
+    } finally {
+      setUser(null);
+      setSession(null);
+    }
   };
 
   const handleLogin = async (email: string, password: string): Promise<AuthUser> => {
+    const finalizeLogin = async (activeSession: Session) => {
+      const authUser = await buildAuthUser(activeSession.user);
+      setUser(authUser);
+      setSession(activeSession);
+      return authUser;
+    };
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      if (!data.user) throw new Error('Login failed');
+      if (!data.user || !data.session) throw new Error('Login failed');
 
-      const authUser = await buildAuthUser(data.user);
-      setUser(authUser);
-      setSession(data.session);
-      return authUser;
+      return finalizeLogin(data.session);
     } catch (error) {
       if (isNetworkError(error)) {
         const recoveredSession = await recoverSessionAfterNetworkError();
 
         if (recoveredSession?.user) {
-          const authUser = await buildAuthUser(recoveredSession.user);
-          setUser(authUser);
-          setSession(recoveredSession);
-          return authUser;
+          return finalizeLogin(recoveredSession);
         }
 
-        throw new Error('We could not reach the authentication service. Please try again in a moment.');
+        await resetAuthClientState();
+
+        try {
+          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({ email, password });
+          if (retryError) throw retryError;
+          if (!retryData.user || !retryData.session) throw new Error('Login failed');
+
+          return finalizeLogin(retryData.session);
+        } catch (retryError) {
+          if (isNetworkError(retryError)) {
+            throw new Error('We could not reach the authentication service. Please try again in a moment.');
+          }
+
+          throw retryError;
+        }
       }
 
       throw error;

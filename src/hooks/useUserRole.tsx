@@ -4,6 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
 
+const USER_ROLES: UserRole[] = ['admin', 'teacher', 'student', 'parent'];
+
+const isUserRole = (role: string): role is UserRole => USER_ROLES.includes(role as UserRole);
+
 export const useUserRole = () => {
   const { user } = useAuth();
   const [roles, setRoles] = useState<UserRole[]>([]);
@@ -17,6 +21,8 @@ export const useUserRole = () => {
         return;
       }
 
+      const fallbackRoles = isUserRole(user.role) ? [user.role] : [];
+
       try {
         const { data, error } = await supabase
           .from('user_roles')
@@ -25,10 +31,11 @@ export const useUserRole = () => {
 
         if (error) throw error;
 
-        setRoles(data?.map(r => r.role as UserRole) || []);
+        const fetchedRoles = data?.map((entry) => entry.role as UserRole) || [];
+        setRoles(fetchedRoles.length > 0 ? fetchedRoles : fallbackRoles);
       } catch (error) {
         console.error('Error fetching user roles:', error);
-        setRoles([]);
+        setRoles(fallbackRoles);
       } finally {
         setIsLoading(false);
       }
