@@ -477,6 +477,14 @@ Analyze this student's learning profile comprehensively.`;
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) throw new Error("No analysis returned");
 
+    await logAiUsage({
+      userId: user.id,
+      model: MODEL,
+      aiData,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: toolCall.function.arguments,
+    });
+
     const profile = JSON.parse(toolCall.function.arguments);
 
     const documentDiagnostics = {
