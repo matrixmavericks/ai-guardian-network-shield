@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logAiUsage } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -325,6 +326,7 @@ serve(async (req) => {
     }));
 
     // LOVABLE_API_KEY already declared above
+    const MODEL = "google/gemini-2.5-flash";
 
     const systemPrompt = `You are an expert educational psychologist and adaptive learning specialist. Analyze a student's learning data and produce a comprehensive learning profile.
 
@@ -371,7 +373,7 @@ Analyze this student's learning profile comprehensively.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -475,6 +477,14 @@ Analyze this student's learning profile comprehensively.`;
     const aiData = await response.json();
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) throw new Error("No analysis returned");
+
+    await logAiUsage({
+      userId: user.id,
+      model: MODEL,
+      aiData,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: toolCall.function.arguments,
+    });
 
     const profile = JSON.parse(toolCall.function.arguments);
 

@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getUserIdFromAuthHeader, logAiUsage } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+const MODEL = "google/gemini-2.5-flash";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,6 +14,7 @@ serve(async (req) => {
   }
 
   try {
+    const requesterUserId = await getUserIdFromAuthHeader(req.headers.get("Authorization"));
     const { subject, prompt, targetClass, title } = await req.json();
     console.log('Generating teaching plan:', { subject, prompt, targetClass, title });
 
@@ -52,7 +56,7 @@ Please generate a detailed, actionable teaching plan that the teacher can implem
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -81,7 +85,16 @@ Please generate a detailed, actionable teaching plan that the teacher can implem
     }
 
     const data = await response.json();
-    const generatedPlan = data.choices[0].message.content;
+    const generatedPlan = data?.choices?.[0]?.message?.content;
+    if (!generatedPlan) throw new Error("AI returned empty teaching plan");
+
+    await logAiUsage({
+      userId: requesterUserId,
+      model: MODEL,
+      aiData: data,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: generatedPlan,
+    });
 
     console.log('Teaching plan generated successfully');
 
@@ -93,7 +106,7 @@ Please generate a detailed, actionable teaching plan that the teacher can implem
   } catch (error) {
     console.error('Error generating teaching plan:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.78.0";
+import { getUserIdFromAuthHeader, logAiUsage } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +22,8 @@ function chunkedBtoa(bytes: Uint8Array): string {
   }
   return btoa(binary);
 }
+
+const MODEL = "google/gemini-3-flash-preview";
 
 async function ocrViaVision(fileBytes: Uint8Array, mimeType: string, apiKey: string): Promise<string> {
   const b64 = chunkedBtoa(fileBytes);
@@ -52,6 +55,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    const authUserId = await getUserIdFromAuthHeader(authHeader);
     const { submissionId } = await req.json();
     if (!submissionId) return json({ success: false, error: "submissionId required" }, 400);
 
@@ -157,7 +162,7 @@ Be thorough but encouraging. Identify specific strengths and actionable improvem
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -178,7 +183,14 @@ Be thorough but encouraging. Identify specific strengths and actionable improvem
     const content = aiData?.choices?.[0]?.message?.content;
     const feedback = JSON.parse(content);
 
-    // Update submission with AI feedback
+    await logAiUsage({
+      userId: authUserId || submission.user_id,
+      model: MODEL,
+      aiData,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: content,
+    });
+
     await sb
       .from("capstone_submissions")
       .update({

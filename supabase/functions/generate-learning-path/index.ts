@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getUserIdFromAuthHeader, logAiUsage } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const MODEL = "google/gemini-3-flash-preview";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -17,7 +20,6 @@ async function fetchFileContent(url: string): Promise<string | null> {
     if (!response.ok) return null;
     const contentType = response.headers.get("content-type") || "";
 
-    // For text-based files, return content directly
     if (
       contentType.includes("text/") ||
       contentType.includes("json") ||
@@ -26,12 +28,9 @@ async function fetchFileContent(url: string): Promise<string | null> {
       contentType.includes("markdown")
     ) {
       const text = await response.text();
-      // Limit to ~8000 chars to stay within token limits
       return text.slice(0, 8000);
     }
 
-    // For PDFs and other binary docs, we can't extract text directly in Deno easily
-    // Return null so the AI uses the metadata instead
     return null;
   } catch {
     return null;
@@ -44,6 +43,7 @@ serve(async (req) => {
   }
 
   try {
+    const requesterUserId = await getUserIdFromAuthHeader(req.headers.get("Authorization"));
     const {
       title,
       description,
@@ -65,7 +65,6 @@ serve(async (req) => {
       return json({ success: false, error: "AI gateway is not configured." }, 500);
     }
 
-    // Try to fetch file content if a URL is provided and no content was passed
     let fileContent = resourceContent || null;
     if (!fileContent && resourceUrl) {
       fileContent = await fetchFileContent(resourceUrl);
@@ -124,7 +123,7 @@ Description: ${description || ""}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -148,6 +147,14 @@ Description: ${description || ""}`;
     if (!content) {
       return json({ success: false, error: "AI returned an empty learning path." }, 500);
     }
+
+    await logAiUsage({
+      userId: requesterUserId,
+      model: MODEL,
+      aiData: data,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: content,
+    });
 
     const parsed = JSON.parse(content);
     const modules = Array.isArray(parsed?.modules) ? parsed.modules : [];

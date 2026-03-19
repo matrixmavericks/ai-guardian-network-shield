@@ -1,11 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logAiUsage } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const MODEL = "google/gemini-2.5-flash";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -26,10 +29,8 @@ serve(async (req) => {
     const { pathId, pathTitle, pathSubject, pathDifficulty, modules, studentId } = body;
     if (!pathId || !pathTitle) throw new Error("Missing path info");
 
-    // Determine target user: if studentId provided, caller must be a teacher
     let targetUserId = user.id;
     if (studentId && studentId !== user.id) {
-      // Verify caller is a teacher
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -40,7 +41,6 @@ serve(async (req) => {
       targetUserId = studentId;
     }
 
-    // Fetch student's past data in parallel
     const [chatRes, submissionsRes, progressRes] = await Promise.all([
       supabase
         .from("ai_chat_messages")
@@ -61,7 +61,6 @@ serve(async (req) => {
 
     const chatHistory = (chatRes.data || []).map((m: any) => m.content).join("\n---\n");
 
-    // Get assignment details for graded submissions
     const gradedSubmissions = (submissionsRes.data || []).filter((s: any) => s.grade !== null);
     let assignmentDetails: any[] = [];
     if (gradedSubmissions.length > 0) {
@@ -129,7 +128,7 @@ Based on the student's history, generate targeted insights for THIS specific lea
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -220,6 +219,14 @@ Based on the student's history, generate targeted insights for THIS specific lea
     const aiData = await response.json();
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) throw new Error("No insights returned");
+
+    await logAiUsage({
+      userId: user.id,
+      model: MODEL,
+      aiData,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: toolCall.function.arguments,
+    });
 
     const insights = JSON.parse(toolCall.function.arguments);
 

@@ -1,10 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getUserIdFromAuthHeader, logAiUsage } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const MODEL = "google/gemini-3-flash-preview";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,15 +15,15 @@ serve(async (req) => {
   }
 
   try {
+    const authUserId = await getUserIdFromAuthHeader(req.headers.get("Authorization"));
     const { prompt, subject, gradeLevel, userId } = await req.json();
     console.log('Moderating prompt:', { prompt, subject, gradeLevel, userId });
 
-    // Initialize Supabase client
+    const effectiveUserId = authUserId || userId || null;
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get AI configuration
     const { data: config } = await supabase
       .from('ai_configurations')
       .select('*')
@@ -28,7 +31,6 @@ serve(async (req) => {
       .eq('enabled', true)
       .single();
 
-    // Check for blocked keywords
     const blockedKeywords = config?.blocked_keywords || [
       'write my essay',
       'do my homework',
@@ -38,7 +40,7 @@ serve(async (req) => {
       'plagiarize'
     ];
 
-    const flaggedKeywords = blockedKeywords.filter(keyword => 
+    const flaggedKeywords = blockedKeywords.filter((keyword: string) =>
       prompt.toLowerCase().includes(keyword.toLowerCase())
     );
 
@@ -46,13 +48,12 @@ serve(async (req) => {
     let modifiedPrompt = prompt;
     let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
 
-    // Check if prompt should be blocked
     if (flaggedKeywords.length > 0) {
       status = 'blocked';
       severity = 'high';
       
       await supabase.from('prompt_logs').insert({
-        user_id: userId,
+        user_id: effectiveUserId,
         original_prompt: prompt,
         modified_prompt: null,
         response: null,
@@ -74,7 +75,6 @@ serve(async (req) => {
       );
     }
 
-    // Process mode: Detect direct answer requests and rewrite
     const processMode = config?.process_mode_enabled !== false;
     const directAnswerPatterns = [
       /what is \d+[\+\-\*\/]\d+/i,
@@ -86,9 +86,11 @@ serve(async (req) => {
     const needsProcessMode = directAnswerPatterns.some(pattern => pattern.test(prompt));
 
     if (processMode && needsProcessMode) {
-      // Use Lovable AI to rewrite the prompt
       const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
       
+      const systemPrompt = 'You are an educational AI assistant. When students ask direct-answer questions, rewrite them into learning-focused prompts that encourage step-by-step thinking. Keep it concise and educational.';
+      const userPrompt = `Rewrite this student prompt to encourage learning: "${prompt}"`;
+
       const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -96,29 +98,36 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
+          model: MODEL,
           messages: [
             {
               role: 'system',
-              content: `You are an educational AI assistant. When students ask direct-answer questions, rewrite them into learning-focused prompts that encourage step-by-step thinking. Keep it concise and educational.`
+              content: systemPrompt
             },
             {
               role: 'user',
-              content: `Rewrite this student prompt to encourage learning: "${prompt}"`
+              content: userPrompt
             }
           ],
         }),
       });
 
       const aiData = await aiResponse.json();
-      modifiedPrompt = aiData.choices[0].message.content;
+      modifiedPrompt = aiData?.choices?.[0]?.message?.content || modifiedPrompt;
       status = 'rewritten';
       severity = 'medium';
+
+      await logAiUsage({
+        userId: effectiveUserId,
+        model: MODEL,
+        aiData,
+        promptSource: `${systemPrompt}\n\n${userPrompt}`,
+        completionSource: modifiedPrompt,
+      });
     }
 
-    // Log the prompt
     await supabase.from('prompt_logs').insert({
-      user_id: userId,
+      user_id: effectiveUserId,
       original_prompt: prompt,
       modified_prompt: status === 'rewritten' ? modifiedPrompt : null,
       response: null,
@@ -143,7 +152,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in moderate-prompt:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

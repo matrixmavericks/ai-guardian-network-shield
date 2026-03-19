@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getUserIdFromAuthHeader, logAiUsage } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const MODEL = "google/gemini-2.5-flash";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -20,6 +23,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ success: false, error: "Unauthorized" }, 401);
 
+    const requesterUserId = await getUserIdFromAuthHeader(authHeader);
     const { type, topic, subject, moduleTitle, moduleDescription, difficulty } = await req.json();
 
     if (!topic?.trim()) {
@@ -110,7 +114,7 @@ Difficulty: ${difficulty || "beginner"}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -125,6 +129,7 @@ Difficulty: ${difficulty || "beginner"}`;
       const errorText = await response.text();
       console.error("generate-module-content gateway error", response.status, errorText);
       if (response.status === 429) return json({ success: false, error: "Rate limit reached. Try again shortly." }, 429);
+      if (response.status === 402) return json({ success: false, error: "AI credits are required for this action." }, 402);
       return json({ success: false, error: "AI generation failed." }, 500);
     }
 
@@ -133,6 +138,14 @@ Difficulty: ${difficulty || "beginner"}`;
     if (!content) {
       return json({ success: false, error: "AI returned empty content." }, 500);
     }
+
+    await logAiUsage({
+      userId: requesterUserId,
+      model: MODEL,
+      aiData: data,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: content,
+    });
 
     const parsed = JSON.parse(content);
     return json({ success: true, type, data: parsed });

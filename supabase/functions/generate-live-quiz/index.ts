@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getUserIdFromAuthHeader, logAiUsage } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const MODEL = "google/gemini-2.5-flash";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -18,6 +21,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ success: false, error: "Unauthorized" }, 401);
 
+    const requesterUserId = await getUserIdFromAuthHeader(authHeader);
     const { topic, subject, difficulty, questionCount, includeRedemption } = await req.json();
 
     if (!topic?.trim()) return json({ success: false, error: "Topic is required." }, 400);
@@ -71,7 +75,7 @@ Number of questions: ${count}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -93,6 +97,14 @@ Number of questions: ${count}`;
     const data = await response.json();
     const content = data?.choices?.[0]?.message?.content;
     if (!content) return json({ success: false, error: "AI returned empty content." }, 500);
+
+    await logAiUsage({
+      userId: requesterUserId,
+      model: MODEL,
+      aiData: data,
+      promptSource: `${systemPrompt}\n\n${userPrompt}`,
+      completionSource: content,
+    });
 
     const parsed = JSON.parse(content);
     return json({ success: true, data: parsed });
