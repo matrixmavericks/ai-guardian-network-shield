@@ -55,17 +55,60 @@ const isNetworkError = (error: unknown) => {
 };
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const AUTH_STORAGE_KEY_PREFIX = `sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}`;
+const AUTH_STORAGE_LEGACY_KEY = 'supabase.auth.token';
+
+const clearStaleAuthStorage = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const keysToRemove: string[] = [];
+
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+
+    if (!key) {
+      continue;
+    }
+
+    if (key.startsWith(AUTH_STORAGE_KEY_PREFIX) || key === AUTH_STORAGE_LEGACY_KEY) {
+      keysToRemove.push(key);
+    }
+  }
+
+  keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+};
 
 async function recoverSessionAfterNetworkError() {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      return session;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        return session;
+      }
+    } catch (error) {
+      if (!isNetworkError(error)) {
+        throw error;
+      }
     }
+
     await wait(300);
   }
 
   return null;
+}
+
+async function resetAuthClientState() {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (error) {
+    if (!isNetworkError(error)) {
+      throw error;
+    }
+  }
+
+  clearStaleAuthStorage();
 }
 
 async function ensureUserSetup(supabaseUser: User) {
@@ -204,33 +247,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      if (!isNetworkError(error)) {
+        throw error;
+      }
+
+      await resetAuthClientState();
+    } finally {
+      setUser(null);
+      setSession(null);
+    }
   };
 
   const handleLogin = async (email: string, password: string): Promise<AuthUser> => {
+    const finalizeLogin = async (activeSession: Session) => {
+      const authUser = await buildAuthUser(activeSession.user);
+      setUser(authUser);
+      setSession(activeSession);
+      return authUser;
+    };
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      if (!data.user) throw new Error('Login failed');
+      if (!data.user || !data.session) throw new Error('Login failed');
 
-      const authUser = await buildAuthUser(data.user);
-      setUser(authUser);
-      setSession(data.session);
-      return authUser;
+      return finalizeLogin(data.session);
     } catch (error) {
       if (isNetworkError(error)) {
         const recoveredSession = await recoverSessionAfterNetworkError();
 
         if (recoveredSession?.user) {
-          const authUser = await buildAuthUser(recoveredSession.user);
-          setUser(authUser);
-          setSession(recoveredSession);
-          return authUser;
+          return finalizeLogin(recoveredSession);
         }
 
-        throw new Error('We could not reach the authentication service. Please try again in a moment.');
+        await resetAuthClientState();
+
+        try {
+          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({ email, password });
+          if (retryError) throw retryError;
+          if (!retryData.user || !retryData.session) throw new Error('Login failed');
+
+          return finalizeLogin(retryData.session);
+        } catch (retryError) {
+          if (isNetworkError(retryError)) {
+            throw new Error('We could not reach the authentication service. Please try again in a moment.');
+          }
+
+          throw retryError;
+        }
       }
 
       throw error;
