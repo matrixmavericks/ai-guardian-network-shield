@@ -162,7 +162,7 @@ Be thorough but encouraging. Identify specific strengths and actionable improvem
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
