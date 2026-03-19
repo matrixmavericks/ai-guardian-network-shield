@@ -326,6 +326,7 @@ serve(async (req) => {
     }));
 
     // LOVABLE_API_KEY already declared above
+    const MODEL = "google/gemini-2.5-flash";
 
     const systemPrompt = `You are an expert educational psychologist and adaptive learning specialist. Analyze a student's learning data and produce a comprehensive learning profile.
 
