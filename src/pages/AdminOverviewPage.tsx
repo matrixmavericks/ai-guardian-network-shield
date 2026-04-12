@@ -406,6 +406,11 @@ export default function AdminOverviewPage() {
                 </div>
               </TabsContent>
 
+              {/* ====== PLAN MANAGEMENT ====== */}
+              <TabsContent value="plans" className="space-y-6">
+                <PlanManagementPanel />
+              </TabsContent>
+
               {/* ====== DATA COLLECTION STATS ====== */}
               <TabsContent value="data" className="space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
