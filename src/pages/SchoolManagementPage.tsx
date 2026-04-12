@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import DashboardNav from '@/components/DashboardNav';
+import { useSchoolCheck } from '@/hooks/useSchoolCheck';
 import { useToast } from '@/components/ui/use-toast';
 import {
   School, Plus, Settings2, Users, Brain, Trash2, UserPlus,
@@ -56,6 +57,7 @@ const PLAN_FEATURES: Record<string, { customDomain: boolean; whiteLabel: boolean
 };
 
 export default function SchoolManagementPage() {
+  const isInSchool = useSchoolCheck();
   const { user } = useAuth();
   const { toast } = useToast();
   const [schools, setSchools] = useState<SchoolData[]>([]);
@@ -125,12 +127,10 @@ export default function SchoolManagementPage() {
   const currentPlanConfig = adminPlan ? (ADMIN_PLANS[adminPlan.plan_id] || unlimitedPlanConfig) : null;
   const planFeatures = adminPlan ? (PLAN_FEATURES[adminPlan.plan_id] || PLAN_FEATURES.school_enterprise) : null;
 
-  return (
-    <div className="min-h-screen flex bg-slate-50">
-      <DashboardSidebar />
-      <div className="flex-1 flex flex-col">
-        <DashboardNav />
-        <main className="flex-1 p-6 overflow-auto">
+  const mainContent = (
+    <div className="flex-1 flex flex-col">
+      {!isInSchool && <DashboardNav />}
+      <main className="flex-1 p-6 overflow-auto">
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <div>
@@ -216,8 +216,16 @@ export default function SchoolManagementPage() {
               </Tabs>
             )}
           </div>
-        </main>
-      </div>
+      </main>
+    </div>
+  );
+
+  if (isInSchool) return mainContent;
+
+  return (
+    <div className="min-h-screen flex bg-slate-50">
+      <DashboardSidebar />
+      {mainContent}
     </div>
   );
 }
