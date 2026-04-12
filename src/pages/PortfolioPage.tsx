@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import FeatureGate from "@/components/FeatureGate";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -171,6 +172,7 @@ const PortfolioPage = () => {
   return (
     <div className="flex min-h-screen bg-background">
       <DashboardSidebar />
+      <FeatureGate feature="portfolio">
       <div className="flex-1 p-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -279,6 +281,7 @@ const PortfolioPage = () => {
           </div>
         )}
       </div>
+      </FeatureGate>
     </div>
   );
 };
