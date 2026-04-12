@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { STUDENT_PLANS, TEACHER_PLANS, ADMIN_PLANS } from "@/lib/planConfigs";
+import { STUDENT_PLANS, TEACHER_PLANS, ADMIN_PLANS, calcAdminMonthlyCost } from "@/lib/planConfigs";
 import { Slider } from "@/components/ui/slider";
 
 // ─── Plan card data ───
