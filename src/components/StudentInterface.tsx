@@ -11,10 +11,12 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import FeatureGate from "@/components/FeatureGate";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "react-router-dom";
+import { useStudentPlan } from "@/hooks/useStudentPlan";
 
 interface ChatMessage {
   id: string;
@@ -52,6 +54,7 @@ const StudentInterface = () => {
   const [resourceContext, setResourceContext] = useState<{ title: string; description: string; url?: string } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { canUseTokens, tokensRemaining, plan } = useStudentPlan();
   const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -141,6 +144,14 @@ const StudentInterface = () => {
     e.preventDefault();
     if (!prompt.trim() || chatState === "sending") return;
 
+    if (plan && !canUseTokens(1)) {
+      toast({
+        title: "Token limit reached",
+        description: `You've used all ${plan.monthly_token_limit} tokens this month. Upgrade your plan for more.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
@@ -244,6 +255,7 @@ const StudentInterface = () => {
   return (
     <div className="flex h-screen bg-background">
       <DashboardSidebar />
+      <FeatureGate feature="aiAssistant" className="flex-1">
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="border-b border-border px-6 py-3 flex items-center justify-between shrink-0 bg-card">
@@ -377,6 +389,7 @@ const StudentInterface = () => {
           </form>
         </div>
       </div>
+      </FeatureGate>
     </div>
   );
 };

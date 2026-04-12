@@ -18,6 +18,7 @@ import {
 import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
 import StudentPlanCard from '@/components/StudentPlanCard';
 import StudentAssignmentView from '@/components/StudentAssignmentView';
+import FeatureGate from '@/components/FeatureGate';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -652,51 +653,53 @@ const StudentDashboard = () => {
 
             {/* ═══════════ AI LEARNING ═══════════ */}
             <TabsContent value="learning">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>AI Learning Assistant</CardTitle>
-                    <CardDescription>Get help with your studies</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2 mb-4">
-                      {['Answering questions about assignments', 'Explaining difficult concepts', 'Providing study tips', 'Creating practice questions'].map(item => (
-                        <li key={item} className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />{item}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" onClick={() => navigate('/ai-learning-assistant')}>
-                      <Brain className="mr-2 h-4 w-4" />Open AI Assistant
-                    </Button>
-                  </CardFooter>
-                </Card>
+              <FeatureGate feature="aiAssistant">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>AI Learning Assistant</CardTitle>
+                      <CardDescription>Get help with your studies</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2 mb-4">
+                        {['Answering questions about assignments', 'Explaining difficult concepts', 'Providing study tips', 'Creating practice questions'].map(item => (
+                          <li key={item} className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />{item}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                    <CardFooter>
+                      <Button className="w-full" onClick={() => navigate('/ai-learning-assistant')}>
+                        <Brain className="mr-2 h-4 w-4" />Open AI Assistant
+                      </Button>
+                    </CardFooter>
+                  </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Your AI Activity</CardTitle>
-                    <CardDescription>Real usage stats</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <div><h4 className="font-medium text-sm">Chat Sessions</h4><p className="text-xs text-muted-foreground">Total conversations</p></div>
-                        <div className="text-2xl font-bold">{aiSessionCount}</div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Your AI Activity</CardTitle>
+                      <CardDescription>Real usage stats</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <div><h4 className="font-medium text-sm">Chat Sessions</h4><p className="text-xs text-muted-foreground">Total conversations</p></div>
+                          <div className="text-2xl font-bold">{aiSessionCount}</div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div><h4 className="font-medium text-sm">Questions Asked</h4><p className="text-xs text-muted-foreground">To the AI assistant</p></div>
+                          <div className="text-2xl font-bold">{aiMessageCount}</div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div><h4 className="font-medium text-sm">Learning Paths</h4><p className="text-xs text-muted-foreground">Active paths</p></div>
+                          <div className="text-2xl font-bold">{pathProgress.length}</div>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <div><h4 className="font-medium text-sm">Questions Asked</h4><p className="text-xs text-muted-foreground">To the AI assistant</p></div>
-                        <div className="text-2xl font-bold">{aiMessageCount}</div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div><h4 className="font-medium text-sm">Learning Paths</h4><p className="text-xs text-muted-foreground">Active paths</p></div>
-                        <div className="text-2xl font-bold">{pathProgress.length}</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </FeatureGate>
             </TabsContent>
 
             {/* ═══════════ MESSAGES ═══════════ */}
@@ -789,16 +792,20 @@ const StudentDashboard = () => {
 
             {/* ═══════════ ADAPTIVE PROFILE ═══════════ */}
             <TabsContent value="adaptive">
-              <AdaptiveLearningProfile />
+              <FeatureGate feature="adaptiveProfile">
+                <AdaptiveLearningProfile />
+              </FeatureGate>
             </TabsContent>
 
             {/* ═══════════ QUIZ LIBRARY ═══════════ */}
             <TabsContent value="quizzes">
-              {practiceSessionId ? (
-                <LiveQuizPlayer sessionId={practiceSessionId} onExit={() => setPracticeSessionId(null)} />
-              ) : (
-                <QuizLibrary onStartPractice={(id) => setPracticeSessionId(id)} />
-              )}
+              <FeatureGate feature="quizPractice">
+                {practiceSessionId ? (
+                  <LiveQuizPlayer sessionId={practiceSessionId} onExit={() => setPracticeSessionId(null)} />
+                ) : (
+                  <QuizLibrary onStartPractice={(id) => setPracticeSessionId(id)} />
+                )}
+              </FeatureGate>
             </TabsContent>
           </Tabs>
         </div>
