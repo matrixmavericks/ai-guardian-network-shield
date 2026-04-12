@@ -54,6 +54,7 @@ const StudentInterface = () => {
   const [resourceContext, setResourceContext] = useState<{ title: string; description: string; url?: string } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { canUseTokens, tokensRemaining, plan } = useStudentPlan();
   const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
