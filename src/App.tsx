@@ -78,6 +78,7 @@ function App() {
           <Route path="/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
           <Route path="/registration-requests" element={<ProtectedRoute allowedRoles={['admin']}><RegistrationRequestsPage /></ProtectedRoute>} />
           <Route path="/platform-workflow" element={<ProtectedRoute allowedRoles={['admin']}><PlatformWorkflowPage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
           <Route path="/student-dashboard" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />
           <Route path="/ai-learning-assistant" element={<ProtectedRoute allowedRoles={['student', 'teacher']}><StudentInterface /></ProtectedRoute>} />
