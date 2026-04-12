@@ -144,6 +144,14 @@ const StudentInterface = () => {
     e.preventDefault();
     if (!prompt.trim() || chatState === "sending") return;
 
+    if (plan && !canUseTokens(1)) {
+      toast({
+        title: "Token limit reached",
+        description: `You've used all ${plan.monthly_token_limit} tokens this month. Upgrade your plan for more.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
