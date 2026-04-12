@@ -389,6 +389,7 @@ const StudentInterface = () => {
           </form>
         </div>
       </div>
+      </FeatureGate>
     </div>
   );
 };
