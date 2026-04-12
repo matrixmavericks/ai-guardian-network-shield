@@ -193,7 +193,7 @@ async function provisionUserOnFirstLogin(supabaseUser: User) {
       .from('registration_requests')
       .select('payment_plan, seat_config, requested_role, status')
       .eq('email', (supabaseUser.email || '').toLowerCase())
-      .eq('status', 'completed')
+      .in('status', ['completed', 'approved'])
       .limit(1);
 
     if (!reqData || reqData.length === 0) return;
