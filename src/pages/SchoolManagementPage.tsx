@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardSidebar from '@/components/DashboardSidebar';
@@ -19,8 +20,8 @@ import { useToast } from '@/components/ui/use-toast';
 import {
   School, Plus, Settings2, Users, Brain, Trash2, UserPlus,
   Shield, BookOpen, RefreshCw, Building2, Globe, Mail, MapPin,
-  CreditCard, TrendingUp, ArrowUpRight, IndianRupee, CheckCircle2,
-  Palette, Link2, Crown, Zap
+  CreditCard, TrendingUp, ArrowUpRight, CheckCircle2,
+  Palette, Crown, Zap, UserCheck, ExternalLink
 } from 'lucide-react';
 import { ADMIN_PLANS, calcAdminMonthlyCost, type AdminPlanConfig } from '@/lib/planConfigs';
 
@@ -48,7 +49,6 @@ interface SchoolAISettings {
 
 const WEBSITE_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
 
-// ─── Plan tier feature gates ───
 const PLAN_FEATURES: Record<string, { customDomain: boolean; whiteLabel: boolean; multiCampus: boolean; apiAccess: boolean; customTraining: boolean }> = {
   school_starter: { customDomain: false, whiteLabel: false, multiCampus: false, apiAccess: false, customTraining: false },
   school_growth: { customDomain: true, whiteLabel: false, multiCampus: false, apiAccess: false, customTraining: false },
@@ -68,36 +68,25 @@ export default function SchoolManagementPage() {
 
   const isMasterAdmin = user?.email === WEBSITE_ADMIN_EMAIL;
 
-  useEffect(() => { fetchAll(); }, []);
-
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     await Promise.all([fetchSchools(), fetchAdminPlan()]);
     setLoading(false);
-  };
+  }, [user?.id]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const fetchAdminPlan = async () => {
     if (!user?.id) return;
-    // Fetch the admin's personal plan
     const { data: planData } = await supabase
-      .from('user_plans')
-      .select('*')
-      .eq('user_id', user.id)
-      .limit(1);
+      .from('user_plans').select('*').eq('user_id', user.id).limit(1);
     if (planData && planData.length > 0) setAdminPlan(planData[0]);
 
-    // Fetch seat limits from any school the admin owns
     const { data: mySchools } = await supabase
-      .from('school_members')
-      .select('school_id')
-      .eq('user_id', user.id)
-      .eq('school_role', 'admin');
+      .from('school_members').select('school_id').eq('user_id', user.id).eq('school_role', 'admin');
     if (mySchools && mySchools.length > 0) {
       const { data: seats } = await supabase
-        .from('school_seat_limits')
-        .select('*')
-        .eq('school_id', mySchools[0].school_id)
-        .maybeSingle();
+        .from('school_seat_limits').select('*').eq('school_id', mySchools[0].school_id).maybeSingle();
       setSeatLimits(seats);
     }
   };
@@ -146,8 +135,7 @@ export default function SchoolManagementPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-                  <Building2 className="h-8 w-8 text-primary" />
-                  School Management
+                  <Building2 className="h-8 w-8 text-primary" /> School Management
                 </h1>
                 <p className="text-muted-foreground mt-1">Manage your admin plan, billing, and school ecosystems</p>
               </div>
@@ -157,7 +145,7 @@ export default function SchoolManagementPage() {
             {loading ? (
               <div className="flex items-center justify-center py-20"><RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" /></div>
             ) : selectedSchool ? (
-              <SchoolDetail school={selectedSchool} onBack={() => { setSelectedSchool(null); fetchAll(); }} userId={user?.id || ''} planFeatures={planFeatures} />
+              <SchoolDetail school={selectedSchool} onBack={() => { setSelectedSchool(null); fetchAll(); }} userId={user?.id || ''} planFeatures={planFeatures} adminPlanId={adminPlan?.plan_id} billingCycle={adminPlan?.billing_cycle} />
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
@@ -165,12 +153,10 @@ export default function SchoolManagementPage() {
                   <TabsTrigger value="schools">My Schools</TabsTrigger>
                 </TabsList>
 
-                {/* ─── BILLING TAB ─── */}
                 <TabsContent value="billing" className="space-y-6">
                   <AdminBillingView adminPlan={adminPlan} seatLimits={seatLimits} currentPlanConfig={currentPlanConfig} planFeatures={planFeatures} />
                 </TabsContent>
 
-                {/* ─── SCHOOLS TAB ─── */}
                 <TabsContent value="schools" className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h2 className="text-lg font-semibold">Your Schools</h2>
@@ -274,7 +260,6 @@ function AdminBillingView({
     if (!user?.id) return;
     setProvisioning(true);
     try {
-      // Look up the approved registration request
       const { data: reqData } = await supabase
         .from('registration_requests')
         .select('payment_plan, seat_config, requested_role, status')
@@ -302,17 +287,11 @@ function AdminBillingView({
       const planId = planParts.slice(0, -1).join('_') || 'school_starter';
       const billingCycle = planParts[planParts.length - 1] || 'monthly';
 
-      // Create user_plan
       await supabase.from('user_plans').insert({
-        user_id: user.id,
-        plan_id: planId,
-        billing_cycle: billingCycle,
-        monthly_token_limit: 99999,
-        tokens_used_this_month: 0,
-        status: 'active',
+        user_id: user.id, plan_id: planId, billing_cycle: billingCycle,
+        monthly_token_limit: 99999, tokens_used_this_month: 0, status: 'active',
       } as any);
 
-      // Create school if seatConfig exists and no school yet
       if (seatConfig) {
         const { data: existingSchools } = await supabase
           .from('school_members').select('school_id').eq('user_id', user.id).limit(1);
@@ -320,9 +299,7 @@ function AdminBillingView({
         if (!existingSchools || existingSchools.length === 0) {
           const userName = user.fullName || user.email?.split('@')[0] || 'Admin';
           const { data: schoolData } = await supabase.from('schools').insert({
-            name: `${userName}'s School`,
-            created_by: user.id,
-            contact_email: user.email || null,
+            name: `${userName}'s School`, created_by: user.id, contact_email: user.email || null,
           } as any).select().single();
 
           if (schoolData) {
@@ -372,7 +349,6 @@ function AdminBillingView({
 
   return (
     <div className="space-y-6">
-      {/* Plan header */}
       <Card className={`bg-gradient-to-br ${planTierColor}`}>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -408,7 +384,6 @@ function AdminBillingView({
         )}
       </Card>
 
-      {/* Seat usage */}
       {seatLimits && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
@@ -440,12 +415,9 @@ function AdminBillingView({
         </div>
       )}
 
-      {/* Features included */}
       {currentPlanConfig && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Features Included in Your Plan</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-base">Features Included in Your Plan</CardTitle></CardHeader>
           <CardContent>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {currentPlanConfig.features.map((f, i) => (
@@ -473,11 +445,8 @@ function AdminBillingView({
         </Card>
       )}
 
-      {/* Compare plans */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Compare All Plans</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Compare All Plans</CardTitle></CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Object.values(ADMIN_PLANS).map(plan => {
@@ -514,7 +483,6 @@ function AdminBillingView({
         </CardContent>
       </Card>
 
-      {/* Upgrade Dialog */}
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>Request Plan Change</DialogTitle></DialogHeader>
@@ -547,7 +515,6 @@ function CreateSchoolDialog({ userId, planFeatures, seatLimits, adminPlanId, bil
     if (!form.name.trim()) return;
     setSaving(true);
 
-    // Validate subdomain
     const subdomainValue = form.subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
     if (canSetSubdomain && subdomainValue) {
       const { data: existing } = await supabase.from('schools').select('id').eq('subdomain', subdomainValue).limit(1);
@@ -570,16 +537,18 @@ function CreateSchoolDialog({ userId, planFeatures, seatLimits, adminPlanId, bil
       toast({ title: 'Error creating school', description: error.message, variant: 'destructive' });
     } else if (data) {
       const schoolId = (data as any).id;
-      // Create default AI settings, add creator as admin, copy seat limits
+      // Determine seat counts - use existing seatLimits or defaults
+      const teacherSeats = seatLimits?.teacher_seats || 5;
+      const studentSeats = seatLimits?.student_seats || 50;
       await Promise.all([
         supabase.from('school_ai_settings').insert({ school_id: schoolId } as any),
         supabase.from('school_members').insert({ school_id: schoolId, user_id: userId, school_role: 'admin' } as any),
-        seatLimits ? supabase.from('school_seat_limits').insert({
+        supabase.from('school_seat_limits').insert({
           school_id: schoolId, plan_id: adminPlanId || 'school_starter',
           billing_cycle: billingCycle || 'monthly',
-          teacher_seats: seatLimits.teacher_seats, student_seats: seatLimits.student_seats,
+          teacher_seats: teacherSeats, student_seats: studentSeats,
           teachers_used: 0, students_used: 0,
-        } as any) : Promise.resolve(),
+        } as any),
       ]);
       toast({ title: 'School created!', description: `${form.name} is ready.` });
       onCreated();
@@ -598,7 +567,6 @@ function CreateSchoolDialog({ userId, planFeatures, seatLimits, adminPlanId, bil
           <div><Label>Address</Label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="123 Main St" /></div>
         </div>
 
-        {/* Custom Subdomain */}
         <div className="rounded-lg border p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-primary" />
@@ -620,7 +588,6 @@ function CreateSchoolDialog({ userId, planFeatures, seatLimits, adminPlanId, bil
           )}
         </div>
 
-        {/* Theme */}
         <div className="rounded-lg border p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Palette className="h-4 w-4 text-primary" />
@@ -657,7 +624,9 @@ function CreateSchoolDialog({ userId, planFeatures, seatLimits, adminPlanId, bil
 
 // ============ SCHOOL DETAIL VIEW ============
 
-function SchoolDetail({ school, onBack, userId, planFeatures }: { school: SchoolData; onBack: () => void; userId: string; planFeatures: any }) {
+function SchoolDetail({ school, onBack, userId, planFeatures, adminPlanId, billingCycle }: {
+  school: SchoolData; onBack: () => void; userId: string; planFeatures: any; adminPlanId?: string; billingCycle?: string;
+}) {
   const { toast } = useToast();
   const [members, setMembers] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -672,12 +641,16 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
   const [assignClassId, setAssignClassId] = useState('');
   const [unassignedClasses, setUnassignedClasses] = useState<any[]>([]);
   const [trainingData, setTrainingData] = useState<any[]>([]);
+  // Student-to-class assignment
+  const [assignStudentId, setAssignStudentId] = useState('');
+  const [assignToClassId, setAssignToClassId] = useState('');
+  const [classMembers, setClassMembers] = useState<any[]>([]);
 
   useEffect(() => { fetchDetail(); }, [school.id]);
 
   const fetchDetail = async () => {
     setLoading(true);
-    const [{ data: mems }, { data: cls }, { data: settings }, { data: profiles }, { data: allCls }, { data: tData }, { data: seats }] = await Promise.all([
+    const [{ data: mems }, { data: cls }, { data: settings }, { data: profiles }, { data: allCls }, { data: tData }, { data: seats }, { data: clsMembers }] = await Promise.all([
       supabase.from('school_members').select('*').eq('school_id', school.id),
       supabase.from('classes').select('*').eq('school_id', school.id),
       supabase.from('school_ai_settings').select('*').eq('school_id', school.id).maybeSingle(),
@@ -685,6 +658,7 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
       supabase.from('classes').select('*'),
       supabase.from('model_training_data').select('*').order('created_at', { ascending: false }),
       supabase.from('school_seat_limits').select('*').eq('school_id', school.id).maybeSingle(),
+      supabase.from('class_members').select('*'),
     ]);
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
     setMembers((mems || []).map((m: any) => ({ ...m, profile: profileMap.get(m.user_id) })));
@@ -692,7 +666,27 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
     setAllProfiles(profiles || []);
     setUnassignedClasses((allCls || []).filter((c: any) => !c.school_id));
     setTrainingData(tData || []);
-    setSeatLimits(seats || null);
+    setClassMembers(clsMembers || []);
+
+    // Auto-create seat limits if missing
+    if (!seats) {
+      const defaultSeats = { school_id: school.id, plan_id: adminPlanId || 'school_starter', billing_cycle: billingCycle || 'monthly', teacher_seats: 5, student_seats: 50, teachers_used: 0, students_used: 0 };
+      const { data: newSeats } = await supabase.from('school_seat_limits').insert(defaultSeats as any).select().maybeSingle();
+      setSeatLimits(newSeats || defaultSeats);
+    } else {
+      // Sync seat usage with actual member count
+      const actualTeachers = (mems || []).filter((m: any) => m.school_role === 'teacher' || m.school_role === 'admin').length;
+      const actualStudents = (mems || []).filter((m: any) => m.school_role === 'member').length;
+      if (seats.teachers_used !== actualTeachers || seats.students_used !== actualStudents) {
+        await supabase.from('school_seat_limits').update({
+          teachers_used: actualTeachers, students_used: actualStudents,
+        } as any).eq('school_id', school.id);
+        seats.teachers_used = actualTeachers;
+        seats.students_used = actualStudents;
+      }
+      setSeatLimits(seats);
+    }
+
     if (settings) setAiSettings(settings as any);
     else {
       const { data: newSettings } = await supabase.from('school_ai_settings').insert({ school_id: school.id } as any).select().single();
@@ -706,29 +700,21 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
     if (!profile) { toast({ title: 'User not found', variant: 'destructive' }); return; }
     if (seatLimits) {
       const isTeacherAdd = addMemberRole === 'teacher' || addMemberRole === 'admin';
-      const currentTeachers = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
-      const currentStudents = members.filter(m => m.school_role === 'member').length;
-      if (isTeacherAdd && currentTeachers >= seatLimits.teacher_seats) {
-        toast({ title: 'Teacher seat limit reached', description: `Your plan allows ${seatLimits.teacher_seats} teacher seats.`, variant: 'destructive' }); return;
+      if (isTeacherAdd && (seatLimits.teachers_used || 0) >= seatLimits.teacher_seats) {
+        toast({ title: 'Teacher seat limit reached', variant: 'destructive' }); return;
       }
-      if (!isTeacherAdd && currentStudents >= seatLimits.student_seats) {
-        toast({ title: 'Student seat limit reached', description: `Your plan allows ${seatLimits.student_seats} student seats.`, variant: 'destructive' }); return;
+      if (!isTeacherAdd && (seatLimits.students_used || 0) >= seatLimits.student_seats) {
+        toast({ title: 'Student seat limit reached', variant: 'destructive' }); return;
       }
     }
     const { error } = await supabase.from('school_members').insert({ school_id: school.id, user_id: profile.user_id, school_role: addMemberRole } as any);
     if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
     else {
-      if (seatLimits) {
-        const isTeacher = addMemberRole === 'teacher' || addMemberRole === 'admin';
-        await supabase.from('school_seat_limits').update(
-          isTeacher ? { teachers_used: (seatLimits.teachers_used || 0) + 1 } : { students_used: (seatLimits.students_used || 0) + 1 } as any
-        ).eq('school_id', school.id);
-      }
       toast({ title: 'Member added' }); setAddMemberEmail(''); fetchDetail();
     }
   };
 
-  const removeMember = async (memberId: string) => {
+  const removeMember = async (memberId: string, memberRole: string) => {
     await supabase.from('school_members').delete().eq('id', memberId);
     toast({ title: 'Member removed' }); fetchDetail();
   };
@@ -742,6 +728,21 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
   const unassignClass = async (classId: string) => {
     await supabase.from('classes').update({ school_id: null } as any).eq('id', classId);
     toast({ title: 'Class unassigned' }); fetchDetail();
+  };
+
+  const assignStudentToClass = async () => {
+    if (!assignStudentId || !assignToClassId) return;
+    // Check if already assigned
+    const existing = classMembers.find(cm => cm.student_id === assignStudentId && cm.class_id === assignToClassId);
+    if (existing) { toast({ title: 'Student already in this class', variant: 'destructive' }); return; }
+    const { error } = await supabase.from('class_members').insert({ class_id: assignToClassId, student_id: assignStudentId } as any);
+    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Student assigned to class' }); setAssignStudentId(''); setAssignToClassId(''); fetchDetail(); }
+  };
+
+  const removeStudentFromClass = async (classId: string, studentId: string) => {
+    await supabase.from('class_members').delete().eq('class_id', classId).eq('student_id', studentId);
+    toast({ title: 'Student removed from class' }); fetchDetail();
   };
 
   const updateAISettings = async (updates: Partial<SchoolAISettings>) => {
@@ -794,8 +795,9 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
 
   if (loading) return <div className="flex justify-center py-20"><RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
-  const teachersUsed = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
-  const studentsUsed = members.filter(m => m.school_role === 'member').length;
+  const teachersUsed = seatLimits?.teachers_used || 0;
+  const studentsUsed = seatLimits?.students_used || 0;
+  const studentMembers = members.filter(m => m.school_role === 'member');
 
   return (
     <div className="space-y-6">
@@ -805,55 +807,65 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
           <h2 className="text-2xl font-bold flex items-center gap-2"><School className="h-6 w-6 text-primary" />{school.name}</h2>
           <p className="text-muted-foreground">{school.description || 'No description'}</p>
           <div className="flex gap-3 mt-2 text-sm text-muted-foreground flex-wrap">
-            {school.subdomain && <Badge variant="outline"><Globe className="h-3 w-3 mr-1" />{school.subdomain}.refyntech.us</Badge>}
+            {school.subdomain && (
+              <Badge variant="outline" className="gap-1">
+                <Globe className="h-3 w-3" />{school.subdomain}.refyntech.us
+                <a href={`https://${school.subdomain}.refyntech.us`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </a>
+              </Badge>
+            )}
             {school.contact_email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{school.contact_email}</span>}
             {school.address && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{school.address}</span>}
           </div>
         </div>
-        <Button variant="destructive" size="sm" onClick={deleteSchool}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={fetchDetail}><RefreshCw className="h-4 w-4" /></Button>
+          <Button variant="destructive" size="sm" onClick={deleteSchool}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
+        </div>
       </div>
+
+      {/* Seat Usage Summary - Always visible */}
+      {seatLimits && (
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="bg-gradient-to-r from-indigo-50/50 to-violet-50/50">
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground font-medium mb-1">Teacher Seats</p>
+              <div className="flex items-end gap-1 mb-2">
+                <span className="text-2xl font-bold">{teachersUsed}</span>
+                <span className="text-muted-foreground text-sm">/ {seatLimits.teacher_seats}</span>
+              </div>
+              <Progress value={Math.min(100, (teachersUsed / Math.max(1, seatLimits.teacher_seats)) * 100)} className="h-2" />
+              <p className="text-xs text-muted-foreground mt-1">{Math.max(0, seatLimits.teacher_seats - teachersUsed)} remaining</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-r from-violet-50/50 to-pink-50/50">
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground font-medium mb-1">Student Seats</p>
+              <div className="flex items-end gap-1 mb-2">
+                <span className="text-2xl font-bold">{studentsUsed}</span>
+                <span className="text-muted-foreground text-sm">/ {seatLimits.student_seats}</span>
+              </div>
+              <Progress value={Math.min(100, (studentsUsed / Math.max(1, seatLimits.student_seats)) * 100)} className="h-2" />
+              <p className="text-xs text-muted-foreground mt-1">{Math.max(0, seatLimits.student_seats - studentsUsed)} remaining</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Tabs defaultValue="members">
         <TabsList>
           <TabsTrigger value="members">Members</TabsTrigger>
-          <TabsTrigger value="classes">Classes</TabsTrigger>
+          <TabsTrigger value="classes">Classes & Enrollment</TabsTrigger>
+          <TabsTrigger value="features">Feature Controls</TabsTrigger>
           <TabsTrigger value="ai-settings">AI Settings</TabsTrigger>
           <TabsTrigger value="ai-models">AI Models</TabsTrigger>
         </TabsList>
 
         {/* MEMBERS TAB */}
         <TabsContent value="members" className="space-y-4">
-          {seatLimits && (
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="bg-gradient-to-r from-indigo-50/50 to-violet-50/50">
-                <CardContent className="pt-4">
-                  <p className="text-xs text-muted-foreground font-medium mb-1">Teacher Seats</p>
-                  <div className="flex items-end gap-1 mb-2">
-                    <span className="text-2xl font-bold">{teachersUsed}</span>
-                    <span className="text-muted-foreground text-sm">/ {seatLimits.teacher_seats}</span>
-                  </div>
-                  <Progress value={Math.min(100, (teachersUsed / Math.max(1, seatLimits.teacher_seats)) * 100)} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">{Math.max(0, seatLimits.teacher_seats - teachersUsed)} remaining</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-r from-violet-50/50 to-pink-50/50">
-                <CardContent className="pt-4">
-                  <p className="text-xs text-muted-foreground font-medium mb-1">Student Seats</p>
-                  <div className="flex items-end gap-1 mb-2">
-                    <span className="text-2xl font-bold">{studentsUsed}</span>
-                    <span className="text-muted-foreground text-sm">/ {seatLimits.student_seats}</span>
-                  </div>
-                  <Progress value={Math.min(100, (studentsUsed / Math.max(1, seatLimits.student_seats)) * 100)} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">{Math.max(0, seatLimits.student_seats - studentsUsed)} remaining</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Create New Account */}
           <CreateSchoolUserCard schoolId={school.id} seatLimits={seatLimits} teachersUsed={teachersUsed} studentsUsed={studentsUsed} onCreated={fetchDetail} />
 
-          {/* Add Existing User */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-5 w-5" /> Add Existing User</CardTitle>
@@ -889,7 +901,7 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
                         <TableCell className="text-sm text-muted-foreground">{m.profile?.email || '—'}</TableCell>
                         <TableCell><Badge variant="outline" className="capitalize">{m.school_role}</Badge></TableCell>
                         <TableCell className="text-xs text-muted-foreground">{new Date(m.joined_at).toLocaleDateString()}</TableCell>
-                        <TableCell><Button variant="ghost" size="sm" onClick={() => removeMember(m.id)}><Trash2 className="h-3 w-3" /></Button></TableCell>
+                        <TableCell><Button variant="ghost" size="sm" onClick={() => removeMember(m.id, m.school_role)}><Trash2 className="h-3 w-3" /></Button></TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -898,9 +910,11 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* CLASSES & ENROLLMENT TAB */}
         <TabsContent value="classes" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">Assign Existing Class</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Assign Existing Class to School</CardTitle></CardHeader>
             <CardContent>
               <div className="flex gap-2">
                 <Select value={assignClassId} onValueChange={setAssignClassId}>
@@ -913,35 +927,87 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
               </div>
             </CardContent>
           </Card>
+
+          {/* Assign Students to Classes */}
+          {classes.length > 0 && studentMembers.length > 0 && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2"><UserCheck className="h-5 w-5 text-primary" /> Assign Students to Classes</CardTitle>
+                <CardDescription>Enroll school students directly into classes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 flex-wrap">
+                  <Select value={assignStudentId} onValueChange={setAssignStudentId}>
+                    <SelectTrigger className="w-64"><SelectValue placeholder="Select student..." /></SelectTrigger>
+                    <SelectContent>
+                      {studentMembers.map(m => (
+                        <SelectItem key={m.user_id} value={m.user_id}>{m.profile?.full_name || m.profile?.email || m.user_id}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={assignToClassId} onValueChange={setAssignToClassId}>
+                    <SelectTrigger className="w-64"><SelectValue placeholder="Select class..." /></SelectTrigger>
+                    <SelectContent>
+                      {classes.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name} — {c.subject}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={assignStudentToClass} disabled={!assignStudentId || !assignToClassId}>Enroll</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader><CardTitle className="text-base">School Classes ({classes.length})</CardTitle></CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               {classes.length === 0 ? <p className="text-muted-foreground text-sm">No classes assigned.</p> : (
-                <Table>
-                  <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Subject</TableHead><TableHead>Join Code</TableHead><TableHead></TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {classes.map((c: any) => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.name}</TableCell>
-                        <TableCell><Badge variant="outline">{c.subject}</Badge></TableCell>
-                        <TableCell><code className="text-xs bg-muted px-2 py-1 rounded">{c.join_code}</code></TableCell>
-                        <TableCell><Button variant="ghost" size="sm" onClick={() => unassignClass(c.id)}>Unassign</Button></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                classes.map((c: any) => {
+                  const enrolled = classMembers.filter(cm => cm.class_id === c.id);
+                  const profileMap = new Map(allProfiles.map((p: any) => [p.user_id, p]));
+                  return (
+                    <div key={c.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold text-sm">{c.name}</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline">{c.subject}</Badge>
+                            <code className="text-xs bg-muted px-2 py-0.5 rounded">{c.join_code}</code>
+                            <span className="text-xs text-muted-foreground">{enrolled.length} students enrolled</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => unassignClass(c.id)}>Unassign</Button>
+                      </div>
+                      {enrolled.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {enrolled.map(cm => {
+                            const p = profileMap.get(cm.student_id);
+                            return (
+                              <Badge key={cm.id} variant="secondary" className="gap-1">
+                                {p?.full_name || p?.email || 'Unknown'}
+                                <button onClick={() => removeStudentFromClass(c.id, cm.student_id)} className="ml-1 hover:text-destructive">×</button>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* AI SETTINGS TAB */}
-        <TabsContent value="ai-settings" className="space-y-4">
+        {/* FEATURE CONTROLS TAB */}
+        <TabsContent value="features" className="space-y-4">
           {aiSettings && (
             <>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2"><Shield className="h-5 w-5" /> Feature Controls</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2"><Shield className="h-5 w-5" /> School-Wide Feature Controls</CardTitle>
+                  <CardDescription>These settings apply to all students and teachers in this school</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ToggleRow label="AI Chat for Students" desc="Allow students to use the AI learning assistant" checked={aiSettings.allow_student_chat} onChange={v => updateAISettings({ allow_student_chat: v })} />
@@ -1009,15 +1075,51 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Custom System Prompt</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base">Custom System Prompt</CardTitle></CardHeader>
                 <CardContent>
                   <Textarea value={aiSettings.custom_system_prompt} onChange={e => updateAISettings({ custom_system_prompt: e.target.value })} placeholder="Custom AI system prompt for this school..." rows={4} />
                 </CardContent>
               </Card>
             </>
           )}
+        </TabsContent>
+
+        {/* AI SETTINGS TAB - now just models */}
+        <TabsContent value="ai-settings" className="space-y-4">
+          {/* Subdomain management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Globe className="h-5 w-5" /> School Portal</CardTitle>
+              <CardDescription>Your school's custom subdomain and branding</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {school.subdomain ? (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm font-medium text-green-800">Subdomain Active</p>
+                  <p className="text-lg font-bold text-green-900 mt-1">{school.subdomain}.refyntech.us</p>
+                  <p className="text-xs text-green-700 mt-2">
+                    All school members can access the school portal at this address. DNS configuration is handled automatically.
+                  </p>
+                  <a href={`https://${school.subdomain}.refyntech.us`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary mt-2 hover:underline">
+                    Open Portal <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              ) : (
+                <div className="p-4 bg-muted/50 border rounded-lg">
+                  <p className="text-sm text-muted-foreground">No custom subdomain configured. {planFeatures?.customDomain ? 'Edit the school to add one.' : 'Upgrade to Growth+ plan to enable custom subdomains.'}</p>
+                </div>
+              )}
+              {school.theme_config && (
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium mb-2">School Theme</p>
+                  <div className="flex gap-2">
+                    <div className="h-8 w-24 rounded" style={{ backgroundColor: school.theme_config.primaryColor || '#3b82f6' }} />
+                    <div className="h-8 w-24 rounded" style={{ backgroundColor: school.theme_config.accentColor || '#8b5cf6' }} />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* AI MODELS TAB */}
@@ -1169,6 +1271,12 @@ function CreateSchoolUserCard({ schoolId, seatLimits, teachersUsed, studentsUsed
             </Select>
           </div>
         </div>
+        {seatLimits && (
+          <div className="text-xs text-muted-foreground flex gap-4">
+            <span>Teachers: {teachersUsed}/{seatLimits.teacher_seats}</span>
+            <span>Students: {studentsUsed}/{seatLimits.student_seats}</span>
+          </div>
+        )}
         <Button onClick={handleCreate} disabled={creating || !form.email || !form.fullName || !form.password} className="w-full">
           {creating ? 'Creating...' : `Create ${form.role === 'teacher' ? 'Teacher' : 'Student'} Account`}
         </Button>
