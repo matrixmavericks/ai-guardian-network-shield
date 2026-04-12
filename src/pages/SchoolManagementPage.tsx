@@ -793,6 +793,32 @@ function PlanBillingTab({ seatLimits, members, school, onRefresh }: { seatLimits
     setSubmitting(false);
   };
 
+  if (!seatLimits) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-12 text-center">
+          <CreditCard className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+          <h3 className="text-lg font-semibold mb-1">No Plan Configured</h3>
+          <p className="text-muted-foreground text-sm mb-4">This school doesn't have a billing plan yet. Request one from the platform administrator.</p>
+          <Button onClick={() => setShowUpgradeDialog(true)} className="gap-1">
+            <ArrowUpRight className="h-4 w-4" /> Request Plan Setup
+          </Button>
+          <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Request Plan Setup</DialogTitle></DialogHeader>
+              <p className="text-sm text-muted-foreground">Describe the plan and seats you need for this school.</p>
+              <Textarea value={upgradeNote} onChange={e => setUpgradeNote(e.target.value)} placeholder="e.g. We need Growth plan with 10 teachers and 200 students..." rows={4} />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>Cancel</Button>
+                <Button onClick={submitUpgradeRequest} disabled={submitting}>{submitting ? 'Submitting...' : 'Submit Request'}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Current Plan Card */}
