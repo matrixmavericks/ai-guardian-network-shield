@@ -417,13 +417,19 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
         <Button variant="destructive" size="sm" onClick={deleteSchool}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
       </div>
 
-      <Tabs defaultValue="members">
+      <Tabs defaultValue="plan">
         <TabsList>
+          <TabsTrigger value="plan">Plan & Billing</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
           <TabsTrigger value="classes">Classes</TabsTrigger>
           <TabsTrigger value="ai-settings">AI Settings</TabsTrigger>
           <TabsTrigger value="ai-models">AI Models</TabsTrigger>
         </TabsList>
+
+        {/* PLAN & BILLING TAB */}
+        <TabsContent value="plan" className="space-y-4">
+          <PlanBillingTab seatLimits={seatLimits} members={members} school={school} onRefresh={fetchDetail} />
+        </TabsContent>
 
         {/* MEMBERS TAB */}
         <TabsContent value="members" className="space-y-4">
