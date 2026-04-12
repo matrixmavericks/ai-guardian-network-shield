@@ -812,6 +812,15 @@ const StudentDashboard = () => {
       </div>
     </div>
   );
+
+  if (isInSchool) return dashboardContent;
+
+  return (
+    <div className="flex h-screen bg-background">
+      <DashboardSidebar />
+      {dashboardContent}
+    </div>
+  );
 };
 
 export default StudentDashboard;
