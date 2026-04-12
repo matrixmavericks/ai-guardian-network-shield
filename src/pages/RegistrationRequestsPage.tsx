@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { CheckCircle2, XCircle, Clock, ArrowLeft, Search, CreditCard } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ArrowLeft, Search, CreditCard, Users } from "lucide-react";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { ALL_PLAN_LABELS } from "@/lib/planConfigs";
 
@@ -23,6 +23,7 @@ interface RegistrationRequest {
   status: string;
   rejection_reason: string | null;
   payment_plan: string | null;
+  seat_config: { teachers: number; students: number } | null;
   created_at: string;
 }
 
@@ -67,7 +68,7 @@ const RegistrationRequestsPage = () => {
     if (error) {
       toast({ title: "Error", description: "Failed to load requests.", variant: "destructive" });
     } else {
-      setRequests(data || []);
+      setRequests((data || []) as any as RegistrationRequest[]);
     }
     setLoading(false);
   };
@@ -231,6 +232,12 @@ const RegistrationRequestsPage = () => {
                         <p className="text-xs font-medium text-indigo-600 flex items-center gap-1">
                           <CreditCard className="h-3 w-3" />
                           Plan: {PLAN_LABELS[req.payment_plan] || req.payment_plan}
+                        </p>
+                      )}
+                      {req.seat_config && (
+                        <p className="text-xs font-medium text-violet-600 flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          Seats: {req.seat_config.teachers} teachers, {req.seat_config.students} students
                         </p>
                       )}
                       {req.rejection_reason && (

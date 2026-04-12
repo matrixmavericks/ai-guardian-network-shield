@@ -211,6 +211,7 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
   const [members, setMembers] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [aiSettings, setAiSettings] = useState<SchoolAISettings | null>(null);
+  const [seatLimits, setSeatLimits] = useState<any>(null);
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addMemberEmail, setAddMemberEmail] = useState('');
@@ -225,13 +226,14 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
   const fetchDetail = async () => {
     setLoading(true);
-    const [{ data: mems }, { data: cls }, { data: settings }, { data: profiles }, { data: allCls }, { data: tData }] = await Promise.all([
+    const [{ data: mems }, { data: cls }, { data: settings }, { data: profiles }, { data: allCls }, { data: tData }, { data: seats }] = await Promise.all([
       supabase.from('school_members').select('*').eq('school_id', school.id),
       supabase.from('classes').select('*').eq('school_id', school.id),
       supabase.from('school_ai_settings').select('*').eq('school_id', school.id).maybeSingle(),
       supabase.from('profiles').select('user_id, full_name, email'),
       supabase.from('classes').select('*'),
       supabase.from('model_training_data').select('*').order('created_at', { ascending: false }),
+      supabase.from('school_seat_limits').select('*').eq('school_id', school.id).maybeSingle(),
     ]);
 
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
@@ -240,11 +242,11 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
     setAllProfiles(profiles || []);
     setUnassignedClasses((allCls || []).filter((c: any) => !c.school_id));
     setTrainingData(tData || []);
+    setSeatLimits(seats || null);
 
     if (settings) {
       setAiSettings(settings as any);
     } else {
-      // Create default settings
       const { data: newSettings } = await supabase.from('school_ai_settings').insert({ school_id: school.id } as any).select().single();
       setAiSettings(newSettings as any);
     }
@@ -257,12 +259,37 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
       toast({ title: 'User not found', description: 'No user with that email exists.', variant: 'destructive' });
       return;
     }
+
+    // Enforce seat limits
+    if (seatLimits) {
+      const isTeacherAdd = addMemberRole === 'teacher' || addMemberRole === 'admin';
+      const currentTeachers = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
+      const currentStudents = members.filter(m => m.school_role === 'member').length;
+
+      if (isTeacherAdd && currentTeachers >= seatLimits.teacher_seats) {
+        toast({ title: 'Teacher seat limit reached', description: `Your plan allows ${seatLimits.teacher_seats} teacher seats. Upgrade to add more.`, variant: 'destructive' });
+        return;
+      }
+      if (!isTeacherAdd && currentStudents >= seatLimits.student_seats) {
+        toast({ title: 'Student seat limit reached', description: `Your plan allows ${seatLimits.student_seats} student seats. Upgrade to add more.`, variant: 'destructive' });
+        return;
+      }
+    }
+
     const { error } = await supabase.from('school_members').insert({
       school_id: school.id, user_id: profile.user_id, school_role: addMemberRole,
     } as any);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
+      // Update seat usage
+      if (seatLimits) {
+        const isTeacher = addMemberRole === 'teacher' || addMemberRole === 'admin';
+        const updateData = isTeacher
+          ? { teachers_used: (seatLimits.teachers_used || 0) + 1 }
+          : { students_used: (seatLimits.students_used || 0) + 1 };
+        await supabase.from('school_seat_limits').update(updateData as any).eq('school_id', school.id);
+      }
       toast({ title: 'Member added' });
       setAddMemberEmail('');
       fetchDetail();
@@ -375,9 +402,60 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
         {/* MEMBERS TAB */}
         <TabsContent value="members" className="space-y-4">
+          {/* Seat Limits Card */}
+          {seatLimits && (
+            <Card className="border-indigo-200 bg-gradient-to-r from-indigo-50/50 to-violet-50/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2"><Shield className="h-5 w-5 text-indigo-600" /> Seat Allocation</CardTitle>
+                <CardDescription>Your plan: <strong className="capitalize">{seatLimits.plan_id?.replace(/_/g, ' ')}</strong> ({seatLimits.billing_cycle})</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-lg border bg-white p-3">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">Teacher Seats</p>
+                    <div className="flex items-end gap-1">
+                      <span className="text-2xl font-bold">{members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length}</span>
+                      <span className="text-muted-foreground text-sm mb-0.5">/ {seatLimits.teacher_seats}</span>
+                    </div>
+                    <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length / Math.max(1, seatLimits.teacher_seats)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-white p-3">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">Student Seats</p>
+                    <div className="flex items-end gap-1">
+                      <span className="text-2xl font-bold">{members.filter(m => m.school_role === 'member').length}</span>
+                      <span className="text-muted-foreground text-sm mb-0.5">/ {seatLimits.student_seats}</span>
+                    </div>
+                    <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-violet-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (members.filter(m => m.school_role === 'member').length / Math.max(1, seatLimits.student_seats)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-5 w-5" /> Add Member</CardTitle>
+              {seatLimits && (
+                <CardDescription>
+                  {(() => {
+                    const teachersUsed = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
+                    const studentsUsed = members.filter(m => m.school_role === 'member').length;
+                    const tLeft = seatLimits.teacher_seats - teachersUsed;
+                    const sLeft = seatLimits.student_seats - studentsUsed;
+                    return `${tLeft} teacher seat${tLeft !== 1 ? 's' : ''} • ${sLeft} student seat${sLeft !== 1 ? 's' : ''} remaining`;
+                  })()}
+                </CardDescription>
+              )}
             </CardHeader>
             <CardContent>
               <div className="flex gap-2">

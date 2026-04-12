@@ -1498,6 +1498,7 @@ export type Database = {
           requested_role: string
           reviewed_at: string | null
           reviewed_by: string | null
+          seat_config: Json | null
           status: string
           updated_at: string
         }
@@ -1511,6 +1512,7 @@ export type Database = {
           requested_role?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          seat_config?: Json | null
           status?: string
           updated_at?: string
         }
@@ -1524,6 +1526,7 @@ export type Database = {
           requested_role?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          seat_config?: Json | null
           status?: string
           updated_at?: string
         }
@@ -1621,6 +1624,53 @@ export type Database = {
             foreignKeyName: "school_members_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_seat_limits: {
+        Row: {
+          billing_cycle: string
+          created_at: string
+          id: string
+          plan_id: string
+          school_id: string
+          student_seats: number
+          students_used: number
+          teacher_seats: number
+          teachers_used: number
+          updated_at: string
+        }
+        Insert: {
+          billing_cycle?: string
+          created_at?: string
+          id?: string
+          plan_id?: string
+          school_id: string
+          student_seats?: number
+          students_used?: number
+          teacher_seats?: number
+          teachers_used?: number
+          updated_at?: string
+        }
+        Update: {
+          billing_cycle?: string
+          created_at?: string
+          id?: string
+          plan_id?: string
+          school_id?: string
+          student_seats?: number
+          students_used?: number
+          teacher_seats?: number
+          teachers_used?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_seat_limits_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: true
             referencedRelation: "schools"
             referencedColumns: ["id"]
           },

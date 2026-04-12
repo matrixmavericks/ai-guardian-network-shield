@@ -110,6 +110,7 @@ const Register = () => {
       }
 
       const paymentPlanValue = `${selectedPlan}_${billingCycle}`;
+      const seatConfig = role === 'admin' ? { teachers: teacherCount, students: studentCount } : null;
 
       const { error } = await supabase.from('registration_requests').insert({
         full_name: formData.name.trim(),
@@ -117,6 +118,7 @@ const Register = () => {
         requested_role: formData.requested_role,
         status: 'pending',
         payment_plan: paymentPlanValue,
+        seat_config: seatConfig,
       } as any);
 
       if (error) {
