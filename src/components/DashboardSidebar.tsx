@@ -66,7 +66,7 @@ const DashboardSidebar = () => {
   };
 
   return (
-    <div className="bg-white border-r border-slate-200 w-64 min-h-screen flex flex-col">
+    <div data-legacy-dashboard-sidebar="true" className="bg-white border-r border-slate-200 w-64 min-h-screen flex flex-col">
       <div className="p-6 border-b">
         <div className="flex items-center">
           <Shield className="h-8 w-8 text-blue-600 mr-2" />

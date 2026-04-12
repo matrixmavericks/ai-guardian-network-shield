@@ -93,7 +93,13 @@
 @layer base {
   * {
     @apply border-border;
+}
+
+@layer components {
+  [data-school-shell="true"] [data-legacy-dashboard-sidebar="true"] {
+    display: none !important;
   }
+}
 
   body {
     @apply bg-background text-foreground;

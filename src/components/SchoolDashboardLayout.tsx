@@ -22,7 +22,7 @@ const SchoolDashboardLayout = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div data-school-shell="true" className="flex min-h-screen bg-background">
       <SchoolSidebar />
       <main className="flex-1 overflow-auto">
         <Outlet />
