@@ -155,9 +155,13 @@ const FeatureGate: React.FC<FeatureGateProps> = ({
   variant = 'full',
 }) => {
   const { hasFeature, plan, isLoading } = useStudentPlan();
+  const { roles, isLoading: rolesLoading } = useUserRole();
   const navigate = useNavigate();
 
-  if (isLoading) return <>{children}</>;
+  if (isLoading || rolesLoading) return <>{children}</>;
+
+  // Non-student roles bypass gating
+  if (!roles.includes('student')) return <>{children}</>;
 
   if (!plan || !hasFeature(feature)) {
     const info: { title: string; description: string; minPlan: string; icon: React.ReactNode; benefit: string; stats?: string } = featureInfo[feature] || {
