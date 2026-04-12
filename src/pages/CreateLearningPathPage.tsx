@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import FeatureGate from '@/components/FeatureGate';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -357,6 +358,7 @@ const CreateLearningPathPage = () => {
       <div className="flex-1 flex flex-col">
         <DashboardNav />
         <main className="flex-1 p-6">
+          <FeatureGate feature="customLearningPaths">
           <div className="max-w-5xl mx-auto space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-2">
@@ -586,6 +588,7 @@ const CreateLearningPathPage = () => {
               )}
             </div>
           </div>
+          </FeatureGate>
         </main>
       </div>
     </div>
