@@ -792,7 +792,9 @@ const StudentDashboard = () => {
 
             {/* ═══════════ ADAPTIVE PROFILE ═══════════ */}
             <TabsContent value="adaptive">
-              <AdaptiveLearningProfile />
+              <FeatureGate feature="adaptiveProfile">
+                <AdaptiveLearningProfile />
+              </FeatureGate>
             </TabsContent>
 
             {/* ═══════════ QUIZ LIBRARY ═══════════ */}
