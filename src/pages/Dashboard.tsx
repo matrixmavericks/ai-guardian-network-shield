@@ -75,144 +75,152 @@ const Dashboard = () => {
     }
   };
 
-  const content = (
-    <>
+  const mainContent = (
+    <div className="flex-1 flex flex-col">
       {!isInSchool && <DashboardNav />}
       <main className="flex-1 p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
-              <Button onClick={fetchDashboardData} variant="outline">
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-500">Total Prompts Filtered</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="text-3xl font-bold">{stats.totalPrompts.toLocaleString()}</div>
-                    <div className="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
-                      <ArrowUpRight className="h-3 w-3 mr-1" />
-                      Live
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-500">Bypass Attempts Blocked</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="text-3xl font-bold">{stats.bypassBlocked.toLocaleString()}</div>
-                    <div className="bg-amber-100 text-amber-700 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
-                      <ArrowUpRight className="h-3 w-3 mr-1" />
-                      Live
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-500">Network Protection</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="text-lg font-medium">Active</div>
-                    <div className="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                      Protected
-                    </div>
-                  </div>
-                  <div className="text-sm text-slate-500">All entry points secured</div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="network">Network</TabsTrigger>
-                <TabsTrigger value="users">Users</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                <TabsTrigger value="alerts">Alerts</TabsTrigger>
-                <TabsTrigger value="help">Help & Support</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <NetworkStatus />
-                  
-                  <Card className="col-span-1">
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
-                        Alert Activity
-                      </CardTitle>
-                      <CardDescription>Recent bypass attempts and security alerts</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {recentAlerts.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No recent alerts. System running smoothly.</p>
-                        ) : (
-                          recentAlerts.slice(0, 3).map((alert) => {
-                            const colors = getSeverityColor(alert.severity || 'low');
-                            return (
-                              <div key={alert.id} className={`${colors.bg} p-3 rounded-md border ${colors.border}`}>
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <p className={`font-medium ${colors.title}`}>{alert.attempt_type}</p>
-                                    <p className={`text-sm ${colors.text}`}>
-                                      {(alert.details as any)?.description || `Severity: ${alert.severity}`}
-                                      {alert.blocked ? ' — Blocked' : ' — Not blocked'}
-                                    </p>
-                                  </div>
-                                  <span className="text-xs text-slate-500">
-                                    {formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <RecentPrompts />
-              </TabsContent>
-
-              <TabsContent value="network" className="space-y-6">
-                <NetworkSettings />
-              </TabsContent>
-
-              <TabsContent value="users" className="space-y-6">
-                <UserManagement />
-              </TabsContent>
-              
-              <TabsContent value="analytics" className="space-y-6">
-                <AnalyticsDashboard />
-              </TabsContent>
-              
-              <TabsContent value="alerts" className="space-y-6">
-                <AlertSettings />
-              </TabsContent>
-              
-              <TabsContent value="help" className="space-y-6">
-                <HelpSupport />
-              </TabsContent>
-            </Tabs>
+            <Button onClick={fetchDashboardData} variant="outline">
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
           </div>
-        </main>
-      </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Total Prompts Filtered</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="text-3xl font-bold">{stats.totalPrompts.toLocaleString()}</div>
+                  <div className="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                    <ArrowUpRight className="h-3 w-3 mr-1" />
+                    Live
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Bypass Attempts Blocked</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="text-3xl font-bold">{stats.bypassBlocked.toLocaleString()}</div>
+                  <div className="bg-amber-100 text-amber-700 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                    <ArrowUpRight className="h-3 w-3 mr-1" />
+                    Live
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Network Protection</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-lg font-medium">Active</div>
+                  <div className="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                    Protected
+                  </div>
+                </div>
+                <div className="text-sm text-slate-500">All entry points secured</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="network">Network</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+              <TabsTrigger value="alerts">Alerts</TabsTrigger>
+              <TabsTrigger value="help">Help & Support</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <NetworkStatus />
+                
+                <Card className="col-span-1">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+                      Alert Activity
+                    </CardTitle>
+                    <CardDescription>Recent bypass attempts and security alerts</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {recentAlerts.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No recent alerts. System running smoothly.</p>
+                      ) : (
+                        recentAlerts.slice(0, 3).map((alert) => {
+                          const colors = getSeverityColor(alert.severity || 'low');
+                          return (
+                            <div key={alert.id} className={`${colors.bg} p-3 rounded-md border ${colors.border}`}>
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className={`font-medium ${colors.title}`}>{alert.attempt_type}</p>
+                                  <p className={`text-sm ${colors.text}`}>
+                                    {(alert.details as any)?.description || `Severity: ${alert.severity}`}
+                                    {alert.blocked ? ' — Blocked' : ' — Not blocked'}
+                                  </p>
+                                </div>
+                                <span className="text-xs text-slate-500">
+                                  {formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <RecentPrompts />
+            </TabsContent>
+
+            <TabsContent value="network" className="space-y-6">
+              <NetworkSettings />
+            </TabsContent>
+
+            <TabsContent value="users" className="space-y-6">
+              <UserManagement />
+            </TabsContent>
+            
+            <TabsContent value="analytics" className="space-y-6">
+              <AnalyticsDashboard />
+            </TabsContent>
+            
+            <TabsContent value="alerts" className="space-y-6">
+              <AlertSettings />
+            </TabsContent>
+            
+            <TabsContent value="help" className="space-y-6">
+              <HelpSupport />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
+    </div>
+  );
+
+  if (isInSchool) return mainContent;
+
+  return (
+    <div className="min-h-screen flex bg-slate-50">
+      <DashboardSidebar />
+      {mainContent}
     </div>
   );
 };
