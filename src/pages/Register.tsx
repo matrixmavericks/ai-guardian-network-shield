@@ -328,38 +328,45 @@ const Register = () => {
                     {/* ─── ADMIN / SCHOOL PLANS ─── */}
                     {role === 'admin' && (
                       <div className="space-y-5">
-                        {/* Volume discount slider */}
-                        <div className="rounded-xl border bg-gradient-to-r from-indigo-50/80 to-violet-50/80 p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-indigo-600" />
-                              <Label className="font-semibold text-sm">Expected Student Count</Label>
+                        {/* Seat configurator */}
+                        <div className="rounded-xl border bg-gradient-to-r from-indigo-50/80 to-violet-50/80 p-5 space-y-4">
+                          <h4 className="font-semibold text-sm flex items-center gap-2"><Users className="h-4 w-4 text-indigo-600" />Configure Your School</h4>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-xs font-medium">Teachers</Label>
+                                <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 text-xs font-bold">{teacherCount}</Badge>
+                              </div>
+                              <Slider value={[teacherCount]} onValueChange={([v]) => setTeacherCount(v)} min={1} max={100} step={1} />
+                              <div className="flex justify-between text-[10px] text-muted-foreground"><span>1</span><span>25</span><span>50</span><span>100</span></div>
                             </div>
-                            <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 text-sm font-bold">{studentCount} students</Badge>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-xs font-medium">Students</Label>
+                                <Badge className="bg-violet-100 text-violet-700 border-violet-200 text-xs font-bold">{studentCount}</Badge>
+                              </div>
+                              <Slider value={[studentCount]} onValueChange={([v]) => setStudentCount(v)} min={10} max={3000} step={10} />
+                              <div className="flex justify-between text-[10px] text-muted-foreground"><span>10</span><span>500</span><span>1,500</span><span>3,000</span></div>
+                            </div>
                           </div>
-                          <Slider
-                            value={[studentCount]}
-                            onValueChange={([v]) => setStudentCount(v)}
-                            min={10}
-                            max={3000}
-                            step={10}
-                            className="py-2"
-                          />
-                          <div className="flex justify-between text-[10px] text-muted-foreground">
-                            <span>10</span>
-                            <span>500</span>
-                            <span>1,000</span>
-                            <span>2,000</span>
-                            <span>3,000</span>
-                          </div>
+
+                          {/* Show discounts for selected plan */}
                           {(() => {
-                            // Show best discount across plans
-                            const discounts = ADMIN_PLAN_CARDS.map(c => getAdminDiscount(c.id)).filter(Boolean);
-                            const best = discounts.length > 0 ? discounts.reduce((a, b) => (a!.discount > b!.discount ? a : b)) : null;
-                            return best ? (
-                              <div className="flex items-center gap-2 text-sm font-semibold text-green-700 bg-green-50 rounded-lg px-3 py-2">
-                                <Percent className="h-4 w-4" />
-                                You qualify for up to {best!.discount}% volume discount!
+                            const cost = calcAdminMonthlyCost(selectedPlan, teacherCount, studentCount, billingCycle === 'yearly');
+                            const hasDiscount = cost.teacherDiscount > 0 || cost.studentDiscount > 0;
+                            return hasDiscount ? (
+                              <div className="flex flex-wrap gap-2">
+                                {cost.teacherDiscount > 0 && (
+                                  <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded-lg px-3 py-1.5">
+                                    <Percent className="h-3 w-3" />{cost.teacherDiscount}% teacher discount
+                                  </div>
+                                )}
+                                {cost.studentDiscount > 0 && (
+                                  <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded-lg px-3 py-1.5">
+                                    <Percent className="h-3 w-3" />{cost.studentDiscount}% student discount
+                                  </div>
+                                )}
                               </div>
                             ) : null;
                           })()}
@@ -368,9 +375,7 @@ const Register = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {ADMIN_PLAN_CARDS.map((card) => {
                             const p = ADMIN_PLANS[card.id];
-                            const disc = getAdminDiscount(card.id);
-                            const effective = getAdminEffectivePrice(card.id);
-                            const displayMonthly = billingCycle === 'monthly' ? effective.monthly : Math.round(effective.yearly / 12);
+                            const cost = calcAdminMonthlyCost(card.id, teacherCount, studentCount, billingCycle === 'yearly');
                             return (
                               <button key={card.id} type="button" onClick={() => setSelectedPlan(card.id)}
                                 className={cn(
@@ -379,24 +384,18 @@ const Register = () => {
                                   selectedPlan === card.id ? "ring-2 ring-primary shadow-md" : "opacity-80 hover:opacity-100"
                                 )}>
                                 {card.popular && <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px]">Most Popular</Badge>}
-                                {disc && <Badge className="absolute -top-2.5 right-2 bg-green-500 text-white text-[10px]">{disc.label}</Badge>}
                                 <div className="flex items-center gap-2 mb-3">
                                   <span className={cn("p-1.5 rounded-lg", card.badgeColor)}>{card.icon}</span>
                                   <span className="font-semibold text-sm">{p.name}</span>
                                 </div>
-                                <div className="mb-3">
-                                  {disc ? (
-                                    <>
-                                      <span className="text-lg line-through text-muted-foreground mr-1">₹{billingCycle === 'monthly' ? p.baseMonthlyPrice : Math.round(p.baseYearlyPrice / 12)}</span>
-                                      <span className="text-2xl font-bold text-green-700">₹{displayMonthly}</span>
-                                    </>
-                                  ) : (
-                                    <span className="text-2xl font-bold">₹{displayMonthly}</span>
-                                  )}
+                                <div className="mb-1">
+                                  <span className="text-2xl font-bold">₹{cost.total.toLocaleString('en-IN')}</span>
                                   <span className="text-sm text-muted-foreground">/mo</span>
-                                  {billingCycle === 'yearly' && (
-                                    <p className="text-xs text-muted-foreground">₹{effective.yearly.toLocaleString('en-IN')} billed yearly</p>
-                                  )}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground mb-3 space-y-0.5">
+                                  <p>Platform: ₹{cost.platform.toLocaleString('en-IN')}</p>
+                                  <p>{teacherCount} teachers: ₹{cost.teacherCost.toLocaleString('en-IN')}{cost.teacherDiscount > 0 && <span className="text-green-600 font-semibold"> (-{cost.teacherDiscount}%)</span>}</p>
+                                  <p>{studentCount} students: ₹{cost.studentCost.toLocaleString('en-IN')}{cost.studentDiscount > 0 && <span className="text-green-600 font-semibold"> (-{cost.studentDiscount}%)</span>}</p>
                                 </div>
                                 <ul className="space-y-1.5">
                                   {p.features.map((f, i) => (
@@ -406,8 +405,8 @@ const Register = () => {
                                   ))}
                                 </ul>
                                 <div className="mt-3 pt-3 border-t text-[10px] text-muted-foreground space-y-0.5">
-                                  <p>Extra teacher: ₹{p.perExtraTeacherMonthly}/mo each</p>
-                                  <p>Extra student: ₹{p.perExtraStudentMonthly}/mo each</p>
+                                  <p>Per teacher: ₹{p.perTeacherMonthly}/mo</p>
+                                  <p>Per student: ₹{p.perStudentMonthly}/mo</p>
                                 </div>
                               </button>
                             );
