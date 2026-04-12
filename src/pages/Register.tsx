@@ -37,7 +37,8 @@ const Register = () => {
   const [formData, setFormData] = useState({ name: "", email: "", requested_role: "student" });
   const [selectedPlan, setSelectedPlan] = useState<string>("standard");
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-  const [studentCount, setStudentCount] = useState<number>(50);
+  const [studentCount, setStudentCount] = useState<number>(100);
+  const [teacherCount, setTeacherCount] = useState<number>(5);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestStatus, setRequestStatus] = useState<'idle' | 'submitted' | 'checking' | 'approved' | 'rejected' | 'pending'>('idle');
   const [rejectionReason, setRejectionReason] = useState("");
