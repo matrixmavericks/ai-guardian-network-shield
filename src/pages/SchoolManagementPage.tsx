@@ -754,3 +754,208 @@ function ToggleRow({ label, desc, checked, onChange }: { label: string; desc: st
     </div>
   );
 }
+
+// ============ PLAN & BILLING TAB ============
+
+function PlanBillingTab({ seatLimits, members, school, onRefresh }: { seatLimits: any; members: any[]; school: SchoolData; onRefresh: () => void }) {
+  const { toast } = useToast();
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeNote, setUpgradeNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const currentPlan = seatLimits ? ADMIN_PLANS[seatLimits.plan_id] : null;
+  const teachersUsed = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
+  const studentsUsed = members.filter(m => m.school_role === 'member').length;
+
+  const currentCost = seatLimits
+    ? calcAdminMonthlyCost(seatLimits.plan_id, seatLimits.teacher_seats, seatLimits.student_seats, seatLimits.billing_cycle === 'yearly')
+    : null;
+
+  const submitUpgradeRequest = async () => {
+    setSubmitting(true);
+    // Store as a registration request for the master admin to review
+    const { error } = await supabase.from('registration_requests').insert({
+      full_name: `[UPGRADE] ${school.name}`,
+      email: school.contact_email || 'admin@school',
+      requested_role: 'admin',
+      status: 'pending',
+      payment_plan: seatLimits?.plan_id ? `${seatLimits.plan_id}_${seatLimits.billing_cycle}` : null,
+      seat_config: { teachers: seatLimits?.teacher_seats || 0, students: seatLimits?.student_seats || 0 },
+    } as any);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Upgrade request submitted', description: 'The administrator will review your request.' });
+      setShowUpgradeDialog(false);
+      setUpgradeNote('');
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Current Plan Card */}
+      <Card className="bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-200">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-indigo-600" />
+                {currentPlan ? currentPlan.name : 'No Plan'} Plan
+              </CardTitle>
+              <CardDescription>
+                {seatLimits ? `${seatLimits.billing_cycle === 'yearly' ? 'Annual' : 'Monthly'} billing` : 'Not configured'}
+              </CardDescription>
+            </div>
+            <Button variant="outline" className="gap-1" onClick={() => setShowUpgradeDialog(true)}>
+              <ArrowUpRight className="h-4 w-4" /> Request Change
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {currentCost && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <div className="rounded-lg bg-white border p-3 text-center">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase">Platform Fee</p>
+                <p className="text-lg font-bold">₹{currentCost.platform.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-muted-foreground">/month</p>
+              </div>
+              <div className="rounded-lg bg-white border p-3 text-center">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase">Teacher Cost</p>
+                <p className="text-lg font-bold">₹{currentCost.teacherCost.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-muted-foreground">{seatLimits.teacher_seats} seats</p>
+              </div>
+              <div className="rounded-lg bg-white border p-3 text-center">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase">Student Cost</p>
+                <p className="text-lg font-bold">₹{currentCost.studentCost.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-muted-foreground">{seatLimits.student_seats} seats</p>
+              </div>
+              <div className="rounded-lg bg-indigo-100 border-indigo-200 border p-3 text-center">
+                <p className="text-[10px] font-medium text-indigo-600 uppercase">Total Monthly</p>
+                <p className="text-lg font-bold text-indigo-800">₹{currentCost.total.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-indigo-600">₹{(currentCost.total * 12).toLocaleString('en-IN')}/yr</p>
+              </div>
+            </div>
+          )}
+
+          {/* Seat usage */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-lg border bg-white p-3">
+              <p className="text-xs text-muted-foreground font-medium mb-1">Teacher Seats</p>
+              <div className="flex items-end gap-1">
+                <span className="text-2xl font-bold">{teachersUsed}</span>
+                <span className="text-muted-foreground text-sm mb-0.5">/ {seatLimits?.teacher_seats || 0}</span>
+              </div>
+              <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-indigo-500 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, (teachersUsed / Math.max(1, seatLimits?.teacher_seats || 1)) * 100)}%` }}
+                />
+              </div>
+            </div>
+            <div className="rounded-lg border bg-white p-3">
+              <p className="text-xs text-muted-foreground font-medium mb-1">Student Seats</p>
+              <div className="flex items-end gap-1">
+                <span className="text-2xl font-bold">{studentsUsed}</span>
+                <span className="text-muted-foreground text-sm mb-0.5">/ {seatLimits?.student_seats || 0}</span>
+              </div>
+              <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-violet-500 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, (studentsUsed / Math.max(1, seatLimits?.student_seats || 1)) * 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Features included */}
+      {currentPlan && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Features Included</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {currentPlan.features.map((f, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Compare plans */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Compare Plans</CardTitle>
+          <CardDescription>See how other plans compare with your current one</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {Object.values(ADMIN_PLANS).map(plan => {
+              const isCurrent = seatLimits?.plan_id === plan.id;
+              const cost = calcAdminMonthlyCost(plan.id, seatLimits?.teacher_seats || 5, seatLimits?.student_seats || 50, false);
+              return (
+                <div key={plan.id} className={`rounded-xl border-2 p-4 transition-all ${isCurrent ? 'border-indigo-400 bg-indigo-50/50 ring-2 ring-indigo-200' : 'border-muted hover:border-muted-foreground/30'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold">{plan.name}</span>
+                    {isCurrent && <Badge className="bg-indigo-100 text-indigo-700 text-[10px]">Current</Badge>}
+                  </div>
+                  <div className="mb-2">
+                    <span className="text-xl font-bold">₹{cost.total.toLocaleString('en-IN')}</span>
+                    <span className="text-xs text-muted-foreground">/mo</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground space-y-0.5 mb-3">
+                    <p>Platform: ₹{plan.platformFeeMonthly.toLocaleString('en-IN')}</p>
+                    <p>Per teacher: ₹{plan.perTeacherMonthly}/mo</p>
+                    <p>Per student: ₹{plan.perStudentMonthly}/mo</p>
+                  </div>
+                  <ul className="space-y-1">
+                    {plan.features.slice(0, 4).map((f, i) => (
+                      <li key={i} className="text-[11px] text-muted-foreground flex items-start gap-1">
+                        <span className="text-green-500">✓</span>{f}
+                      </li>
+                    ))}
+                    {plan.features.length > 4 && (
+                      <li className="text-[11px] text-muted-foreground">+{plan.features.length - 4} more</li>
+                    )}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Upgrade/Change Dialog */}
+      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Plan Change</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Submit a request to the platform administrator to upgrade, downgrade, or modify your plan. Include details about what you'd like to change.
+          </p>
+          <Textarea
+            value={upgradeNote}
+            onChange={e => setUpgradeNote(e.target.value)}
+            placeholder="e.g. We'd like to upgrade to Enterprise plan with 20 teachers and 500 students..."
+            rows={4}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>Cancel</Button>
+            <Button onClick={submitUpgradeRequest} disabled={submitting}>
+              {submitting ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
