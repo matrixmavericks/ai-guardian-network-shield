@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { CheckCircle2, XCircle, Clock, ArrowLeft, Search, CreditCard } from "lucide-react";
 import DashboardSidebar from "@/components/DashboardSidebar";
-import { PLAN_CONFIGS } from "@/hooks/useStudentPlan";
+import { ALL_PLAN_LABELS } from "@/lib/planConfigs";
 
 interface RegistrationRequest {
   id: string;
@@ -26,20 +26,7 @@ interface RegistrationRequest {
   created_at: string;
 }
 
-const PLAN_LABELS: Record<string, string> = {
-  starter_monthly: "Starter – ₹150/mo",
-  starter_yearly: "Starter – ₹1,350/yr",
-  standard_monthly: "Standard – ₹200/mo",
-  standard_yearly: "Standard – ₹1,800/yr",
-  premium_monthly: "Premium – ₹300/mo",
-  premium_yearly: "Premium – ₹2,700/yr",
-};
-
-const TOKEN_LIMITS: Record<string, number> = {
-  starter: 500,
-  standard: 2000,
-  premium: 5000,
-};
+const PLAN_LABELS = ALL_PLAN_LABELS;
 
 const WEBSITE_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
 
