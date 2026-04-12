@@ -203,7 +203,9 @@ export default function SchoolManagementPage() {
                               <span className="flex items-center gap-1"><BookOpen className="h-4 w-4" /> {school.classCount} classes</span>
                             </div>
                             {school.subdomain && (
-                              <Badge variant="outline" className="mt-3"><Globe className="h-3 w-3 mr-1" />{school.subdomain}.refyntech.us</Badge>
+                              <a href={`/s/${school.subdomain}`} target="_blank" rel="noopener noreferrer">
+                                <Badge variant="outline" className="mt-3 cursor-pointer hover:bg-accent"><Globe className="h-3 w-3 mr-1" />{school.subdomain}.refyntech.us</Badge>
+                              </a>
                             )}
                           </CardContent>
                         </Card>
