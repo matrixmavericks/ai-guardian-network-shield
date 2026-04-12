@@ -418,6 +418,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           </div>
         )}
       </div>
+      </FeatureGate>
     </div>
   );
 }
