@@ -75,32 +75,13 @@ const Dashboard = () => {
     }
   };
 
-  if (isInSchool) {
-    return (
-      <div className="flex-1 flex flex-col">
-        <main className="flex-1 p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
-              <Button onClick={fetchDashboardData} variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-              </Button>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen flex bg-slate-50">
-      <DashboardSidebar />
-      <div className="flex-1 flex flex-col">
-        <DashboardNav />
-        <main className="flex-1 p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
+  const content = (
+    <>
+      {!isInSchool && <DashboardNav />}
+      <main className="flex-1 p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
               <Button onClick={fetchDashboardData} variant="outline">
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
