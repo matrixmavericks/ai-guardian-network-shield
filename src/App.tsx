@@ -32,6 +32,7 @@ import TeacherPortfolioReviewPage from './pages/TeacherPortfolioReviewPage';
 import AdminOverviewPage from './pages/AdminOverviewPage';
 import SchoolManagementPage from './pages/SchoolManagementPage';
 import RegistrationRequestsPage from './pages/RegistrationRequestsPage';
+import PlatformWorkflowPage from './pages/PlatformWorkflowPage';
 
 const ProtectedRoute = ({ 
   children, 
