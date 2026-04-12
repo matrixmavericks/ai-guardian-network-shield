@@ -1493,6 +1493,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          payment_plan: string | null
           rejection_reason: string | null
           requested_role: string
           reviewed_at: string | null
@@ -1505,6 +1506,7 @@ export type Database = {
           email: string
           full_name: string
           id?: string
+          payment_plan?: string | null
           rejection_reason?: string | null
           requested_role?: string
           reviewed_at?: string | null
@@ -1517,6 +1519,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          payment_plan?: string | null
           rejection_reason?: string | null
           requested_role?: string
           reviewed_at?: string | null
