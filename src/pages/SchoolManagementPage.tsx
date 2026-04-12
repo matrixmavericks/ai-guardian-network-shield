@@ -216,8 +216,16 @@ export default function SchoolManagementPage() {
               </Tabs>
             )}
           </div>
-        </main>
-      </div>
+      </main>
+    </div>
+  );
+
+  if (isInSchool) return mainContent;
+
+  return (
+    <div className="min-h-screen flex bg-slate-50">
+      <DashboardSidebar />
+      {mainContent}
     </div>
   );
 }
