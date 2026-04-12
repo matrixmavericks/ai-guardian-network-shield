@@ -5,6 +5,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Map school plan tiers to individual plan IDs
+const SCHOOL_TO_INDIVIDUAL_PLAN: Record<string, { student: string; teacher: string }> = {
+  school_starter: { student: "starter", teacher: "teacher_individual" },
+  school_growth: { student: "standard", teacher: "teacher_pro" },
+  school_enterprise: { student: "premium", teacher: "teacher_pro" },
+};
+
+const TOKEN_LIMITS: Record<string, number> = {
+  starter: 500,
+  standard: 2000,
+  premium: 5000,
+  teacher_individual: 99999,
+  teacher_pro: 99999,
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -23,16 +38,36 @@ Deno.serve(async (req) => {
     const { data: { user: caller } } = await userClient.auth.getUser();
     if (!caller) throw new Error("Unauthorized");
 
-    // Check if caller has admin role
     const { data: roles } = await userClient.from("user_roles").select("role").eq("user_id", caller.id);
     const isAdmin = roles?.some((r: any) => r.role === "admin");
     if (!isAdmin) throw new Error("Only admins can create accounts");
 
-    const { email, password, fullName, role, schoolId, planId, billingCycle } = await req.json();
+    const { email, password, fullName, role, schoolId } = await req.json();
     if (!email || !password || !fullName || !role) throw new Error("Missing required fields");
 
-    // Use service role to create auth user
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // If school provided, check seat limits before creating
+    let schoolSeats: any = null;
+    if (schoolId) {
+      const { data: seats } = await adminClient
+        .from("school_seat_limits")
+        .select("*")
+        .eq("school_id", schoolId)
+        .maybeSingle();
+
+      schoolSeats = seats;
+
+      if (seats) {
+        const isTeacher = role === "teacher";
+        if (isTeacher && seats.teachers_used >= seats.teacher_seats) {
+          throw new Error(`Teacher seat limit reached (${seats.teacher_seats}). Upgrade your plan for more seats.`);
+        }
+        if (!isTeacher && seats.students_used >= seats.student_seats) {
+          throw new Error(`Student seat limit reached (${seats.student_seats}). Upgrade your plan for more seats.`);
+        }
+      }
+    }
 
     // Create auth user
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
@@ -60,7 +95,7 @@ Deno.serve(async (req) => {
       role: role,
     });
 
-    // If school provided, add as school member
+    // If school provided, add as school member and inherit plan
     if (schoolId) {
       const schoolRole = role === "teacher" ? "teacher" : "member";
       await adminClient.from("school_members").insert({
@@ -70,48 +105,31 @@ Deno.serve(async (req) => {
       });
 
       // Update seat usage
-      const { data: seats } = await adminClient
-        .from("school_seat_limits")
-        .select("*")
-        .eq("school_id", schoolId)
-        .maybeSingle();
-
-      if (seats) {
+      if (schoolSeats) {
         const isTeacher = role === "teacher";
         await adminClient.from("school_seat_limits").update(
           isTeacher
-            ? { teachers_used: (seats.teachers_used || 0) + 1 }
-            : { students_used: (seats.students_used || 0) + 1 }
+            ? { teachers_used: (schoolSeats.teachers_used || 0) + 1 }
+            : { students_used: (schoolSeats.students_used || 0) + 1 }
         ).eq("school_id", schoolId);
+
+        // Inherit plan from school
+        const schoolPlanId = schoolSeats.plan_id || "school_starter";
+        const billingCycle = schoolSeats.billing_cycle || "monthly";
+        const mapping = SCHOOL_TO_INDIVIDUAL_PLAN[schoolPlanId] || SCHOOL_TO_INDIVIDUAL_PLAN["school_starter"];
+        const individualPlanId = isTeacher ? mapping.teacher : mapping.student;
+        const tokenLimit = TOKEN_LIMITS[individualPlanId] || 500;
+
+        await adminClient.from("user_plans").insert({
+          user_id: userId,
+          plan_id: individualPlanId,
+          billing_cycle: billingCycle,
+          monthly_token_limit: tokenLimit,
+          tokens_used_this_month: 0,
+          status: "active",
+          assigned_by: caller.id,
+        });
       }
-    }
-
-    // Create user plan - auto-fetch from school's seat limits if not provided
-    let effectivePlanId = planId;
-    let effectiveBillingCycle = billingCycle || "monthly";
-
-    if (!effectivePlanId && schoolId) {
-      const { data: seatData } = await adminClient
-        .from("school_seat_limits")
-        .select("plan_id, billing_cycle")
-        .eq("school_id", schoolId)
-        .maybeSingle();
-
-      if (seatData) {
-        effectivePlanId = seatData.plan_id;
-        effectiveBillingCycle = seatData.billing_cycle || "monthly";
-      }
-    }
-
-    if (effectivePlanId) {
-      await adminClient.from("user_plans").insert({
-        user_id: userId,
-        plan_id: effectivePlanId,
-        billing_cycle: effectiveBillingCycle,
-        monthly_token_limit: 99999,
-        tokens_used_this_month: 0,
-        status: "active",
-      });
     }
 
     return new Response(JSON.stringify({ success: true, userId }), {
