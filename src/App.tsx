@@ -33,6 +33,7 @@ import AdminOverviewPage from './pages/AdminOverviewPage';
 import SchoolManagementPage from './pages/SchoolManagementPage';
 import RegistrationRequestsPage from './pages/RegistrationRequestsPage';
 import PlatformWorkflowPage from './pages/PlatformWorkflowPage';
+import SchoolPortalPage from './pages/SchoolPortalPage';
 
 const ProtectedRoute = ({ 
   children, 
