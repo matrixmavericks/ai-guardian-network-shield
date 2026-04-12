@@ -255,6 +255,7 @@ const StudentInterface = () => {
   return (
     <div className="flex h-screen bg-background">
       <DashboardSidebar />
+      <FeatureGate feature="aiAssistant" className="flex-1">
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="border-b border-border px-6 py-3 flex items-center justify-between shrink-0 bg-card">
