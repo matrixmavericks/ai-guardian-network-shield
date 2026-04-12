@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import DashboardNav from '@/components/DashboardNav';
+import { useSchoolCheck } from '@/hooks/useSchoolCheck';
 import { useToast } from '@/components/ui/use-toast';
 import {
   School, Plus, Settings2, Users, Brain, Trash2, UserPlus,
