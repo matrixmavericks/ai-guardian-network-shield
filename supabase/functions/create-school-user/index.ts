@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.78.0";
+import { getMonthlyTokenLimitForPlan, resolvePlanForSchoolMembership } from "../_shared/schoolPlanMapping.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,25 +17,21 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify the caller is an admin
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user: caller } } = await userClient.auth.getUser();
     if (!caller) throw new Error("Unauthorized");
 
-    // Check if caller has admin role
     const { data: roles } = await userClient.from("user_roles").select("role").eq("user_id", caller.id);
-    const isAdmin = roles?.some((r: any) => r.role === "admin");
+    const isAdmin = roles?.some((r: { role: string }) => r.role === "admin");
     if (!isAdmin) throw new Error("Only admins can create accounts");
 
     const { email, password, fullName, role, schoolId, planId, billingCycle } = await req.json();
     if (!email || !password || !fullName || !role) throw new Error("Missing required fields");
 
-    // Use service role to create auth user
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Create auth user
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -47,29 +44,29 @@ Deno.serve(async (req) => {
 
     const userId = newUser.user.id;
 
-    // Create profile
     await adminClient.from("profiles").insert({
       user_id: userId,
       full_name: fullName,
       email: email.toLowerCase(),
     });
 
-    // Assign role
     await adminClient.from("user_roles").insert({
       user_id: userId,
-      role: role,
+      role,
     });
 
-    // If school provided, add as school member
+    let effectivePlanId = planId;
+    let effectiveBillingCycle = billingCycle || "monthly";
+    let monthlyTokenLimit = effectivePlanId ? getMonthlyTokenLimitForPlan(effectivePlanId) : 99999;
+
     if (schoolId) {
-      const schoolRole = role === "teacher" ? "teacher" : "member";
+      const schoolRole = role === "teacher" ? "teacher" : role === "admin" ? "admin" : "member";
       await adminClient.from("school_members").insert({
         school_id: schoolId,
         user_id: userId,
         school_role: schoolRole,
       });
 
-      // Update seat usage
       const { data: seats } = await adminClient
         .from("school_seat_limits")
         .select("*")
@@ -77,29 +74,19 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (seats) {
-        const isTeacher = role === "teacher";
+        const isTeacher = role === "teacher" || role === "admin";
         await adminClient.from("school_seat_limits").update(
           isTeacher
             ? { teachers_used: (seats.teachers_used || 0) + 1 }
             : { students_used: (seats.students_used || 0) + 1 }
         ).eq("school_id", schoolId);
-      }
-    }
 
-    // Create user plan - auto-fetch from school's seat limits if not provided
-    let effectivePlanId = planId;
-    let effectiveBillingCycle = billingCycle || "monthly";
-
-    if (!effectivePlanId && schoolId) {
-      const { data: seatData } = await adminClient
-        .from("school_seat_limits")
-        .select("plan_id, billing_cycle")
-        .eq("school_id", schoolId)
-        .maybeSingle();
-
-      if (seatData) {
-        effectivePlanId = seatData.plan_id;
-        effectiveBillingCycle = seatData.billing_cycle || "monthly";
+        const schoolTargetPlan = resolvePlanForSchoolMembership(seats.plan_id, schoolRole);
+        if (schoolTargetPlan) {
+          effectivePlanId = schoolTargetPlan.planId;
+          effectiveBillingCycle = seats.billing_cycle || "monthly";
+          monthlyTokenLimit = schoolTargetPlan.monthlyTokenLimit;
+        }
       }
     }
 
@@ -108,17 +95,19 @@ Deno.serve(async (req) => {
         user_id: userId,
         plan_id: effectivePlanId,
         billing_cycle: effectiveBillingCycle,
-        monthly_token_limit: 99999,
+        monthly_token_limit: monthlyTokenLimit,
         tokens_used_this_month: 0,
         status: "active",
+        assigned_by: caller.id,
       });
     }
 
-    return new Response(JSON.stringify({ success: true, userId }), {
+    return new Response(JSON.stringify({ success: true, userId, planId: effectivePlanId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

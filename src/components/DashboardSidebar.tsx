@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users, DollarSign, Briefcase, Activity, Building2, ClipboardList, Workflow } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,11 @@ import { useAuth } from '@/contexts/AuthContext';
 const DashboardSidebar = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  if (location.pathname.startsWith('/s/')) {
+    return null;
+  }
 
   const handleLogout = async () => {
     await logout();
