@@ -234,6 +234,12 @@ const RegistrationRequestsPage = () => {
                           Plan: {PLAN_LABELS[req.payment_plan] || req.payment_plan}
                         </p>
                       )}
+                      {req.seat_config && (
+                        <p className="text-xs font-medium text-violet-600 flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          Seats: {req.seat_config.teachers} teachers, {req.seat_config.students} students
+                        </p>
+                      )}
                       {req.rejection_reason && (
                         <p className="text-xs text-red-600">Reason: {req.rejection_reason}</p>
                       )}
