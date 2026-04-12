@@ -11,10 +11,12 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import FeatureGate from "@/components/FeatureGate";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "react-router-dom";
+import { useStudentPlan } from "@/hooks/useStudentPlan";
 
 interface ChatMessage {
   id: string;
