@@ -159,7 +159,7 @@ const FeatureGate: React.FC<FeatureGateProps> = ({
   if (isLoading) return <>{children}</>;
 
   if (!plan || !hasFeature(feature)) {
-    const info = featureInfo[feature] || {
+    const info: { title: string; description: string; minPlan: string; icon: React.ReactNode; benefit: string; stats?: string } = featureInfo[feature] || {
       title: fallbackTitle || 'Premium Feature',
       description: fallbackDescription || 'Upgrade your plan to unlock this feature.',
       minPlan: 'standard',
