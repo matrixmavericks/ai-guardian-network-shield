@@ -32,7 +32,7 @@ const DEFAULT_ROLE = 'student';
 export const useAuth = () => useContext(AuthContext);
 
 const getSafeRole = (requestedRole?: string | null) => {
-  return requestedRole === 'teacher' || requestedRole === 'parent' ? requestedRole : DEFAULT_ROLE;
+  return requestedRole === 'teacher' || requestedRole === 'parent' || requestedRole === 'admin' ? requestedRole : DEFAULT_ROLE;
 };
 
 const getFallbackAuthUser = (supabaseUser: User, role = getSafeRole(supabaseUser.user_metadata?.requested_role)) => ({
