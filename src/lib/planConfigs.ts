@@ -166,92 +166,137 @@ export const TEACHER_PLANS: Record<string, TeacherPlanConfig> = {
 };
 
 // ─── School Admin Plans ───
+// Pure per-seat pricing — no bundled counts. Teachers & students are fully customizable.
 export interface AdminPlanConfig {
   id: string;
   name: string;
-  baseMonthlyPrice: number;
-  baseYearlyPrice: number;
-  includedTeachers: number;
-  includedStudents: number;
-  perExtraTeacherMonthly: number;
-  perExtraStudentMonthly: number;
+  platformFeeMonthly: number; // base platform access fee
+  platformFeeYearly: number;
+  perTeacherMonthly: number;
+  perStudentMonthly: number;
   features: string[];
-  volumeDiscounts: { minStudents: number; discount: number; label: string }[];
+  teacherDiscounts: { min: number; discount: number }[];
+  studentDiscounts: { min: number; discount: number }[];
 }
 
 export const ADMIN_PLANS: Record<string, AdminPlanConfig> = {
   school_starter: {
     id: 'school_starter',
-    name: 'School Starter',
-    baseMonthlyPrice: 3000,
-    baseYearlyPrice: 27000,
-    includedTeachers: 5,
-    includedStudents: 50,
-    perExtraTeacherMonthly: 300,
-    perExtraStudentMonthly: 80,
+    name: 'Starter',
+    platformFeeMonthly: 1000,
+    platformFeeYearly: 9000,
+    perTeacherMonthly: 350,
+    perStudentMonthly: 100,
     features: [
-      '5 teacher accounts included',
-      '50 student accounts included',
       'School dashboard & branding',
       'Centralized class management',
       'Basic AI configuration',
       'Usage analytics & reporting',
+      'Email support',
     ],
-    volumeDiscounts: [
-      { minStudents: 100, discount: 10, label: '10% off' },
-      { minStudents: 250, discount: 20, label: '20% off' },
-      { minStudents: 500, discount: 30, label: '30% off' },
+    teacherDiscounts: [
+      { min: 5, discount: 5 },
+      { min: 10, discount: 10 },
+      { min: 20, discount: 15 },
+    ],
+    studentDiscounts: [
+      { min: 50, discount: 5 },
+      { min: 100, discount: 10 },
+      { min: 250, discount: 15 },
+      { min: 500, discount: 25 },
     ],
   },
   school_growth: {
     id: 'school_growth',
-    name: 'School Growth',
-    baseMonthlyPrice: 8000,
-    baseYearlyPrice: 72000,
-    includedTeachers: 15,
-    includedStudents: 200,
-    perExtraTeacherMonthly: 250,
-    perExtraStudentMonthly: 60,
+    name: 'Growth',
+    platformFeeMonthly: 2500,
+    platformFeeYearly: 22500,
+    perTeacherMonthly: 300,
+    perStudentMonthly: 80,
     features: [
-      '15 teacher accounts included',
-      '200 student accounts included',
       'Everything in Starter',
       'Advanced AI controls & content filtering',
       'Custom grading systems',
       'Parent portal access',
       'Priority support',
+      'Live quiz & assessment tools',
     ],
-    volumeDiscounts: [
-      { minStudents: 300, discount: 15, label: '15% off' },
-      { minStudents: 500, discount: 25, label: '25% off' },
-      { minStudents: 1000, discount: 35, label: '35% off' },
+    teacherDiscounts: [
+      { min: 5, discount: 8 },
+      { min: 15, discount: 15 },
+      { min: 30, discount: 22 },
+    ],
+    studentDiscounts: [
+      { min: 100, discount: 10 },
+      { min: 300, discount: 20 },
+      { min: 500, discount: 30 },
+      { min: 1000, discount: 40 },
     ],
   },
   school_enterprise: {
     id: 'school_enterprise',
-    name: 'School Enterprise',
-    baseMonthlyPrice: 15000,
-    baseYearlyPrice: 135000,
-    includedTeachers: 50,
-    includedStudents: 500,
-    perExtraTeacherMonthly: 200,
-    perExtraStudentMonthly: 40,
+    name: 'Enterprise',
+    platformFeeMonthly: 5000,
+    platformFeeYearly: 45000,
+    perTeacherMonthly: 250,
+    perStudentMonthly: 60,
     features: [
-      '50 teacher accounts included',
-      '500 student accounts included',
       'Everything in Growth',
       'Custom AI model training',
       'Multi-campus support',
       'API access & LMS integration',
       'Dedicated account manager',
       'SLA guarantee',
+      'White-label options',
     ],
-    volumeDiscounts: [
-      { minStudents: 750, discount: 20, label: '20% off' },
-      { minStudents: 1500, discount: 35, label: '35% off' },
-      { minStudents: 3000, discount: 45, label: '45% off' },
+    teacherDiscounts: [
+      { min: 10, discount: 10 },
+      { min: 25, discount: 20 },
+      { min: 50, discount: 30 },
+    ],
+    studentDiscounts: [
+      { min: 200, discount: 15 },
+      { min: 500, discount: 25 },
+      { min: 1000, discount: 35 },
+      { min: 2000, discount: 45 },
     ],
   },
+};
+
+// Helper: get volume discount for a count
+export const getVolumeDiscount = (
+  discounts: { min: number; discount: number }[],
+  count: number
+): number => {
+  let best = 0;
+  for (const d of discounts) {
+    if (count >= d.min && d.discount > best) best = d.discount;
+  }
+  return best;
+};
+
+// Helper: calculate admin plan total monthly cost
+export const calcAdminMonthlyCost = (
+  planId: string,
+  teacherCount: number,
+  studentCount: number,
+  yearly: boolean
+): { platform: number; teacherCost: number; studentCost: number; teacherDiscount: number; studentDiscount: number; total: number } => {
+  const plan = ADMIN_PLANS[planId];
+  if (!plan) return { platform: 0, teacherCost: 0, studentCost: 0, teacherDiscount: 0, studentDiscount: 0, total: 0 };
+
+  const platform = yearly ? Math.round(plan.platformFeeYearly / 12) : plan.platformFeeMonthly;
+  const tDisc = getVolumeDiscount(plan.teacherDiscounts, teacherCount);
+  const sDisc = getVolumeDiscount(plan.studentDiscounts, studentCount);
+
+  const tRate = plan.perTeacherMonthly * (1 - tDisc / 100);
+  const sRate = plan.perStudentMonthly * (1 - sDisc / 100);
+
+  const teacherCost = Math.round(tRate * teacherCount);
+  const studentCost = Math.round(sRate * studentCount);
+  const total = platform + teacherCost + studentCost;
+
+  return { platform, teacherCost, studentCost, teacherDiscount: tDisc, studentDiscount: sDisc, total };
 };
 
 // Backward compat
@@ -272,11 +317,11 @@ export const ALL_PLAN_LABELS: Record<string, string> = {
   teacher_pro_yearly: 'Pro Teacher – ₹7,200/yr',
   teacher_master_monthly: 'Master Teacher – ₹1,200/mo',
   teacher_master_yearly: 'Master Teacher – ₹10,800/yr',
-  // Admin
-  school_starter_monthly: 'School Starter – ₹3,000/mo',
-  school_starter_yearly: 'School Starter – ₹27,000/yr',
-  school_growth_monthly: 'School Growth – ₹8,000/mo',
-  school_growth_yearly: 'School Growth – ₹72,000/yr',
-  school_enterprise_monthly: 'School Enterprise – ₹15,000/mo',
-  school_enterprise_yearly: 'School Enterprise – ₹1,35,000/yr',
+  // Admin (dynamic, label generated at runtime)
+  school_starter_monthly: 'School Starter (custom)',
+  school_starter_yearly: 'School Starter (custom)',
+  school_growth_monthly: 'School Growth (custom)',
+  school_growth_yearly: 'School Growth (custom)',
+  school_enterprise_monthly: 'School Enterprise (custom)',
+  school_enterprise_yearly: 'School Enterprise (custom)',
 };
