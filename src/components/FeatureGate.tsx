@@ -1,5 +1,6 @@
 import React from 'react';
 import { useStudentPlan, PLAN_CONFIGS, type PlanConfig } from '@/hooks/useStudentPlan';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Lock, Sparkles, Zap, Crown, ArrowUpRight, Star, Rocket, TrendingUp, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
