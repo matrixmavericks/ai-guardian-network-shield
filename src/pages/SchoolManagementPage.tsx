@@ -127,8 +127,8 @@ export default function SchoolManagementPage() {
     })));
   };
 
-  const currentPlanConfig = adminPlan ? ADMIN_PLANS[adminPlan.plan_id] : null;
-  const planFeatures = adminPlan ? PLAN_FEATURES[adminPlan.plan_id] || PLAN_FEATURES.school_starter : null;
+  const currentPlanConfig = adminPlan ? (ADMIN_PLANS[adminPlan.plan_id] || { name: 'Unlimited', platformFee: 0, perTeacher: 0, perStudent: 0, features: ['All features unlocked', 'Unlimited seats', 'Full platform access'] }) : null;
+  const planFeatures = adminPlan ? (PLAN_FEATURES[adminPlan.plan_id] || PLAN_FEATURES.school_enterprise) : null;
 
   return (
     <div className="min-h-screen flex bg-slate-50">
