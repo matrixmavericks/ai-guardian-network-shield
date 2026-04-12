@@ -164,6 +164,9 @@ async function ensureUserSetup(supabaseUser: User) {
         throw roleInsertError;
       }
     }
+
+    // Provision plan/school on first login if not yet done
+    await provisionUserOnFirstLogin(supabaseUser);
   } catch (error) {
     if (isNetworkError(error)) {
       console.warn('Skipping user setup because the network is temporarily unavailable.', error);
@@ -171,6 +174,121 @@ async function ensureUserSetup(supabaseUser: User) {
     }
 
     throw error;
+  }
+}
+
+async function provisionUserOnFirstLogin(supabaseUser: User) {
+  try {
+    // Check if user already has a plan
+    const { data: existingPlan } = await supabase
+      .from('user_plans')
+      .select('id')
+      .eq('user_id', supabaseUser.id)
+      .limit(1);
+
+    if (existingPlan && existingPlan.length > 0) return; // Already provisioned
+
+    // Check for completed registration request
+    const { data: reqData } = await supabase
+      .from('registration_requests')
+      .select('payment_plan, seat_config, requested_role, status')
+      .eq('email', (supabaseUser.email || '').toLowerCase())
+      .eq('status', 'completed')
+      .limit(1);
+
+    if (!reqData || reqData.length === 0) return;
+
+    const req = reqData[0];
+    const paymentPlan = req.payment_plan;
+    const seatConfig = req.seat_config as { teachers: number; students: number } | null;
+    const reqRole = req.requested_role;
+
+    if (!paymentPlan) return;
+
+    // Student plan provisioning
+    if (reqRole === 'student') {
+      const planParts = paymentPlan.split('_');
+      const planId = planParts[0] || 'starter';
+      const billingCycle = planParts[1] || 'monthly';
+      const tokenLimits: Record<string, number> = { starter: 500, standard: 2000, premium: 5000 };
+
+      await supabase.from('user_plans').insert({
+        user_id: supabaseUser.id,
+        plan_id: planId,
+        billing_cycle: billingCycle,
+        monthly_token_limit: tokenLimits[planId] || 500,
+        tokens_used_this_month: 0,
+        status: 'active',
+      } as any);
+    }
+
+    // Teacher plan provisioning
+    if (reqRole === 'teacher') {
+      const planParts = paymentPlan.split('_');
+      const planId = planParts.slice(0, -1).join('_') || 'teacher_individual';
+      const billingCycle = planParts[planParts.length - 1] || 'monthly';
+
+      await supabase.from('user_plans').insert({
+        user_id: supabaseUser.id,
+        plan_id: planId,
+        billing_cycle: billingCycle,
+        monthly_token_limit: 99999,
+        tokens_used_this_month: 0,
+        status: 'active',
+      } as any);
+    }
+
+    // Admin plan provisioning — create school + seats
+    if (reqRole === 'admin' && seatConfig) {
+      // Check if admin already has a school
+      const { data: existingSchools } = await supabase
+        .from('school_members')
+        .select('school_id')
+        .eq('user_id', supabaseUser.id)
+        .limit(1);
+
+      if (existingSchools && existingSchools.length > 0) return;
+
+      const planParts = paymentPlan.split('_');
+      const planId = planParts.slice(0, -1).join('_') || 'school_starter';
+      const billingCycle = planParts[planParts.length - 1] || 'monthly';
+
+      const userName = supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Admin';
+
+      const { data: schoolData } = await supabase.from('schools').insert({
+        name: `${userName}'s School`,
+        created_by: supabaseUser.id,
+        contact_email: supabaseUser.email || null,
+      } as any).select().single();
+
+      if (schoolData) {
+        const schoolId = (schoolData as any).id;
+
+        await Promise.all([
+          supabase.from('school_members').insert({
+            school_id: schoolId, user_id: supabaseUser.id, school_role: 'admin',
+          } as any),
+          supabase.from('school_ai_settings').insert({ school_id: schoolId } as any),
+          supabase.from('school_seat_limits').insert({
+            school_id: schoolId, plan_id: planId, billing_cycle: billingCycle,
+            teacher_seats: seatConfig.teachers || 0, student_seats: seatConfig.students || 0,
+            teachers_used: 0, students_used: 0,
+          } as any),
+        ]);
+      }
+
+      // Also create user_plan for the admin
+      await supabase.from('user_plans').insert({
+        user_id: supabaseUser.id,
+        plan_id: planId,
+        billing_cycle: billingCycle,
+        monthly_token_limit: 99999,
+        tokens_used_this_month: 0,
+        status: 'active',
+      } as any);
+    }
+  } catch (error) {
+    console.error('Provisioning error (non-fatal):', error);
   }
 }
 
