@@ -586,7 +586,7 @@ function CreateSchoolDialog({ userId, planFeatures, seatLimits, adminPlanId, bil
             <span className="text-sm text-muted-foreground whitespace-nowrap">.refyntech.us</span>
           </div>
           {canSetSubdomain && form.subdomain && (
-            <p className="text-xs text-muted-foreground">Your school will be accessible at <strong>{form.subdomain}.refyntech.us</strong></p>
+            <p className="text-xs text-muted-foreground">Your school portal will be at <strong>/s/{form.subdomain}</strong> (accessible as <strong>{form.subdomain}.refyntech.us</strong> with DNS configured)</p>
           )}
         </div>
 
