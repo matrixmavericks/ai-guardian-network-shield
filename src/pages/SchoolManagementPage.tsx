@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardSidebar from '@/components/DashboardSidebar';
@@ -19,52 +19,41 @@ import { useToast } from '@/components/ui/use-toast';
 import {
   School, Plus, Settings2, Users, Brain, Trash2, UserPlus,
   Shield, BookOpen, RefreshCw, Building2, Globe, Mail, MapPin,
-  CreditCard, TrendingUp, ArrowUpRight, IndianRupee
+  CreditCard, TrendingUp, ArrowUpRight, IndianRupee, CheckCircle2,
+  Palette, Link2, Crown, Zap
 } from 'lucide-react';
-import { ADMIN_PLANS, calcAdminMonthlyCost } from '@/lib/planConfigs';
+import { ADMIN_PLANS, calcAdminMonthlyCost, type AdminPlanConfig } from '@/lib/planConfigs';
 
 const AI_MODELS = [
-  'google/gemini-2.5-pro',
-  'google/gemini-2.5-flash',
-  'google/gemini-2.5-flash-lite',
-  'google/gemini-3-flash-preview',
-  'google/gemini-3.1-pro-preview',
-  'openai/gpt-5',
-  'openai/gpt-5-mini',
-  'openai/gpt-5-nano',
-  'openai/gpt-5.2',
+  'google/gemini-2.5-pro', 'google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite',
+  'google/gemini-3-flash-preview', 'google/gemini-3.1-pro-preview',
+  'openai/gpt-5', 'openai/gpt-5-mini', 'openai/gpt-5-nano', 'openai/gpt-5.2',
 ];
 
 interface SchoolData {
-  id: string;
-  name: string;
-  description: string;
-  logo_url: string | null;
-  domain: string | null;
-  contact_email: string | null;
-  address: string | null;
-  created_at: string;
-  memberCount?: number;
-  classCount?: number;
+  id: string; name: string; description: string; logo_url: string | null;
+  domain: string | null; contact_email: string | null; address: string | null;
+  created_at: string; subdomain?: string | null; theme_config?: any;
+  memberCount?: number; classCount?: number;
 }
 
 interface SchoolAISettings {
-  id?: string;
-  school_id: string;
-  allowed_ai_models: string[];
-  max_daily_prompts_per_student: number;
-  max_monthly_cost_usd: number;
-  blocked_keywords: string[];
-  process_mode_enabled: boolean;
-  allow_student_chat: boolean;
-  allow_capstone_ai_grading: boolean;
-  allow_learning_path_generation: boolean;
-  custom_system_prompt: string;
-  grade_level_restrictions: string[];
-  subject_restrictions: string[];
+  id?: string; school_id: string; allowed_ai_models: string[];
+  max_daily_prompts_per_student: number; max_monthly_cost_usd: number;
+  blocked_keywords: string[]; process_mode_enabled: boolean;
+  allow_student_chat: boolean; allow_capstone_ai_grading: boolean;
+  allow_learning_path_generation: boolean; custom_system_prompt: string;
+  grade_level_restrictions: string[]; subject_restrictions: string[];
 }
 
 const WEBSITE_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
+
+// ─── Plan tier feature gates ───
+const PLAN_FEATURES: Record<string, { customDomain: boolean; whiteLabel: boolean; multiCampus: boolean; apiAccess: boolean; customTraining: boolean }> = {
+  school_starter: { customDomain: false, whiteLabel: false, multiCampus: false, apiAccess: false, customTraining: false },
+  school_growth: { customDomain: true, whiteLabel: false, multiCampus: false, apiAccess: false, customTraining: false },
+  school_enterprise: { customDomain: true, whiteLabel: true, multiCampus: true, apiAccess: true, customTraining: true },
+};
 
 export default function SchoolManagementPage() {
   const { user } = useAuth();
@@ -73,44 +62,73 @@ export default function SchoolManagementPage() {
   const [loading, setLoading] = useState(true);
   const [selectedSchool, setSelectedSchool] = useState<SchoolData | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [adminPlan, setAdminPlan] = useState<any>(null);
+  const [seatLimits, setSeatLimits] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('billing');
 
   const isMasterAdmin = user?.email === WEBSITE_ADMIN_EMAIL;
 
-  useEffect(() => { fetchSchools(); }, []);
+  useEffect(() => { fetchAll(); }, []);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    await Promise.all([fetchSchools(), fetchAdminPlan()]);
+    setLoading(false);
+  };
+
+  const fetchAdminPlan = async () => {
+    if (!user?.id) return;
+    // Fetch the admin's personal plan
+    const { data: planData } = await supabase
+      .from('user_plans')
+      .select('*')
+      .eq('user_id', user.id)
+      .limit(1);
+    if (planData && planData.length > 0) setAdminPlan(planData[0]);
+
+    // Fetch seat limits from any school the admin owns
+    const { data: mySchools } = await supabase
+      .from('school_members')
+      .select('school_id')
+      .eq('user_id', user.id)
+      .eq('school_role', 'admin');
+    if (mySchools && mySchools.length > 0) {
+      const { data: seats } = await supabase
+        .from('school_seat_limits')
+        .select('*')
+        .eq('school_id', mySchools[0].school_id)
+        .maybeSingle();
+      setSeatLimits(seats);
+    }
+  };
 
   const fetchSchools = async () => {
-    setLoading(true);
-
     let schoolsData: any[] = [];
-
     if (isMasterAdmin) {
-      // Master admin sees all schools
       const { data } = await supabase.from('schools').select('*').order('created_at', { ascending: false });
       schoolsData = data || [];
     } else {
-      // School admin only sees schools they are a member of
       const { data: myMemberships } = await supabase
-        .from('school_members')
-        .select('school_id')
-        .eq('user_id', user?.id || '');
-      const mySchoolIds = (myMemberships || []).map((m: any) => m.school_id);
-      if (mySchoolIds.length > 0) {
-        const { data } = await supabase.from('schools').select('*').in('id', mySchoolIds).order('created_at', { ascending: false });
+        .from('school_members').select('school_id').eq('user_id', user?.id || '');
+      const ids = (myMemberships || []).map((m: any) => m.school_id);
+      if (ids.length > 0) {
+        const { data } = await supabase.from('schools').select('*').in('id', ids).order('created_at', { ascending: false });
         schoolsData = data || [];
       }
     }
-
-    const { data: members } = await supabase.from('school_members').select('school_id');
-    const { data: classes } = await supabase.from('classes').select('school_id');
-
-    const enriched = schoolsData.map((s: any) => ({
+    const [{ data: members }, { data: classes }] = await Promise.all([
+      supabase.from('school_members').select('school_id'),
+      supabase.from('classes').select('school_id'),
+    ]);
+    setSchools(schoolsData.map((s: any) => ({
       ...s,
       memberCount: (members || []).filter((m: any) => m.school_id === s.id).length,
       classCount: (classes || []).filter((c: any) => c.school_id === s.id).length,
-    }));
-    setSchools(enriched);
-    setLoading(false);
+    })));
   };
+
+  const currentPlanConfig = adminPlan ? ADMIN_PLANS[adminPlan.plan_id] : null;
+  const planFeatures = adminPlan ? PLAN_FEATURES[adminPlan.plan_id] || PLAN_FEATURES.school_starter : null;
 
   return (
     <div className="min-h-screen flex bg-slate-50">
@@ -121,59 +139,87 @@ export default function SchoolManagementPage() {
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
-                  <Building2 className="h-8 w-8 text-blue-600" />
-                  School Ecosystem Management
+                <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+                  <Building2 className="h-8 w-8 text-primary" />
+                  School Management
                 </h1>
-                <p className="text-muted-foreground mt-1">Create and manage separate school environments with independent AI settings</p>
+                <p className="text-muted-foreground mt-1">Manage your admin plan, billing, and school ecosystems</p>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={fetchSchools} variant="outline" size="sm"><RefreshCw className="h-4 w-4 mr-1" /> Refresh</Button>
-                <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                  <DialogTrigger asChild>
-                    <Button className="gap-2"><Plus className="h-4 w-4" /> Create School</Button>
-                  </DialogTrigger>
-                  <CreateSchoolDialog userId={user?.id || ''} onCreated={() => { fetchSchools(); setShowCreateDialog(false); }} />
-                </Dialog>
-              </div>
+              <Button onClick={fetchAll} variant="outline" size="sm"><RefreshCw className="h-4 w-4 mr-1" /> Refresh</Button>
             </div>
 
             {loading ? (
               <div className="flex items-center justify-center py-20"><RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-            ) : schools.length === 0 ? (
-              <Card>
-                <CardContent className="py-16 text-center">
-                  <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Schools Created Yet</h3>
-                  <p className="text-muted-foreground mb-4">Create your first school ecosystem to organize users, classes, and AI settings.</p>
-                  <Button onClick={() => setShowCreateDialog(true)}><Plus className="h-4 w-4 mr-2" /> Create School</Button>
-                </CardContent>
-              </Card>
             ) : selectedSchool ? (
-              <SchoolDetail school={selectedSchool} onBack={() => { setSelectedSchool(null); fetchSchools(); }} userId={user?.id || ''} />
+              <SchoolDetail school={selectedSchool} onBack={() => { setSelectedSchool(null); fetchAll(); }} userId={user?.id || ''} planFeatures={planFeatures} />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {schools.map(school => (
-                  <Card key={school.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedSchool(school)}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-lg">{school.name}</CardTitle>
-                          <CardDescription className="mt-1 line-clamp-2">{school.description || 'No description'}</CardDescription>
-                        </div>
-                        <School className="h-6 w-6 text-blue-500 shrink-0" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {school.memberCount} members</span>
-                        <span className="flex items-center gap-1"><BookOpen className="h-4 w-4" /> {school.classCount} classes</span>
-                      </div>
-                      {school.domain && <Badge variant="outline" className="mt-3"><Globe className="h-3 w-3 mr-1" />{school.domain}</Badge>}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList>
+                  <TabsTrigger value="billing">My Plan & Billing</TabsTrigger>
+                  <TabsTrigger value="schools">My Schools</TabsTrigger>
+                </TabsList>
+
+                {/* ─── BILLING TAB ─── */}
+                <TabsContent value="billing" className="space-y-6">
+                  <AdminBillingView adminPlan={adminPlan} seatLimits={seatLimits} currentPlanConfig={currentPlanConfig} planFeatures={planFeatures} />
+                </TabsContent>
+
+                {/* ─── SCHOOLS TAB ─── */}
+                <TabsContent value="schools" className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-lg font-semibold">Your Schools</h2>
+                    <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                      <DialogTrigger asChild>
+                        <Button className="gap-2"><Plus className="h-4 w-4" /> Create School</Button>
+                      </DialogTrigger>
+                      <CreateSchoolDialog
+                        userId={user?.id || ''}
+                        planFeatures={planFeatures}
+                        seatLimits={seatLimits}
+                        adminPlanId={adminPlan?.plan_id}
+                        billingCycle={adminPlan?.billing_cycle}
+                        onCreated={() => { fetchAll(); setShowCreateDialog(false); }}
+                      />
+                    </Dialog>
+                  </div>
+
+                  {schools.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-16 text-center">
+                        <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No Schools Yet</h3>
+                        <p className="text-muted-foreground mb-4">Create your first school to start managing classes, teachers, and students.</p>
+                        <Button onClick={() => setShowCreateDialog(true)}><Plus className="h-4 w-4 mr-2" /> Create School</Button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {schools.map(school => (
+                        <Card key={school.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedSchool(school)}>
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">{school.name}</CardTitle>
+                                <CardDescription className="mt-1 line-clamp-2">{school.description || 'No description'}</CardDescription>
+                              </div>
+                              <School className="h-6 w-6 text-primary shrink-0" />
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex gap-4 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {school.memberCount} members</span>
+                              <span className="flex items-center gap-1"><BookOpen className="h-4 w-4" /> {school.classCount} classes</span>
+                            </div>
+                            {school.subdomain && (
+                              <Badge variant="outline" className="mt-3"><Globe className="h-3 w-3 mr-1" />{school.subdomain}.refyntech.us</Badge>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             )}
           </div>
         </main>
@@ -182,29 +228,270 @@ export default function SchoolManagementPage() {
   );
 }
 
+// ============ ADMIN BILLING VIEW ============
+
+function AdminBillingView({
+  adminPlan, seatLimits, currentPlanConfig, planFeatures,
+}: {
+  adminPlan: any; seatLimits: any; currentPlanConfig: AdminPlanConfig | null; planFeatures: any;
+}) {
+  const { toast } = useToast();
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeNote, setUpgradeNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const cost = seatLimits && adminPlan
+    ? calcAdminMonthlyCost(adminPlan.plan_id, seatLimits.teacher_seats, seatLimits.student_seats, adminPlan.billing_cycle === 'yearly')
+    : null;
+
+  const submitUpgradeRequest = async () => {
+    setSubmitting(true);
+    const { error } = await supabase.from('registration_requests').insert({
+      full_name: `[UPGRADE REQUEST]`,
+      email: 'upgrade@request',
+      requested_role: 'admin',
+      status: 'pending',
+      payment_plan: adminPlan?.plan_id ? `${adminPlan.plan_id}_${adminPlan.billing_cycle}` : null,
+      seat_config: { teachers: seatLimits?.teacher_seats || 0, students: seatLimits?.student_seats || 0, note: upgradeNote },
+    } as any);
+    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    else {
+      toast({ title: 'Request submitted', description: 'The platform administrator will review your upgrade request.' });
+      setShowUpgradeDialog(false); setUpgradeNote('');
+    }
+    setSubmitting(false);
+  };
+
+  if (!adminPlan) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-16 text-center">
+          <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Admin Plan Found</h3>
+          <p className="text-muted-foreground mb-4">Your admin plan will appear here once your registration is processed. If you've already signed up, try refreshing.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const planTierIcon = adminPlan.plan_id === 'school_enterprise' ? <Crown className="h-5 w-5" /> :
+    adminPlan.plan_id === 'school_growth' ? <Zap className="h-5 w-5" /> : <School className="h-5 w-5" />;
+
+  const planTierColor = adminPlan.plan_id === 'school_enterprise' ? 'from-amber-50 to-orange-50 border-amber-300' :
+    adminPlan.plan_id === 'school_growth' ? 'from-indigo-50 to-violet-50 border-indigo-300' : 'from-sky-50 to-blue-50 border-sky-300';
+
+  return (
+    <div className="space-y-6">
+      {/* Plan header */}
+      <Card className={`bg-gradient-to-br ${planTierColor}`}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-white/80 shadow-sm">{planTierIcon}</div>
+              <div>
+                <CardTitle className="text-xl">{currentPlanConfig?.name || adminPlan.plan_id.replace(/_/g, ' ')} Plan</CardTitle>
+                <CardDescription className="capitalize">{adminPlan.billing_cycle} billing • Status: <Badge variant="outline" className="ml-1 capitalize">{adminPlan.status}</Badge></CardDescription>
+              </div>
+            </div>
+            <Button variant="outline" className="gap-1" onClick={() => setShowUpgradeDialog(true)}>
+              <ArrowUpRight className="h-4 w-4" /> Upgrade / Change
+            </Button>
+          </div>
+        </CardHeader>
+        {cost && (
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: 'Platform Fee', value: cost.platform, sub: '/month' },
+                { label: 'Teacher Cost', value: cost.teacherCost, sub: `${seatLimits?.teacher_seats || 0} seats` },
+                { label: 'Student Cost', value: cost.studentCost, sub: `${seatLimits?.student_seats || 0} seats` },
+                { label: 'Total Monthly', value: cost.total, sub: `₹${(cost.total * 12).toLocaleString('en-IN')}/yr`, highlight: true },
+              ].map((item, i) => (
+                <div key={i} className={`rounded-xl border p-4 text-center ${item.highlight ? 'bg-primary/5 border-primary/30' : 'bg-white'}`}>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{item.label}</p>
+                  <p className="text-xl font-bold mt-1">₹{item.value.toLocaleString('en-IN')}</p>
+                  <p className="text-[10px] text-muted-foreground">{item.sub}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Seat usage */}
+      {seatLimits && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Teacher Seats</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-end gap-2 mb-2">
+                <span className="text-3xl font-bold">{seatLimits.teachers_used || 0}</span>
+                <span className="text-muted-foreground text-lg mb-0.5">/ {seatLimits.teacher_seats}</span>
+              </div>
+              <Progress value={Math.min(100, ((seatLimits.teachers_used || 0) / Math.max(1, seatLimits.teacher_seats)) * 100)} className="h-2" />
+              <p className="text-xs text-muted-foreground mt-2">{seatLimits.teacher_seats - (seatLimits.teachers_used || 0)} seats remaining</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Student Seats</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-end gap-2 mb-2">
+                <span className="text-3xl font-bold">{seatLimits.students_used || 0}</span>
+                <span className="text-muted-foreground text-lg mb-0.5">/ {seatLimits.student_seats}</span>
+              </div>
+              <Progress value={Math.min(100, ((seatLimits.students_used || 0) / Math.max(1, seatLimits.student_seats)) * 100)} className="h-2" />
+              <p className="text-xs text-muted-foreground mt-2">{seatLimits.student_seats - (seatLimits.students_used || 0)} seats remaining</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Features included */}
+      {currentPlanConfig && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Features Included in Your Plan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {currentPlanConfig.features.map((f, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />{f}
+                </li>
+              ))}
+            </ul>
+            {planFeatures && (
+              <div className="mt-4 pt-4 border-t grid grid-cols-2 md:grid-cols-5 gap-2">
+                {[
+                  { label: 'Custom Domain', enabled: planFeatures.customDomain },
+                  { label: 'White Label', enabled: planFeatures.whiteLabel },
+                  { label: 'Multi-Campus', enabled: planFeatures.multiCampus },
+                  { label: 'API Access', enabled: planFeatures.apiAccess },
+                  { label: 'Custom AI Training', enabled: planFeatures.customTraining },
+                ].map((feat, i) => (
+                  <div key={i} className={`text-center rounded-lg border p-2 ${feat.enabled ? 'bg-green-50 border-green-200' : 'bg-muted/50 opacity-50'}`}>
+                    <p className="text-[10px] font-semibold">{feat.enabled ? '✓' : '✗'} {feat.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Compare plans */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Compare All Plans</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.values(ADMIN_PLANS).map(plan => {
+              const isCurrent = adminPlan?.plan_id === plan.id;
+              const exampleCost = calcAdminMonthlyCost(plan.id, seatLimits?.teacher_seats || 5, seatLimits?.student_seats || 50, false);
+              const icon = plan.id === 'school_enterprise' ? <Crown className="h-5 w-5 text-amber-600" /> :
+                plan.id === 'school_growth' ? <Zap className="h-5 w-5 text-indigo-600" /> : <School className="h-5 w-5 text-sky-600" />;
+              return (
+                <div key={plan.id} className={`rounded-xl border-2 p-5 transition-all ${isCurrent ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-lg' : 'border-muted hover:border-muted-foreground/30'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">{icon}<span className="font-bold">{plan.name}</span></div>
+                    {isCurrent && <Badge className="bg-primary text-primary-foreground text-[10px]">Current</Badge>}
+                  </div>
+                  <div className="mb-3">
+                    <span className="text-2xl font-bold">₹{exampleCost.total.toLocaleString('en-IN')}</span>
+                    <span className="text-xs text-muted-foreground">/mo est.</span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground space-y-0.5 mb-3">
+                    <p>Platform: ₹{plan.platformFeeMonthly.toLocaleString('en-IN')}/mo</p>
+                    <p>Per teacher: ₹{plan.perTeacherMonthly}/mo</p>
+                    <p>Per student: ₹{plan.perStudentMonthly}/mo</p>
+                  </div>
+                  <ul className="space-y-1">
+                    {plan.features.map((f, i) => (
+                      <li key={i} className="text-[11px] text-muted-foreground flex items-start gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-green-500 mt-0.5 shrink-0" />{f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Upgrade Dialog */}
+      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Request Plan Change</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Describe what you'd like to change — plan tier, seat count, billing cycle, etc.</p>
+          <Textarea value={upgradeNote} onChange={e => setUpgradeNote(e.target.value)} placeholder="e.g. Upgrade to Enterprise with 20 teachers and 500 students..." rows={4} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>Cancel</Button>
+            <Button onClick={submitUpgradeRequest} disabled={submitting}>{submitting ? 'Submitting...' : 'Submit Request'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ============ CREATE SCHOOL DIALOG ============
 
-function CreateSchoolDialog({ userId, onCreated }: { userId: string; onCreated: () => void }) {
+function CreateSchoolDialog({ userId, planFeatures, seatLimits, adminPlanId, billingCycle, onCreated }: {
+  userId: string; planFeatures: any; seatLimits: any; adminPlanId?: string; billingCycle?: string; onCreated: () => void;
+}) {
   const { toast } = useToast();
-  const [form, setForm] = useState({ name: '', description: '', domain: '', contact_email: '', address: '' });
+  const [form, setForm] = useState({ name: '', description: '', domain: '', contact_email: '', address: '', subdomain: '' });
+  const [primaryColor, setPrimaryColor] = useState('#3b82f6');
+  const [accentColor, setAccentColor] = useState('#8b5cf6');
   const [saving, setSaving] = useState(false);
+
+  const canSetSubdomain = planFeatures?.customDomain;
 
   const handleCreate = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
+
+    // Validate subdomain
+    const subdomainValue = form.subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (canSetSubdomain && subdomainValue) {
+      const { data: existing } = await supabase.from('schools').select('id').eq('subdomain', subdomainValue).limit(1);
+      if (existing && existing.length > 0) {
+        toast({ title: 'Subdomain taken', description: `"${subdomainValue}.refyntech.us" is already in use.`, variant: 'destructive' });
+        setSaving(false);
+        return;
+      }
+    }
+
     const { data, error } = await supabase.from('schools').insert({
       name: form.name, description: form.description, domain: form.domain || null,
-      contact_email: form.contact_email || null, address: form.address || null, created_by: userId,
+      contact_email: form.contact_email || null, address: form.address || null,
+      created_by: userId,
+      subdomain: canSetSubdomain && subdomainValue ? subdomainValue : null,
+      theme_config: { primaryColor, accentColor },
     } as any).select().single();
 
     if (error) {
       toast({ title: 'Error creating school', description: error.message, variant: 'destructive' });
     } else if (data) {
-      // Create default AI settings
-      await supabase.from('school_ai_settings').insert({ school_id: (data as any).id } as any);
-      // Add creator as admin of the school
-      await supabase.from('school_members').insert({ school_id: (data as any).id, user_id: userId, school_role: 'admin' } as any);
-      toast({ title: 'School created', description: `${form.name} is ready.` });
+      const schoolId = (data as any).id;
+      // Create default AI settings, add creator as admin, copy seat limits
+      await Promise.all([
+        supabase.from('school_ai_settings').insert({ school_id: schoolId } as any),
+        supabase.from('school_members').insert({ school_id: schoolId, user_id: userId, school_role: 'admin' } as any),
+        seatLimits ? supabase.from('school_seat_limits').insert({
+          school_id: schoolId, plan_id: adminPlanId || 'school_starter',
+          billing_cycle: billingCycle || 'monthly',
+          teacher_seats: seatLimits.teacher_seats, student_seats: seatLimits.student_seats,
+          teachers_used: 0, students_used: 0,
+        } as any) : Promise.resolve(),
+      ]);
+      toast({ title: 'School created!', description: `${form.name} is ready.` });
       onCreated();
     }
     setSaving(false);
@@ -213,14 +500,63 @@ function CreateSchoolDialog({ userId, onCreated }: { userId: string; onCreated: 
   return (
     <DialogContent className="max-w-lg">
       <DialogHeader><DialogTitle>Create New School</DialogTitle></DialogHeader>
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
         <div><Label>School Name *</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Lincoln High School" /></div>
-        <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Brief description of the school" /></div>
+        <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Brief description" /></div>
         <div className="grid grid-cols-2 gap-4">
-          <div><Label>Domain</Label><Input value={form.domain} onChange={e => setForm(p => ({ ...p, domain: e.target.value }))} placeholder="school.edu" /></div>
           <div><Label>Contact Email</Label><Input value={form.contact_email} onChange={e => setForm(p => ({ ...p, contact_email: e.target.value }))} placeholder="admin@school.edu" /></div>
+          <div><Label>Address</Label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="123 Main St" /></div>
         </div>
-        <div><Label>Address</Label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="123 Main St, City" /></div>
+
+        {/* Custom Subdomain */}
+        <div className="rounded-lg border p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-primary" />
+            <Label className="text-sm font-semibold">Custom Subdomain</Label>
+            {!canSetSubdomain && <Badge variant="secondary" className="text-[10px]">Growth+ plan required</Badge>}
+          </div>
+          <div className="flex items-center gap-1">
+            <Input
+              value={form.subdomain}
+              onChange={e => setForm(p => ({ ...p, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+              placeholder="yourschool"
+              disabled={!canSetSubdomain}
+              className="flex-1"
+            />
+            <span className="text-sm text-muted-foreground whitespace-nowrap">.refyntech.us</span>
+          </div>
+          {canSetSubdomain && form.subdomain && (
+            <p className="text-xs text-muted-foreground">Your school will be accessible at <strong>{form.subdomain}.refyntech.us</strong></p>
+          )}
+        </div>
+
+        {/* Theme */}
+        <div className="rounded-lg border p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Palette className="h-4 w-4 text-primary" />
+            <Label className="text-sm font-semibold">School Theme</Label>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Primary Color</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer border-0" />
+                <Input value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="text-xs h-8" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Accent Color</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer border-0" />
+                <Input value={accentColor} onChange={e => setAccentColor(e.target.value)} className="text-xs h-8" />
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <div className="h-8 rounded flex-1" style={{ backgroundColor: primaryColor }} />
+            <div className="h-8 rounded flex-1" style={{ backgroundColor: accentColor }} />
+          </div>
+        </div>
       </div>
       <DialogFooter>
         <Button onClick={handleCreate} disabled={saving || !form.name.trim()}>{saving ? 'Creating...' : 'Create School'}</Button>
@@ -231,7 +567,7 @@ function CreateSchoolDialog({ userId, onCreated }: { userId: string; onCreated: 
 
 // ============ SCHOOL DETAIL VIEW ============
 
-function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: () => void; userId: string }) {
+function SchoolDetail({ school, onBack, userId, planFeatures }: { school: SchoolData; onBack: () => void; userId: string; planFeatures: any }) {
   const { toast } = useToast();
   const [members, setMembers] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -260,7 +596,6 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
       supabase.from('model_training_data').select('*').order('created_at', { ascending: false }),
       supabase.from('school_seat_limits').select('*').eq('school_id', school.id).maybeSingle(),
     ]);
-
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
     setMembers((mems || []).map((m: any) => ({ ...m, profile: profileMap.get(m.user_id) })));
     setClasses(cls || []);
@@ -268,10 +603,8 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
     setUnassignedClasses((allCls || []).filter((c: any) => !c.school_id));
     setTrainingData(tData || []);
     setSeatLimits(seats || null);
-
-    if (settings) {
-      setAiSettings(settings as any);
-    } else {
+    if (settings) setAiSettings(settings as any);
+    else {
       const { data: newSettings } = await supabase.from('school_ai_settings').insert({ school_id: school.id } as any).select().single();
       setAiSettings(newSettings as any);
     }
@@ -280,82 +613,57 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
   const addMember = async () => {
     const profile = allProfiles.find((p: any) => p.email === addMemberEmail);
-    if (!profile) {
-      toast({ title: 'User not found', description: 'No user with that email exists.', variant: 'destructive' });
-      return;
-    }
-
-    // Enforce seat limits
+    if (!profile) { toast({ title: 'User not found', variant: 'destructive' }); return; }
     if (seatLimits) {
       const isTeacherAdd = addMemberRole === 'teacher' || addMemberRole === 'admin';
       const currentTeachers = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
       const currentStudents = members.filter(m => m.school_role === 'member').length;
-
       if (isTeacherAdd && currentTeachers >= seatLimits.teacher_seats) {
-        toast({ title: 'Teacher seat limit reached', description: `Your plan allows ${seatLimits.teacher_seats} teacher seats. Upgrade to add more.`, variant: 'destructive' });
-        return;
+        toast({ title: 'Teacher seat limit reached', description: `Your plan allows ${seatLimits.teacher_seats} teacher seats.`, variant: 'destructive' }); return;
       }
       if (!isTeacherAdd && currentStudents >= seatLimits.student_seats) {
-        toast({ title: 'Student seat limit reached', description: `Your plan allows ${seatLimits.student_seats} student seats. Upgrade to add more.`, variant: 'destructive' });
-        return;
+        toast({ title: 'Student seat limit reached', description: `Your plan allows ${seatLimits.student_seats} student seats.`, variant: 'destructive' }); return;
       }
     }
-
-    const { error } = await supabase.from('school_members').insert({
-      school_id: school.id, user_id: profile.user_id, school_role: addMemberRole,
-    } as any);
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      // Update seat usage
+    const { error } = await supabase.from('school_members').insert({ school_id: school.id, user_id: profile.user_id, school_role: addMemberRole } as any);
+    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    else {
       if (seatLimits) {
         const isTeacher = addMemberRole === 'teacher' || addMemberRole === 'admin';
-        const updateData = isTeacher
-          ? { teachers_used: (seatLimits.teachers_used || 0) + 1 }
-          : { students_used: (seatLimits.students_used || 0) + 1 };
-        await supabase.from('school_seat_limits').update(updateData as any).eq('school_id', school.id);
+        await supabase.from('school_seat_limits').update(
+          isTeacher ? { teachers_used: (seatLimits.teachers_used || 0) + 1 } : { students_used: (seatLimits.students_used || 0) + 1 } as any
+        ).eq('school_id', school.id);
       }
-      toast({ title: 'Member added' });
-      setAddMemberEmail('');
-      fetchDetail();
+      toast({ title: 'Member added' }); setAddMemberEmail(''); fetchDetail();
     }
   };
 
   const removeMember = async (memberId: string) => {
     await supabase.from('school_members').delete().eq('id', memberId);
-    toast({ title: 'Member removed' });
-    fetchDetail();
+    toast({ title: 'Member removed' }); fetchDetail();
   };
 
   const assignClass = async () => {
     if (!assignClassId) return;
     await supabase.from('classes').update({ school_id: school.id } as any).eq('id', assignClassId);
-    toast({ title: 'Class assigned to school' });
-    setAssignClassId('');
-    fetchDetail();
+    toast({ title: 'Class assigned' }); setAssignClassId(''); fetchDetail();
   };
 
   const unassignClass = async (classId: string) => {
     await supabase.from('classes').update({ school_id: null } as any).eq('id', classId);
-    toast({ title: 'Class unassigned' });
-    fetchDetail();
+    toast({ title: 'Class unassigned' }); fetchDetail();
   };
 
   const updateAISettings = async (updates: Partial<SchoolAISettings>) => {
     if (!aiSettings?.id) return;
     const { error } = await supabase.from('school_ai_settings').update(updates as any).eq('id', aiSettings.id);
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      setAiSettings(prev => prev ? { ...prev, ...updates } : prev);
-      toast({ title: 'Settings updated' });
-    }
+    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    else { setAiSettings(prev => prev ? { ...prev, ...updates } : prev); toast({ title: 'Settings updated' }); }
   };
 
   const addBlockedKeyword = () => {
     if (!newKeyword.trim() || !aiSettings) return;
-    const updated = [...(aiSettings.blocked_keywords || []), newKeyword.trim()];
-    updateAISettings({ blocked_keywords: updated });
+    updateAISettings({ blocked_keywords: [...(aiSettings.blocked_keywords || []), newKeyword.trim()] });
     setNewKeyword('');
   };
 
@@ -366,8 +674,7 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
   const addSubjectRestriction = () => {
     if (!newSubject.trim() || !aiSettings) return;
-    const updated = [...(aiSettings.subject_restrictions || []), newSubject.trim().toLowerCase()];
-    updateAISettings({ subject_restrictions: updated });
+    updateAISettings({ subject_restrictions: [...(aiSettings.subject_restrictions || []), newSubject.trim().toLowerCase()] });
     setNewSubject('');
   };
 
@@ -386,30 +693,29 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
   const toggleModel = (model: string) => {
     if (!aiSettings) return;
     const current = aiSettings.allowed_ai_models || [];
-    const updated = current.includes(model) ? current.filter(m => m !== model) : [...current, model];
-    updateAISettings({ allowed_ai_models: updated });
+    updateAISettings({ allowed_ai_models: current.includes(model) ? current.filter(m => m !== model) : [...current, model] });
   };
 
   const deleteSchool = async () => {
     if (!confirm(`Delete "${school.name}"? This will remove all members and settings.`)) return;
     await supabase.from('schools').delete().eq('id', school.id);
-    toast({ title: 'School deleted' });
-    onBack();
+    toast({ title: 'School deleted' }); onBack();
   };
 
-  if (loading) {
-    return <div className="flex justify-center py-20"><RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-  }
+  if (loading) return <div className="flex justify-center py-20"><RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+
+  const teachersUsed = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
+  const studentsUsed = members.filter(m => m.school_role === 'member').length;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Button variant="ghost" onClick={onBack} className="mb-2 -ml-2 text-sm">← Back to Schools</Button>
-          <h2 className="text-2xl font-bold flex items-center gap-2"><School className="h-6 w-6 text-blue-600" />{school.name}</h2>
+          <Button variant="ghost" onClick={onBack} className="mb-2 -ml-2 text-sm">← Back</Button>
+          <h2 className="text-2xl font-bold flex items-center gap-2"><School className="h-6 w-6 text-primary" />{school.name}</h2>
           <p className="text-muted-foreground">{school.description || 'No description'}</p>
-          <div className="flex gap-3 mt-2 text-sm text-muted-foreground">
-            {school.domain && <span className="flex items-center gap-1"><Globe className="h-3 w-3" />{school.domain}</span>}
+          <div className="flex gap-3 mt-2 text-sm text-muted-foreground flex-wrap">
+            {school.subdomain && <Badge variant="outline"><Globe className="h-3 w-3 mr-1" />{school.subdomain}.refyntech.us</Badge>}
             {school.contact_email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{school.contact_email}</span>}
             {school.address && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{school.address}</span>}
           </div>
@@ -417,76 +723,43 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
         <Button variant="destructive" size="sm" onClick={deleteSchool}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
       </div>
 
-      <Tabs defaultValue="plan">
+      <Tabs defaultValue="members">
         <TabsList>
-          <TabsTrigger value="plan">Plan & Billing</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
           <TabsTrigger value="classes">Classes</TabsTrigger>
           <TabsTrigger value="ai-settings">AI Settings</TabsTrigger>
           <TabsTrigger value="ai-models">AI Models</TabsTrigger>
         </TabsList>
 
-        {/* PLAN & BILLING TAB */}
-        <TabsContent value="plan" className="space-y-4">
-          <PlanBillingTab seatLimits={seatLimits} members={members} school={school} onRefresh={fetchDetail} />
-        </TabsContent>
-
         {/* MEMBERS TAB */}
         <TabsContent value="members" className="space-y-4">
-          {/* Seat Limits Card */}
           {seatLimits && (
-            <Card className="border-indigo-200 bg-gradient-to-r from-indigo-50/50 to-violet-50/50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><Shield className="h-5 w-5 text-indigo-600" /> Seat Allocation</CardTitle>
-                <CardDescription>Your plan: <strong className="capitalize">{seatLimits.plan_id?.replace(/_/g, ' ')}</strong> ({seatLimits.billing_cycle})</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-lg border bg-white p-3">
-                    <p className="text-xs text-muted-foreground font-medium mb-1">Teacher Seats</p>
-                    <div className="flex items-end gap-1">
-                      <span className="text-2xl font-bold">{members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length}</span>
-                      <span className="text-muted-foreground text-sm mb-0.5">/ {seatLimits.teacher_seats}</span>
-                    </div>
-                    <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full bg-indigo-500 rounded-full transition-all"
-                        style={{ width: `${Math.min(100, (members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length / Math.max(1, seatLimits.teacher_seats)) * 100)}%` }}
-                      />
-                    </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="bg-gradient-to-r from-indigo-50/50 to-violet-50/50">
+                <CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground font-medium mb-1">Teacher Seats</p>
+                  <div className="flex items-end gap-1 mb-2">
+                    <span className="text-2xl font-bold">{teachersUsed}</span>
+                    <span className="text-muted-foreground text-sm">/ {seatLimits.teacher_seats}</span>
                   </div>
-                  <div className="rounded-lg border bg-white p-3">
-                    <p className="text-xs text-muted-foreground font-medium mb-1">Student Seats</p>
-                    <div className="flex items-end gap-1">
-                      <span className="text-2xl font-bold">{members.filter(m => m.school_role === 'member').length}</span>
-                      <span className="text-muted-foreground text-sm mb-0.5">/ {seatLimits.student_seats}</span>
-                    </div>
-                    <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full bg-violet-500 rounded-full transition-all"
-                        style={{ width: `${Math.min(100, (members.filter(m => m.school_role === 'member').length / Math.max(1, seatLimits.student_seats)) * 100)}%` }}
-                      />
-                    </div>
+                  <Progress value={Math.min(100, (teachersUsed / Math.max(1, seatLimits.teacher_seats)) * 100)} className="h-2" />
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-r from-violet-50/50 to-pink-50/50">
+                <CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground font-medium mb-1">Student Seats</p>
+                  <div className="flex items-end gap-1 mb-2">
+                    <span className="text-2xl font-bold">{studentsUsed}</span>
+                    <span className="text-muted-foreground text-sm">/ {seatLimits.student_seats}</span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <Progress value={Math.min(100, (studentsUsed / Math.max(1, seatLimits.student_seats)) * 100)} className="h-2" />
+                </CardContent>
+              </Card>
+            </div>
           )}
-
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-5 w-5" /> Add Member</CardTitle>
-              {seatLimits && (
-                <CardDescription>
-                  {(() => {
-                    const teachersUsed = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
-                    const studentsUsed = members.filter(m => m.school_role === 'member').length;
-                    const tLeft = seatLimits.teacher_seats - teachersUsed;
-                    const sLeft = seatLimits.student_seats - studentsUsed;
-                    return `${tLeft} teacher seat${tLeft !== 1 ? 's' : ''} • ${sLeft} student seat${sLeft !== 1 ? 's' : ''} remaining`;
-                  })()}
-                </CardDescription>
-              )}
             </CardHeader>
             <CardContent>
               <div className="flex gap-2">
@@ -496,23 +769,20 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="teacher">Teacher</SelectItem>
-                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="member">Student</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button onClick={addMember} disabled={!addMemberEmail}>Add</Button>
               </div>
             </CardContent>
           </Card>
-
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Members ({members.length})</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">Members ({members.length})</CardTitle></CardHeader>
             <CardContent>
               {members.length === 0 ? <p className="text-muted-foreground text-sm">No members yet.</p> : (
                 <Table>
                   <TableHeader><TableRow>
-                    <TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>School Role</TableHead><TableHead>Joined</TableHead><TableHead></TableHead>
+                    <TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Joined</TableHead><TableHead></TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
                     {members.map(m => (
@@ -534,34 +804,25 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
         {/* CLASSES TAB */}
         <TabsContent value="classes" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Assign Existing Class</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">Assign Existing Class</CardTitle></CardHeader>
             <CardContent>
               <div className="flex gap-2">
                 <Select value={assignClassId} onValueChange={setAssignClassId}>
                   <SelectTrigger className="flex-1"><SelectValue placeholder="Select unassigned class..." /></SelectTrigger>
                   <SelectContent>
-                    {unassignedClasses.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name} — {c.subject}</SelectItem>
-                    ))}
+                    {unassignedClasses.map((c: any) => (<SelectItem key={c.id} value={c.id}>{c.name} — {c.subject}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Button onClick={assignClass} disabled={!assignClassId}>Assign</Button>
               </div>
             </CardContent>
           </Card>
-
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">School Classes ({classes.length})</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-base">School Classes ({classes.length})</CardTitle></CardHeader>
             <CardContent>
               {classes.length === 0 ? <p className="text-muted-foreground text-sm">No classes assigned.</p> : (
                 <Table>
-                  <TableHeader><TableRow>
-                    <TableHead>Name</TableHead><TableHead>Subject</TableHead><TableHead>Join Code</TableHead><TableHead></TableHead>
-                  </TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Subject</TableHead><TableHead>Join Code</TableHead><TableHead></TableHead></TableRow></TableHeader>
                   <TableBody>
                     {classes.map((c: any) => (
                       <TableRow key={c.id}>
@@ -585,7 +846,6 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2"><Shield className="h-5 w-5" /> Feature Controls</CardTitle>
-                  <CardDescription>Enable or disable AI features for this school</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ToggleRow label="AI Chat for Students" desc="Allow students to use the AI learning assistant" checked={aiSettings.allow_student_chat} onChange={v => updateAISettings({ allow_student_chat: v })} />
@@ -594,11 +854,8 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
                   <ToggleRow label="Learning Path Generation" desc="Allow AI to generate personalized learning paths" checked={aiSettings.allow_learning_path_generation} onChange={v => updateAISettings({ allow_learning_path_generation: v })} />
                 </CardContent>
               </Card>
-
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5" /> Usage Limits</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5" /> Usage Limits</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -612,11 +869,10 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
                   </div>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Blocked Keywords</CardTitle>
-                  <CardDescription>Keywords that will be blocked in student prompts for this school</CardDescription>
+                  <CardDescription>Keywords blocked in student prompts for this school</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-2 mb-3">
@@ -631,11 +887,10 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
                   </div>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Subject-Specific Filtering</CardTitle>
-                  <CardDescription>Restrict AI usage to specific subjects only. Leave empty to allow all subjects.</CardDescription>
+                  <CardTitle className="text-base">Subject Filtering</CardTitle>
+                  <CardDescription>Restrict AI to specific subjects only. Leave empty for all subjects.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-2 mb-3">
@@ -651,27 +906,18 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {(aiSettings.subject_restrictions || []).map((subj: string) => (
-                      <Badge key={subj} variant="secondary" className="gap-1 cursor-pointer capitalize" onClick={() => removeSubjectRestriction(subj)}>
-                        {subj} ×
-                      </Badge>
+                      <Badge key={subj} variant="secondary" className="gap-1 cursor-pointer capitalize" onClick={() => removeSubjectRestriction(subj)}>{subj} ×</Badge>
                     ))}
                     {(aiSettings.subject_restrictions || []).length === 0 && <p className="text-sm text-muted-foreground">All subjects allowed.</p>}
                   </div>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Custom System Prompt</CardTitle>
-                  <CardDescription>Override the default AI system prompt for this school's students</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Textarea
-                    value={aiSettings.custom_system_prompt}
-                    onChange={e => updateAISettings({ custom_system_prompt: e.target.value })}
-                    placeholder="e.g. You are a helpful teaching assistant for Lincoln High School. Focus on STEM subjects and always encourage students to show their work..."
-                    rows={4}
-                  />
+                  <Textarea value={aiSettings.custom_system_prompt} onChange={e => updateAISettings({ custom_system_prompt: e.target.value })} placeholder="Custom AI system prompt for this school..." rows={4} />
                 </CardContent>
               </Card>
             </>
@@ -683,7 +929,7 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2"><Brain className="h-5 w-5" /> Allowed AI Models</CardTitle>
-              <CardDescription>Select which AI models students in this school can access. Restricting to smaller models reduces cost.</CardDescription>
+              <CardDescription>Select which AI models students can access. Smaller models = lower cost.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -703,40 +949,37 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">School Training Datasets</CardTitle>
-              <CardDescription>Link approved training data to this school. The AI will use these examples to customize responses for students.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {trainingData.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No training data available. Visit the <strong>Model Training</strong> page to create prompt-response pairs.</p>
-              ) : (
-                <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {trainingData.map((td: any) => {
-                    const isLinked = ((aiSettings as any)?.custom_model_training_data_ids || []).includes(td.id);
-                    return (
-                      <div key={td.id} className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${isLinked ? 'bg-primary/5 border-primary/30' : 'hover:bg-muted/50'}`}>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="capitalize text-xs">{td.subject}</Badge>
-                            {td.grade_level && <Badge variant="outline" className="text-xs">{td.grade_level}</Badge>}
-                            {td.approved ? <Badge className="text-xs bg-green-100 text-green-700">Approved</Badge> : <Badge variant="secondary" className="text-xs">Pending</Badge>}
+          {planFeatures?.customTraining && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">School Training Datasets</CardTitle>
+                <CardDescription>Link training data to customize AI responses for this school.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {trainingData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No training data available.</p>
+                ) : (
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {trainingData.map((td: any) => {
+                      const isLinked = ((aiSettings as any)?.custom_model_training_data_ids || []).includes(td.id);
+                      return (
+                        <div key={td.id} className={`flex items-center justify-between p-3 border rounded-lg ${isLinked ? 'bg-primary/5 border-primary/30' : 'hover:bg-muted/50'}`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline" className="capitalize text-xs">{td.subject}</Badge>
+                              {td.approved ? <Badge className="text-xs bg-green-100 text-green-700">Approved</Badge> : <Badge variant="secondary" className="text-xs">Pending</Badge>}
+                            </div>
+                            <p className="text-sm truncate">{td.input_prompt}</p>
                           </div>
-                          <p className="text-sm truncate">{td.input_prompt}</p>
+                          <Switch checked={isLinked} onCheckedChange={() => toggleTrainingData(td.id)} />
                         </div>
-                        <Switch checked={isLinked} onCheckedChange={() => toggleTrainingData(td.id)} />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="mt-3 p-3 bg-muted rounded-lg text-sm">
-                <strong>How it works:</strong> Linked training examples shape the AI's teaching style, curriculum focus, and response patterns specifically for this school's students.
-              </div>
-            </CardContent>
-          </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
@@ -746,242 +989,8 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 function ToggleRow({ label, desc, checked, onChange }: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="flex items-center justify-between">
-      <div>
-        <Label className="text-sm font-medium">{label}</Label>
-        <p className="text-xs text-muted-foreground">{desc}</p>
-      </div>
+      <div><Label className="text-sm font-medium">{label}</Label><p className="text-xs text-muted-foreground">{desc}</p></div>
       <Switch checked={checked} onCheckedChange={onChange} />
-    </div>
-  );
-}
-
-// ============ PLAN & BILLING TAB ============
-
-function PlanBillingTab({ seatLimits, members, school, onRefresh }: { seatLimits: any; members: any[]; school: SchoolData; onRefresh: () => void }) {
-  const { toast } = useToast();
-  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const [upgradeNote, setUpgradeNote] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const currentPlan = seatLimits ? ADMIN_PLANS[seatLimits.plan_id] : null;
-  const teachersUsed = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
-  const studentsUsed = members.filter(m => m.school_role === 'member').length;
-
-  const currentCost = seatLimits
-    ? calcAdminMonthlyCost(seatLimits.plan_id, seatLimits.teacher_seats, seatLimits.student_seats, seatLimits.billing_cycle === 'yearly')
-    : null;
-
-  const submitUpgradeRequest = async () => {
-    setSubmitting(true);
-    // Store as a registration request for the master admin to review
-    const { error } = await supabase.from('registration_requests').insert({
-      full_name: `[UPGRADE] ${school.name}`,
-      email: school.contact_email || 'admin@school',
-      requested_role: 'admin',
-      status: 'pending',
-      payment_plan: seatLimits?.plan_id ? `${seatLimits.plan_id}_${seatLimits.billing_cycle}` : null,
-      seat_config: { teachers: seatLimits?.teacher_seats || 0, students: seatLimits?.student_seats || 0 },
-    } as any);
-
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Upgrade request submitted', description: 'The administrator will review your request.' });
-      setShowUpgradeDialog(false);
-      setUpgradeNote('');
-    }
-    setSubmitting(false);
-  };
-
-  if (!seatLimits) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="py-12 text-center">
-          <CreditCard className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <h3 className="text-lg font-semibold mb-1">No Plan Configured</h3>
-          <p className="text-muted-foreground text-sm mb-4">This school doesn't have a billing plan yet. Request one from the platform administrator.</p>
-          <Button onClick={() => setShowUpgradeDialog(true)} className="gap-1">
-            <ArrowUpRight className="h-4 w-4" /> Request Plan Setup
-          </Button>
-          <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Request Plan Setup</DialogTitle></DialogHeader>
-              <p className="text-sm text-muted-foreground">Describe the plan and seats you need for this school.</p>
-              <Textarea value={upgradeNote} onChange={e => setUpgradeNote(e.target.value)} placeholder="e.g. We need Growth plan with 10 teachers and 200 students..." rows={4} />
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>Cancel</Button>
-                <Button onClick={submitUpgradeRequest} disabled={submitting}>{submitting ? 'Submitting...' : 'Submit Request'}</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Current Plan Card */}
-      <Card className="bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-200">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-indigo-600" />
-                {currentPlan ? currentPlan.name : 'No Plan'} Plan
-              </CardTitle>
-              <CardDescription>
-                {seatLimits ? `${seatLimits.billing_cycle === 'yearly' ? 'Annual' : 'Monthly'} billing` : 'Not configured'}
-              </CardDescription>
-            </div>
-            <Button variant="outline" className="gap-1" onClick={() => setShowUpgradeDialog(true)}>
-              <ArrowUpRight className="h-4 w-4" /> Request Change
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {currentCost && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              <div className="rounded-lg bg-white border p-3 text-center">
-                <p className="text-[10px] font-medium text-muted-foreground uppercase">Platform Fee</p>
-                <p className="text-lg font-bold">₹{currentCost.platform.toLocaleString('en-IN')}</p>
-                <p className="text-[10px] text-muted-foreground">/month</p>
-              </div>
-              <div className="rounded-lg bg-white border p-3 text-center">
-                <p className="text-[10px] font-medium text-muted-foreground uppercase">Teacher Cost</p>
-                <p className="text-lg font-bold">₹{currentCost.teacherCost.toLocaleString('en-IN')}</p>
-                <p className="text-[10px] text-muted-foreground">{seatLimits.teacher_seats} seats</p>
-              </div>
-              <div className="rounded-lg bg-white border p-3 text-center">
-                <p className="text-[10px] font-medium text-muted-foreground uppercase">Student Cost</p>
-                <p className="text-lg font-bold">₹{currentCost.studentCost.toLocaleString('en-IN')}</p>
-                <p className="text-[10px] text-muted-foreground">{seatLimits.student_seats} seats</p>
-              </div>
-              <div className="rounded-lg bg-indigo-100 border-indigo-200 border p-3 text-center">
-                <p className="text-[10px] font-medium text-indigo-600 uppercase">Total Monthly</p>
-                <p className="text-lg font-bold text-indigo-800">₹{currentCost.total.toLocaleString('en-IN')}</p>
-                <p className="text-[10px] text-indigo-600">₹{(currentCost.total * 12).toLocaleString('en-IN')}/yr</p>
-              </div>
-            </div>
-          )}
-
-          {/* Seat usage */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-lg border bg-white p-3">
-              <p className="text-xs text-muted-foreground font-medium mb-1">Teacher Seats</p>
-              <div className="flex items-end gap-1">
-                <span className="text-2xl font-bold">{teachersUsed}</span>
-                <span className="text-muted-foreground text-sm mb-0.5">/ {seatLimits?.teacher_seats || 0}</span>
-              </div>
-              <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-indigo-500 rounded-full transition-all"
-                  style={{ width: `${Math.min(100, (teachersUsed / Math.max(1, seatLimits?.teacher_seats || 1)) * 100)}%` }}
-                />
-              </div>
-            </div>
-            <div className="rounded-lg border bg-white p-3">
-              <p className="text-xs text-muted-foreground font-medium mb-1">Student Seats</p>
-              <div className="flex items-end gap-1">
-                <span className="text-2xl font-bold">{studentsUsed}</span>
-                <span className="text-muted-foreground text-sm mb-0.5">/ {seatLimits?.student_seats || 0}</span>
-              </div>
-              <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-violet-500 rounded-full transition-all"
-                  style={{ width: `${Math.min(100, (studentsUsed / Math.max(1, seatLimits?.student_seats || 1)) * 100)}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Features included */}
-      {currentPlan && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Features Included</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {currentPlan.features.map((f, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-green-500 mt-0.5">✓</span>
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Compare plans */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Compare Plans</CardTitle>
-          <CardDescription>See how other plans compare with your current one</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {Object.values(ADMIN_PLANS).map(plan => {
-              const isCurrent = seatLimits?.plan_id === plan.id;
-              const cost = calcAdminMonthlyCost(plan.id, seatLimits?.teacher_seats || 5, seatLimits?.student_seats || 50, false);
-              return (
-                <div key={plan.id} className={`rounded-xl border-2 p-4 transition-all ${isCurrent ? 'border-indigo-400 bg-indigo-50/50 ring-2 ring-indigo-200' : 'border-muted hover:border-muted-foreground/30'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold">{plan.name}</span>
-                    {isCurrent && <Badge className="bg-indigo-100 text-indigo-700 text-[10px]">Current</Badge>}
-                  </div>
-                  <div className="mb-2">
-                    <span className="text-xl font-bold">₹{cost.total.toLocaleString('en-IN')}</span>
-                    <span className="text-xs text-muted-foreground">/mo</span>
-                  </div>
-                  <div className="text-[10px] text-muted-foreground space-y-0.5 mb-3">
-                    <p>Platform: ₹{plan.platformFeeMonthly.toLocaleString('en-IN')}</p>
-                    <p>Per teacher: ₹{plan.perTeacherMonthly}/mo</p>
-                    <p>Per student: ₹{plan.perStudentMonthly}/mo</p>
-                  </div>
-                  <ul className="space-y-1">
-                    {plan.features.slice(0, 4).map((f, i) => (
-                      <li key={i} className="text-[11px] text-muted-foreground flex items-start gap-1">
-                        <span className="text-green-500">✓</span>{f}
-                      </li>
-                    ))}
-                    {plan.features.length > 4 && (
-                      <li className="text-[11px] text-muted-foreground">+{plan.features.length - 4} more</li>
-                    )}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Upgrade/Change Dialog */}
-      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Request Plan Change</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Submit a request to the platform administrator to upgrade, downgrade, or modify your plan. Include details about what you'd like to change.
-          </p>
-          <Textarea
-            value={upgradeNote}
-            onChange={e => setUpgradeNote(e.target.value)}
-            placeholder="e.g. We'd like to upgrade to Enterprise plan with 20 teachers and 500 students..."
-            rows={4}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>Cancel</Button>
-            <Button onClick={submitUpgradeRequest} disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Submit Request'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
