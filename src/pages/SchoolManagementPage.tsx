@@ -211,6 +211,7 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
   const [members, setMembers] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [aiSettings, setAiSettings] = useState<SchoolAISettings | null>(null);
+  const [seatLimits, setSeatLimits] = useState<any>(null);
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addMemberEmail, setAddMemberEmail] = useState('');
