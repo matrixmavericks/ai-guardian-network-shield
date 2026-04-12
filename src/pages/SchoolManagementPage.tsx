@@ -226,13 +226,14 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
   const fetchDetail = async () => {
     setLoading(true);
-    const [{ data: mems }, { data: cls }, { data: settings }, { data: profiles }, { data: allCls }, { data: tData }] = await Promise.all([
+    const [{ data: mems }, { data: cls }, { data: settings }, { data: profiles }, { data: allCls }, { data: tData }, { data: seats }] = await Promise.all([
       supabase.from('school_members').select('*').eq('school_id', school.id),
       supabase.from('classes').select('*').eq('school_id', school.id),
       supabase.from('school_ai_settings').select('*').eq('school_id', school.id).maybeSingle(),
       supabase.from('profiles').select('user_id, full_name, email'),
       supabase.from('classes').select('*'),
       supabase.from('model_training_data').select('*').order('created_at', { ascending: false }),
+      supabase.from('school_seat_limits').select('*').eq('school_id', school.id).maybeSingle(),
     ]);
 
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
@@ -241,11 +242,11 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
     setAllProfiles(profiles || []);
     setUnassignedClasses((allCls || []).filter((c: any) => !c.school_id));
     setTrainingData(tData || []);
+    setSeatLimits(seats || null);
 
     if (settings) {
       setAiSettings(settings as any);
     } else {
-      // Create default settings
       const { data: newSettings } = await supabase.from('school_ai_settings').insert({ school_id: school.id } as any).select().single();
       setAiSettings(newSettings as any);
     }
@@ -258,12 +259,38 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
       toast({ title: 'User not found', description: 'No user with that email exists.', variant: 'destructive' });
       return;
     }
+
+    // Enforce seat limits
+    if (seatLimits) {
+      const isTeacherAdd = addMemberRole === 'teacher' || addMemberRole === 'admin';
+      const currentTeachers = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
+      const currentStudents = members.filter(m => m.school_role === 'member').length;
+
+      if (isTeacherAdd && currentTeachers >= seatLimits.teacher_seats) {
+        toast({ title: 'Teacher seat limit reached', description: `Your plan allows ${seatLimits.teacher_seats} teacher seats. Upgrade to add more.`, variant: 'destructive' });
+        return;
+      }
+      if (!isTeacherAdd && currentStudents >= seatLimits.student_seats) {
+        toast({ title: 'Student seat limit reached', description: `Your plan allows ${seatLimits.student_seats} student seats. Upgrade to add more.`, variant: 'destructive' });
+        return;
+      }
+    }
+
     const { error } = await supabase.from('school_members').insert({
       school_id: school.id, user_id: profile.user_id, school_role: addMemberRole,
     } as any);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
+      // Update seat usage
+      if (seatLimits) {
+        const isTeacher = addMemberRole === 'teacher' || addMemberRole === 'admin';
+        await supabase.from('school_seat_limits').update(
+          isTeacher
+            ? { teachers_used: (seatLimits.teachers_used || 0) + 1 }
+            : { students_used: (seatLimits.students_used || 0) + 1 }
+        as any).eq('school_id', school.id);
+      }
       toast({ title: 'Member added' });
       setAddMemberEmail('');
       fetchDetail();
