@@ -226,9 +226,10 @@ export default function AdminOverviewPage() {
             </div>
 
             <Tabs defaultValue="pilot" className="space-y-4">
-              <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+              <TabsList className="grid grid-cols-6 w-full max-w-3xl">
                 <TabsTrigger value="pilot">Pilot Metrics</TabsTrigger>
                 <TabsTrigger value="ecosystem">Ecosystem</TabsTrigger>
+                <TabsTrigger value="plans">Plan Mgmt</TabsTrigger>
                 <TabsTrigger value="data">Data Stats</TabsTrigger>
                 <TabsTrigger value="permissions">Permissions</TabsTrigger>
                 <TabsTrigger value="security">Security</TabsTrigger>
