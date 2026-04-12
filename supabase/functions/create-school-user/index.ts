@@ -86,12 +86,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create user plan if planId provided
-    if (planId) {
+    // Create user plan - auto-fetch from school's seat limits if not provided
+    let effectivePlanId = planId;
+    let effectiveBillingCycle = billingCycle || "monthly";
+
+    if (!effectivePlanId && schoolId) {
+      const { data: seatData } = await adminClient
+        .from("school_seat_limits")
+        .select("plan_id, billing_cycle")
+        .eq("school_id", schoolId)
+        .maybeSingle();
+
+      if (seatData) {
+        effectivePlanId = seatData.plan_id;
+        effectiveBillingCycle = seatData.billing_cycle || "monthly";
+      }
+    }
+
+    if (effectivePlanId) {
       await adminClient.from("user_plans").insert({
         user_id: userId,
-        plan_id: planId,
-        billing_cycle: billingCycle || "monthly",
+        plan_id: effectivePlanId,
+        billing_cycle: effectiveBillingCycle,
         monthly_token_limit: 99999,
         tokens_used_this_month: 0,
         status: "active",
