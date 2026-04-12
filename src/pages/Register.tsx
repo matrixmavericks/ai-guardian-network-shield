@@ -109,6 +109,7 @@ const Register = () => {
                   <SelectContent>
                     <SelectItem value="student">Student</SelectItem>
                     <SelectItem value="teacher">Teacher</SelectItem>
+                    <SelectItem value="admin">School Administrator</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
