@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import DashboardNav from '@/components/DashboardNav';
 import {
@@ -20,7 +21,7 @@ import {
   BarChart3, PieChart, RefreshCw, Download, AlertTriangle, Clock,
   CheckCircle, XCircle, BookOpen, Brain, Briefcase, Settings2,
   ChevronRight, Globe, Zap, Target, ArrowUpRight, ArrowDownRight,
-  FileText, Lock
+  FileText, Lock, CreditCard
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -226,9 +227,10 @@ export default function AdminOverviewPage() {
             </div>
 
             <Tabs defaultValue="pilot" className="space-y-4">
-              <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+              <TabsList className="grid grid-cols-6 w-full max-w-3xl">
                 <TabsTrigger value="pilot">Pilot Metrics</TabsTrigger>
                 <TabsTrigger value="ecosystem">Ecosystem</TabsTrigger>
+                <TabsTrigger value="plans">Plan Mgmt</TabsTrigger>
                 <TabsTrigger value="data">Data Stats</TabsTrigger>
                 <TabsTrigger value="permissions">Permissions</TabsTrigger>
                 <TabsTrigger value="security">Security</TabsTrigger>
@@ -403,6 +405,11 @@ export default function AdminOverviewPage() {
                     </CardContent>
                   </Card>
                 </div>
+              </TabsContent>
+
+              {/* ====== PLAN MANAGEMENT ====== */}
+              <TabsContent value="plans" className="space-y-6">
+                <PlanManagementPanel />
               </TabsContent>
 
               {/* ====== DATA COLLECTION STATS ====== */}
@@ -624,6 +631,180 @@ export default function AdminOverviewPage() {
           </div>
         </main>
       </div>
+    </div>
+  );
+}
+
+// === Plan Management Panel ===
+
+function PlanManagementPanel() {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ plan_id: '', billing_cycle: '', status: '', monthly_token_limit: 0 });
+  const { toast } = useToast();
+
+  useEffect(() => { fetchPlans(); }, []);
+
+  const fetchPlans = async () => {
+    setLoading(true);
+    const [{ data: userPlans }, { data: profiles }] = await Promise.all([
+      supabase.from('user_plans').select('*').order('created_at', { ascending: false }),
+      supabase.from('profiles').select('user_id, full_name, email'),
+    ]);
+    const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+    setPlans((userPlans || []).map((up: any) => ({ ...up, profile: profileMap.get(up.user_id) })));
+    setLoading(false);
+  };
+
+  const cancelPlan = async (planId: string) => {
+    if (!confirm('Cancel this user\'s plan? They will lose access to premium features.')) return;
+    const { error } = await supabase.from('user_plans').update({ status: 'cancelled' } as any).eq('id', planId);
+    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Plan cancelled' }); fetchPlans(); }
+  };
+
+  const reactivatePlan = async (planId: string) => {
+    const { error } = await supabase.from('user_plans').update({ status: 'active' } as any).eq('id', planId);
+    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Plan reactivated' }); fetchPlans(); }
+  };
+
+  const startEdit = (plan: any) => {
+    setEditingPlan(plan);
+    setEditForm({
+      plan_id: plan.plan_id,
+      billing_cycle: plan.billing_cycle,
+      status: plan.status,
+      monthly_token_limit: plan.monthly_token_limit,
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editingPlan) return;
+    const { error } = await supabase.from('user_plans').update({
+      plan_id: editForm.plan_id,
+      billing_cycle: editForm.billing_cycle,
+      status: editForm.status,
+      monthly_token_limit: editForm.monthly_token_limit,
+    } as any).eq('id', editingPlan.id);
+    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Plan updated' }); setEditingPlan(null); fetchPlans(); }
+  };
+
+  if (loading) return <div className="flex justify-center py-10"><RefreshCw className="h-6 w-6 animate-spin" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-5 w-5" /> All User Plans ({plans.length})</CardTitle>
+          <CardDescription>Manage, edit, or cancel any user's subscription plan</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="max-h-[600px] overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Cycle</TableHead>
+                  <TableHead>Token Limit</TableHead>
+                  <TableHead>Used</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {plans.map(p => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.profile?.full_name || '—'}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{p.profile?.email || '—'}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-xs">{p.plan_id}</Badge></TableCell>
+                    <TableCell className="text-xs capitalize">{p.billing_cycle}</TableCell>
+                    <TableCell className="font-mono text-xs">{p.monthly_token_limit?.toLocaleString()}</TableCell>
+                    <TableCell className="font-mono text-xs">{p.tokens_used_this_month || 0}</TableCell>
+                    <TableCell>
+                      <Badge className={p.status === 'active' ? 'bg-green-100 text-green-700' : p.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'} variant="secondary">
+                        {p.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => startEdit(p)}>Edit</Button>
+                        {p.status === 'active' ? (
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => cancelPlan(p.id)}>Cancel</Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" onClick={() => reactivatePlan(p.id)}>Reactivate</Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Edit Plan Dialog */}
+      <Dialog open={!!editingPlan} onOpenChange={open => { if (!open) setEditingPlan(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Plan — {editingPlan?.profile?.full_name || 'User'}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Plan ID</Label>
+              <Select value={editForm.plan_id} onValueChange={v => setEditForm(p => ({ ...p, plan_id: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="starter">Student — Starter</SelectItem>
+                  <SelectItem value="standard">Student — Standard</SelectItem>
+                  <SelectItem value="premium">Student — Premium</SelectItem>
+                  <SelectItem value="teacher_individual">Teacher — Individual</SelectItem>
+                  <SelectItem value="teacher_pro">Teacher — Pro</SelectItem>
+                  <SelectItem value="teacher_master">Teacher — Master</SelectItem>
+                  <SelectItem value="school_starter">Admin — Starter</SelectItem>
+                  <SelectItem value="school_growth">Admin — Growth</SelectItem>
+                  <SelectItem value="school_enterprise">Admin — Enterprise</SelectItem>
+                  <SelectItem value="unlimited">Unlimited</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Billing Cycle</Label>
+                <Select value={editForm.billing_cycle} onValueChange={v => setEditForm(p => ({ ...p, billing_cycle: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Select value={editForm.status} onValueChange={v => setEditForm(p => ({ ...p, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>Monthly Token Limit</Label>
+              <Input type="number" value={editForm.monthly_token_limit} onChange={e => setEditForm(p => ({ ...p, monthly_token_limit: parseInt(e.target.value) || 0 }))} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setEditingPlan(null)}>Cancel</Button>
+            <Button onClick={saveEdit}>Save Changes</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

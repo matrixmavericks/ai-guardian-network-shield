@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users, DollarSign, Briefcase, Activity, Building2, ClipboardList } from 'lucide-react';
+import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users, DollarSign, Briefcase, Activity, Building2, ClipboardList, Workflow } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const DashboardSidebar = () => {
@@ -29,7 +29,10 @@ const DashboardSidebar = () => {
         { title: "AI Config", href: "/ai-configuration", icon: <Brain className="h-5 w-5" /> },
         { title: "AI Usage", href: "/ai-usage", icon: <DollarSign className="h-5 w-5" /> },
         { title: "Security Keys", href: "/security-keys", icon: <Shield className="h-5 w-5" /> },
-        ...(user?.email === 'info.aiconditioner@gmail.com' ? [{ title: "Registrations", href: "/registration-requests", icon: <ClipboardList className="h-5 w-5" /> }] : []),
+        ...(user?.email === 'info.aiconditioner@gmail.com' ? [
+          { title: "Registrations", href: "/registration-requests", icon: <ClipboardList className="h-5 w-5" /> },
+          { title: "Platform Docs", href: "/platform-workflow", icon: <Workflow className="h-5 w-5" /> },
+        ] : []),
         { title: "Settings", href: "/settings", icon: <Settings className="h-5 w-5" /> },
       ];
     } else if (role === 'teacher') {
