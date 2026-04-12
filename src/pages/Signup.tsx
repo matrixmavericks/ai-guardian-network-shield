@@ -72,12 +72,43 @@ const Signup = () => {
     try {
       await signUp(formData.email.trim(), formData.password, approvedRequest.full_name, approvedRequest.requested_role);
 
+      // Get the approved request to find the payment plan
+      const { data: reqData } = await supabase
+        .from('registration_requests')
+        .select('payment_plan')
+        .eq('email', formData.email.trim().toLowerCase())
+        .eq('status', 'approved')
+        .limit(1);
+
+      const paymentPlan = reqData?.[0]?.payment_plan;
+
       // Mark the request as completed
       await supabase
         .from('registration_requests')
         .update({ status: 'completed' } as any)
         .eq('email', formData.email.trim().toLowerCase())
         .eq('status', 'approved');
+
+      // If student with a plan, create the user_plan record after a short delay for auth to settle
+      if (approvedRequest.requested_role === 'student' && paymentPlan) {
+        const planParts = paymentPlan.split('_');
+        const planId = planParts[0] || 'starter';
+        const billingCycle = planParts[1] || 'monthly';
+        const tokenLimits: Record<string, number> = { starter: 500, standard: 2000, premium: 5000 };
+
+        // Wait for auth session to be available
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await supabase.from('user_plans').insert({
+            user_id: session.user.id,
+            plan_id: planId,
+            billing_cycle: billingCycle,
+            monthly_token_limit: tokenLimits[planId] || 500,
+            tokens_used_this_month: 0,
+            status: 'active',
+          } as any);
+        }
+      }
 
       toast({
         title: "Account created!",

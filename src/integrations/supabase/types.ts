@@ -1727,6 +1727,48 @@ export type Database = {
           },
         ]
       }
+      user_plans: {
+        Row: {
+          assigned_by: string | null
+          billing_cycle: string
+          created_at: string
+          id: string
+          monthly_token_limit: number
+          plan_id: string
+          status: string
+          token_reset_date: string
+          tokens_used_this_month: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          billing_cycle?: string
+          created_at?: string
+          id?: string
+          monthly_token_limit?: number
+          plan_id?: string
+          status?: string
+          token_reset_date?: string
+          tokens_used_this_month?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          billing_cycle?: string
+          created_at?: string
+          id?: string
+          monthly_token_limit?: number
+          plan_id?: string
+          status?: string
+          token_reset_date?: string
+          tokens_used_this_month?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

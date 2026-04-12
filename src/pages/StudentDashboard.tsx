@@ -13,9 +13,10 @@ import {
 import DashboardSidebar from '@/components/DashboardSidebar';
 import {
   Book, Brain, Calendar, Clock, FileText, GraduationCap, TrendingUp,
-  CheckCircle2, AlertTriangle, Shield, MessageSquare, Send, Search, Loader, Trophy,
+  CheckCircle2, AlertTriangle, Shield, MessageSquare, Send, Search, Loader, Trophy, Sparkles,
 } from 'lucide-react';
 import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
+import StudentPlanCard from '@/components/StudentPlanCard';
 import StudentAssignmentView from '@/components/StudentAssignmentView';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -318,8 +319,9 @@ const StudentDashboard = () => {
           </div>
 
           <Tabs defaultValue={activeTab}>
-            <TabsList className="mb-8">
+            <TabsList className="mb-8 flex-wrap">
               <TabsTrigger value="overview"><TrendingUp className="mr-2 h-4 w-4" />Overview</TabsTrigger>
+              <TabsTrigger value="myplan"><Sparkles className="mr-2 h-4 w-4" />My Plan</TabsTrigger>
               <TabsTrigger value="assignments"><FileText className="mr-2 h-4 w-4" />Assignments</TabsTrigger>
               <TabsTrigger value="progress"><GraduationCap className="mr-2 h-4 w-4" />Progress</TabsTrigger>
               <TabsTrigger value="learning"><Brain className="mr-2 h-4 w-4" />AI Learning</TabsTrigger>
@@ -334,6 +336,13 @@ const StudentDashboard = () => {
               <TabsTrigger value="adaptive"><Shield className="mr-2 h-4 w-4" />Adaptive Profile</TabsTrigger>
               <TabsTrigger value="quizzes"><Trophy className="mr-2 h-4 w-4" />Quiz Library</TabsTrigger>
             </TabsList>
+
+            {/* ═══════════ MY PLAN ═══════════ */}
+            <TabsContent value="myplan">
+              <div className="max-w-2xl mx-auto">
+                <StudentPlanCard />
+              </div>
+            </TabsContent>
 
             {/* ═══════════ OVERVIEW ═══════════ */}
             <TabsContent value="overview">

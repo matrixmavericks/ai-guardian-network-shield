@@ -3,14 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { CheckCircle2, XCircle, Clock, ArrowLeft, Search } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ArrowLeft, Search, CreditCard } from "lucide-react";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import { PLAN_CONFIGS } from "@/hooks/useStudentPlan";
 
 interface RegistrationRequest {
   id: string;
@@ -32,6 +35,12 @@ const PLAN_LABELS: Record<string, string> = {
   premium_yearly: "Premium – ₹2,700/yr",
 };
 
+const TOKEN_LIMITS: Record<string, number> = {
+  starter: 500,
+  standard: 2000,
+  premium: 5000,
+};
+
 const WEBSITE_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
 
 const RegistrationRequestsPage = () => {
@@ -45,6 +54,9 @@ const RegistrationRequestsPage = () => {
   const [rejectDialog, setRejectDialog] = useState<{ open: boolean; request: RegistrationRequest | null }>({ open: false, request: null });
   const [rejectionReason, setRejectionReason] = useState("");
   const [processing, setProcessing] = useState<string | null>(null);
+  const [planDialog, setPlanDialog] = useState<{ open: boolean; request: RegistrationRequest | null }>({ open: false, request: null });
+  const [assignPlan, setAssignPlan] = useState("starter");
+  const [assignBilling, setAssignBilling] = useState("monthly");
 
   const isWebsiteAdmin = user?.email === WEBSITE_ADMIN_EMAIL;
 
@@ -74,10 +86,29 @@ const RegistrationRequestsPage = () => {
   };
 
   const handleApprove = async (req: RegistrationRequest) => {
+    // If student and has a plan, approve directly; otherwise show plan dialog
+    if (req.requested_role === 'student') {
+      if (req.payment_plan) {
+        await doApprove(req, req.payment_plan);
+      } else {
+        // Open plan assignment dialog
+        setPlanDialog({ open: true, request: req });
+      }
+    } else {
+      await doApprove(req, null);
+    }
+  };
+
+  const doApprove = async (req: RegistrationRequest, planStr: string | null) => {
     setProcessing(req.id);
     const { error } = await supabase
       .from('registration_requests')
-      .update({ status: 'approved', reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any)
+      .update({
+        status: 'approved',
+        reviewed_by: user?.id,
+        reviewed_at: new Date().toISOString(),
+        payment_plan: planStr || req.payment_plan,
+      } as any)
       .eq('id', req.id);
 
     if (error) {
@@ -87,6 +118,18 @@ const RegistrationRequestsPage = () => {
       fetchRequests();
     }
     setProcessing(null);
+  };
+
+  const handleAssignAndApprove = async () => {
+    if (!planDialog.request) return;
+    const planStr = `${assignPlan}_${assignBilling}`;
+    await supabase
+      .from('registration_requests')
+      .update({ payment_plan: planStr } as any)
+      .eq('id', planDialog.request.id);
+
+    await doApprove(planDialog.request, planStr);
+    setPlanDialog({ open: false, request: null });
   };
 
   const handleReject = async () => {
@@ -198,7 +241,8 @@ const RegistrationRequestsPage = () => {
                         Submitted: {new Date(req.created_at).toLocaleDateString()} at {new Date(req.created_at).toLocaleTimeString()}
                       </p>
                       {req.payment_plan && (
-                        <p className="text-xs font-medium text-indigo-600">
+                        <p className="text-xs font-medium text-indigo-600 flex items-center gap-1">
+                          <CreditCard className="h-3 w-3" />
                           Plan: {PLAN_LABELS[req.payment_plan] || req.payment_plan}
                         </p>
                       )}
@@ -224,6 +268,7 @@ const RegistrationRequestsPage = () => {
         </div>
       </div>
 
+      {/* Reject Dialog */}
       <Dialog open={rejectDialog.open} onOpenChange={(open) => { if (!open) { setRejectDialog({ open: false, request: null }); setRejectionReason(""); } }}>
         <DialogContent>
           <DialogHeader>
@@ -240,6 +285,45 @@ const RegistrationRequestsPage = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectDialog({ open: false, request: null })}>Cancel</Button>
             <Button variant="destructive" onClick={handleReject} disabled={processing !== null}>Reject Request</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Plan Assignment Dialog (for students without a plan) */}
+      <Dialog open={planDialog.open} onOpenChange={(open) => { if (!open) setPlanDialog({ open: false, request: null }); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Plan & Approve</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Assign a plan to <strong>{planDialog.request?.full_name}</strong> before approving.
+          </p>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label>Plan</Label>
+              <Select value={assignPlan} onValueChange={setAssignPlan}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="starter">Starter (₹150/mo – 500 tokens)</SelectItem>
+                  <SelectItem value="standard">Standard (₹200/mo – 2,000 tokens)</SelectItem>
+                  <SelectItem value="premium">Premium (₹300/mo – 5,000 tokens)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Billing Cycle</Label>
+              <Select value={assignBilling} onValueChange={setAssignBilling}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="yearly">Yearly (Save 25%)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPlanDialog({ open: false, request: null })}>Cancel</Button>
+            <Button onClick={handleAssignAndApprove}>Assign & Approve</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
