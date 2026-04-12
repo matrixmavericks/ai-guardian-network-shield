@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { CheckCircle2, XCircle, Clock, ArrowLeft, Search, CreditCard } from "lucide-react";
 import DashboardSidebar from "@/components/DashboardSidebar";
-import { PLAN_CONFIGS } from "@/hooks/useStudentPlan";
+import { ALL_PLAN_LABELS } from "@/lib/planConfigs";
 
 interface RegistrationRequest {
   id: string;
