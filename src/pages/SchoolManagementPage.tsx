@@ -833,6 +833,7 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
                     <span className="text-muted-foreground text-sm">/ {seatLimits.teacher_seats}</span>
                   </div>
                   <Progress value={Math.min(100, (teachersUsed / Math.max(1, seatLimits.teacher_seats)) * 100)} className="h-2" />
+                  <p className="text-xs text-muted-foreground mt-1">{Math.max(0, seatLimits.teacher_seats - teachersUsed)} remaining</p>
                 </CardContent>
               </Card>
               <Card className="bg-gradient-to-r from-violet-50/50 to-pink-50/50">
@@ -843,13 +844,20 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
                     <span className="text-muted-foreground text-sm">/ {seatLimits.student_seats}</span>
                   </div>
                   <Progress value={Math.min(100, (studentsUsed / Math.max(1, seatLimits.student_seats)) * 100)} className="h-2" />
+                  <p className="text-xs text-muted-foreground mt-1">{Math.max(0, seatLimits.student_seats - studentsUsed)} remaining</p>
                 </CardContent>
               </Card>
             </div>
           )}
+
+          {/* Create New Account */}
+          <CreateSchoolUserCard schoolId={school.id} seatLimits={seatLimits} teachersUsed={teachersUsed} studentsUsed={studentsUsed} onCreated={fetchDetail} />
+
+          {/* Add Existing User */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-5 w-5" /> Add Member</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-5 w-5" /> Add Existing User</CardTitle>
+              <CardDescription>Add a user who already has an account on the platform</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex gap-2">
@@ -890,8 +898,6 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* CLASSES TAB */}
         <TabsContent value="classes" className="space-y-4">
           <Card>
             <CardHeader><CardTitle className="text-base">Assign Existing Class</CardTitle></CardHeader>
