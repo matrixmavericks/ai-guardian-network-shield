@@ -18,8 +18,10 @@ import DashboardNav from '@/components/DashboardNav';
 import { useToast } from '@/components/ui/use-toast';
 import {
   School, Plus, Settings2, Users, Brain, Trash2, UserPlus,
-  Shield, BookOpen, RefreshCw, Building2, Globe, Mail, MapPin
+  Shield, BookOpen, RefreshCw, Building2, Globe, Mail, MapPin,
+  CreditCard, TrendingUp, ArrowUpRight, IndianRupee
 } from 'lucide-react';
+import { ADMIN_PLANS, calcAdminMonthlyCost } from '@/lib/planConfigs';
 
 const AI_MODELS = [
   'google/gemini-2.5-pro',
