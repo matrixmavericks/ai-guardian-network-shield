@@ -19,8 +19,18 @@ interface RegistrationRequest {
   requested_role: string;
   status: string;
   rejection_reason: string | null;
+  payment_plan: string | null;
   created_at: string;
 }
+
+const PLAN_LABELS: Record<string, string> = {
+  starter_monthly: "Starter – ₹150/mo",
+  starter_yearly: "Starter – ₹1,350/yr",
+  standard_monthly: "Standard – ₹200/mo",
+  standard_yearly: "Standard – ₹1,800/yr",
+  premium_monthly: "Premium – ₹300/mo",
+  premium_yearly: "Premium – ₹2,700/yr",
+};
 
 const WEBSITE_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
 
@@ -187,6 +197,11 @@ const RegistrationRequestsPage = () => {
                       <p className="text-xs text-muted-foreground">
                         Submitted: {new Date(req.created_at).toLocaleDateString()} at {new Date(req.created_at).toLocaleTimeString()}
                       </p>
+                      {req.payment_plan && (
+                        <p className="text-xs font-medium text-indigo-600">
+                          Plan: {PLAN_LABELS[req.payment_plan] || req.payment_plan}
+                        </p>
+                      )}
                       {req.rejection_reason && (
                         <p className="text-xs text-red-600">Reason: {req.rejection_reason}</p>
                       )}
