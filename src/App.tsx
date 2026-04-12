@@ -33,6 +33,7 @@ import AdminOverviewPage from './pages/AdminOverviewPage';
 import SchoolManagementPage from './pages/SchoolManagementPage';
 import RegistrationRequestsPage from './pages/RegistrationRequestsPage';
 import PlatformWorkflowPage from './pages/PlatformWorkflowPage';
+import SchoolPortalPage from './pages/SchoolPortalPage';
 
 const ProtectedRoute = ({ 
   children, 
@@ -97,6 +98,7 @@ function App() {
           <Route path="/portfolio" element={<ProtectedRoute allowedRoles={['student', 'teacher']}><PortfolioPage /></ProtectedRoute>} />
           <Route path="/portfolio/shared/:token" element={<SharedPortfolioPage />} />
           <Route path="/portfolio/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher']}><PortfolioProjectPage /></ProtectedRoute>} />
+          <Route path="/s/:subdomain" element={<SchoolPortalPage />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
