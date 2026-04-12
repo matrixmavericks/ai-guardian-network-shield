@@ -808,7 +808,6 @@ const StudentDashboard = () => {
               </FeatureGate>
             </TabsContent>
           </Tabs>
-        </div>
       </div>
     </div>
   );
