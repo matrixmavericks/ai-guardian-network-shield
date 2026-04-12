@@ -23,17 +23,6 @@ import {
   ChevronRight, Globe, Zap, Target, ArrowUpRight, ArrowDownRight,
   FileText, Lock, CreditCard
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import DashboardSidebar from '@/components/DashboardSidebar';
-import DashboardNav from '@/components/DashboardNav';
-import {
-  Activity, Users, School, ShieldCheck, TrendingUp, Database,
-  BarChart3, PieChart, RefreshCw, Download, AlertTriangle, Clock,
-  CheckCircle, XCircle, BookOpen, Brain, Briefcase, Settings2,
-  ChevronRight, Globe, Zap, Target, ArrowUpRight, ArrowDownRight,
-  FileText, Lock
-} from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Legend, AreaChart, Area
