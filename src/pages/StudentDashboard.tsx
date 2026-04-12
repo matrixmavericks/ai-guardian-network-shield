@@ -18,6 +18,7 @@ import {
 import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
 import StudentPlanCard from '@/components/StudentPlanCard';
 import StudentAssignmentView from '@/components/StudentAssignmentView';
+import FeatureGate from '@/components/FeatureGate';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
