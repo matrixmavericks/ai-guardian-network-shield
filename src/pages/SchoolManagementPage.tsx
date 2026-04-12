@@ -127,12 +127,10 @@ export default function SchoolManagementPage() {
   const currentPlanConfig = adminPlan ? (ADMIN_PLANS[adminPlan.plan_id] || unlimitedPlanConfig) : null;
   const planFeatures = adminPlan ? (PLAN_FEATURES[adminPlan.plan_id] || PLAN_FEATURES.school_enterprise) : null;
 
-  return (
-    <div className="min-h-screen flex bg-slate-50">
-      <DashboardSidebar />
-      <div className="flex-1 flex flex-col">
-        <DashboardNav />
-        <main className="flex-1 p-6 overflow-auto">
+  const mainContent = (
+    <div className="flex-1 flex flex-col">
+      {!isInSchool && <DashboardNav />}
+      <main className="flex-1 p-6 overflow-auto">
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <div>
