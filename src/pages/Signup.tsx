@@ -72,15 +72,17 @@ const Signup = () => {
     try {
       await signUp(formData.email.trim(), formData.password, approvedRequest.full_name, approvedRequest.requested_role);
 
-      // Get the approved request to find the payment plan
+      // Get the approved request to find the payment plan and seat config
       const { data: reqData } = await supabase
         .from('registration_requests')
-        .select('payment_plan')
+        .select('payment_plan, seat_config, requested_role')
         .eq('email', formData.email.trim().toLowerCase())
         .eq('status', 'approved')
         .limit(1);
 
       const paymentPlan = reqData?.[0]?.payment_plan;
+      const seatConfig = reqData?.[0]?.seat_config as { teachers: number; students: number } | null;
+      const reqRole = reqData?.[0]?.requested_role;
 
       // Mark the request as completed
       await supabase
@@ -89,21 +91,81 @@ const Signup = () => {
         .eq('email', formData.email.trim().toLowerCase())
         .eq('status', 'approved');
 
-      // If student with a plan, create the user_plan record after a short delay for auth to settle
-      if (approvedRequest.requested_role === 'student' && paymentPlan) {
-        const planParts = paymentPlan.split('_');
-        const planId = planParts[0] || 'starter';
-        const billingCycle = planParts[1] || 'monthly';
-        const tokenLimits: Record<string, number> = { starter: 500, standard: 2000, premium: 5000 };
+      // Wait for auth session to be available
+      const { data: { session } } = await supabase.auth.getSession();
 
-        // Wait for auth session to be available
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+      if (session?.user) {
+        // If student with a plan, create the user_plan record
+        if (reqRole === 'student' && paymentPlan) {
+          const planParts = paymentPlan.split('_');
+          const planId = planParts[0] || 'starter';
+          const billingCycle = planParts[1] || 'monthly';
+          const tokenLimits: Record<string, number> = { starter: 500, standard: 2000, premium: 5000 };
+
           await supabase.from('user_plans').insert({
             user_id: session.user.id,
             plan_id: planId,
             billing_cycle: billingCycle,
             monthly_token_limit: tokenLimits[planId] || 500,
+            tokens_used_this_month: 0,
+            status: 'active',
+          } as any);
+        }
+
+        // If admin, create a school and seat limits
+        if (reqRole === 'admin' && paymentPlan && seatConfig) {
+          const planParts = paymentPlan.split('_');
+          // planParts for admin: e.g. ["school", "growth", "monthly"]
+          const planId = planParts.slice(0, -1).join('_') || 'school_starter';
+          const billingCycle = planParts[planParts.length - 1] || 'monthly';
+
+          // Create a school for this admin
+          const { data: schoolData } = await supabase.from('schools').insert({
+            name: `${approvedRequest.full_name}'s School`,
+            created_by: session.user.id,
+            contact_email: formData.email.trim().toLowerCase(),
+          } as any).select().single();
+
+          if (schoolData) {
+            const schoolId = (schoolData as any).id;
+
+            // Add admin as school member
+            await supabase.from('school_members').insert({
+              school_id: schoolId,
+              user_id: session.user.id,
+              school_role: 'admin',
+            } as any);
+
+            // Create default AI settings
+            await supabase.from('school_ai_settings').insert({
+              school_id: schoolId,
+            } as any);
+
+            // Create seat limits
+            await supabase.from('school_seat_limits').insert({
+              school_id: schoolId,
+              plan_id: planId,
+              billing_cycle: billingCycle,
+              teacher_seats: seatConfig.teachers || 0,
+              student_seats: seatConfig.students || 0,
+              teachers_used: 0,
+              students_used: 0,
+            } as any);
+          }
+        }
+
+        // If teacher with a plan, create user_plan record for teachers
+        if (reqRole === 'teacher' && paymentPlan) {
+          const planParts = paymentPlan.split('_');
+          // e.g. ["teacher", "pro", "monthly"]
+          const planId = planParts.slice(0, -1).join('_') || 'teacher_individual';
+          const billingCycle = planParts[planParts.length - 1] || 'monthly';
+
+          await supabase.from('user_plans').insert({
+            user_id: session.user.id,
+            plan_id: planId,
+            billing_cycle: billingCycle,
+            monthly_token_limit: 99999,
             tokens_used_this_month: 0,
             status: 'active',
           } as any);
