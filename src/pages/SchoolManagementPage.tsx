@@ -285,11 +285,10 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
       // Update seat usage
       if (seatLimits) {
         const isTeacher = addMemberRole === 'teacher' || addMemberRole === 'admin';
-        await supabase.from('school_seat_limits').update(
-          isTeacher
-            ? { teachers_used: (seatLimits.teachers_used || 0) + 1 }
-            : { students_used: (seatLimits.students_used || 0) + 1 }
-        as any).eq('school_id', school.id);
+        const updateData = isTeacher
+          ? { teachers_used: (seatLimits.teachers_used || 0) + 1 }
+          : { students_used: (seatLimits.students_used || 0) + 1 };
+        await supabase.from('school_seat_limits').update(updateData as any).eq('school_id', school.id);
       }
       toast({ title: 'Member added' });
       setAddMemberEmail('');
