@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { CheckCircle2, XCircle, Clock, ArrowLeft, Search, CreditCard } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ArrowLeft, Search, CreditCard, Users } from "lucide-react";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { ALL_PLAN_LABELS } from "@/lib/planConfigs";
 
@@ -23,6 +23,7 @@ interface RegistrationRequest {
   status: string;
   rejection_reason: string | null;
   payment_plan: string | null;
+  seat_config: { teachers: number; students: number } | null;
   created_at: string;
 }
 
