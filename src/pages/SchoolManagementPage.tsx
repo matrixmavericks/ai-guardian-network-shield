@@ -235,10 +235,12 @@ function AdminBillingView({
 }: {
   adminPlan: any; seatLimits: any; currentPlanConfig: AdminPlanConfig | null; planFeatures: any;
 }) {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [upgradeNote, setUpgradeNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [provisioning, setProvisioning] = useState(false);
 
   const cost = seatLimits && adminPlan
     ? calcAdminMonthlyCost(adminPlan.plan_id, seatLimits.teacher_seats, seatLimits.student_seats, adminPlan.billing_cycle === 'yearly')
@@ -262,13 +264,95 @@ function AdminBillingView({
     setSubmitting(false);
   };
 
+  const provisionNow = async () => {
+    if (!user?.id) return;
+    setProvisioning(true);
+    try {
+      // Look up the approved registration request
+      const { data: reqData } = await supabase
+        .from('registration_requests')
+        .select('payment_plan, seat_config, requested_role, status')
+        .eq('email', (user.email || '').toLowerCase())
+        .in('status', ['completed', 'approved'])
+        .limit(1);
+
+      if (!reqData || reqData.length === 0) {
+        toast({ title: 'No approved request found', description: 'Your registration request may still be pending approval.', variant: 'destructive' });
+        setProvisioning(false);
+        return;
+      }
+
+      const req = reqData[0];
+      const paymentPlan = req.payment_plan;
+      const seatConfig = req.seat_config as { teachers: number; students: number } | null;
+
+      if (!paymentPlan) {
+        toast({ title: 'No plan found', description: 'Your registration request does not include a payment plan.', variant: 'destructive' });
+        setProvisioning(false);
+        return;
+      }
+
+      const planParts = paymentPlan.split('_');
+      const planId = planParts.slice(0, -1).join('_') || 'school_starter';
+      const billingCycle = planParts[planParts.length - 1] || 'monthly';
+
+      // Create user_plan
+      await supabase.from('user_plans').insert({
+        user_id: user.id,
+        plan_id: planId,
+        billing_cycle: billingCycle,
+        monthly_token_limit: 99999,
+        tokens_used_this_month: 0,
+        status: 'active',
+      } as any);
+
+      // Create school if seatConfig exists and no school yet
+      if (seatConfig) {
+        const { data: existingSchools } = await supabase
+          .from('school_members').select('school_id').eq('user_id', user.id).limit(1);
+
+        if (!existingSchools || existingSchools.length === 0) {
+          const userName = user.fullName || user.email?.split('@')[0] || 'Admin';
+          const { data: schoolData } = await supabase.from('schools').insert({
+            name: `${userName}'s School`,
+            created_by: user.id,
+            contact_email: user.email || null,
+          } as any).select().single();
+
+          if (schoolData) {
+            const schoolId = (schoolData as any).id;
+            await Promise.all([
+              supabase.from('school_members').insert({ school_id: schoolId, user_id: user.id, school_role: 'admin' } as any),
+              supabase.from('school_ai_settings').insert({ school_id: schoolId } as any),
+              supabase.from('school_seat_limits').insert({
+                school_id: schoolId, plan_id: planId, billing_cycle: billingCycle,
+                teacher_seats: seatConfig.teachers || 0, student_seats: seatConfig.students || 0,
+                teachers_used: 0, students_used: 0,
+              } as any),
+            ]);
+          }
+        }
+      }
+
+      toast({ title: 'Plan activated!', description: 'Your admin plan and school have been set up. Refreshing...' });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+    setProvisioning(false);
+  };
+
   if (!adminPlan) {
     return (
       <Card className="border-dashed">
         <CardContent className="py-16 text-center">
           <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Admin Plan Found</h3>
-          <p className="text-muted-foreground mb-4">Your admin plan will appear here once your registration is processed. If you've already signed up, try refreshing.</p>
+          <p className="text-muted-foreground mb-4">Your admin plan may not have been provisioned yet. Click below to activate it from your approved registration.</p>
+          <Button onClick={provisionNow} disabled={provisioning} className="gap-2">
+            {provisioning ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            {provisioning ? 'Activating...' : 'Activate My Plan'}
+          </Button>
         </CardContent>
       </Card>
     );
