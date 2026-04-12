@@ -799,11 +799,13 @@ const StudentDashboard = () => {
 
             {/* ═══════════ QUIZ LIBRARY ═══════════ */}
             <TabsContent value="quizzes">
-              {practiceSessionId ? (
-                <LiveQuizPlayer sessionId={practiceSessionId} onExit={() => setPracticeSessionId(null)} />
-              ) : (
-                <QuizLibrary onStartPractice={(id) => setPracticeSessionId(id)} />
-              )}
+              <FeatureGate feature="quizPractice">
+                {practiceSessionId ? (
+                  <LiveQuizPlayer sessionId={practiceSessionId} onExit={() => setPracticeSessionId(null)} />
+                ) : (
+                  <QuizLibrary onStartPractice={(id) => setPracticeSessionId(id)} />
+                )}
+              </FeatureGate>
             </TabsContent>
           </Tabs>
         </div>
