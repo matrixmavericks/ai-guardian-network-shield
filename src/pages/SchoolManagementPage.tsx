@@ -1082,6 +1082,101 @@ function SchoolDetail({ school, onBack, userId, planFeatures }: { school: School
   );
 }
 
+function CreateSchoolUserCard({ schoolId, seatLimits, teachersUsed, studentsUsed, onCreated }: {
+  schoolId: string; seatLimits: any; teachersUsed: number; studentsUsed: number; onCreated: () => void;
+}) {
+  const { toast } = useToast();
+  const [form, setForm] = useState({ email: '', password: '', fullName: '', role: 'student' as string });
+  const [creating, setCreating] = useState(false);
+
+  const canAddTeacher = !seatLimits || teachersUsed < seatLimits.teacher_seats;
+  const canAddStudent = !seatLimits || studentsUsed < seatLimits.student_seats;
+
+  const handleCreate = async () => {
+    if (!form.email || !form.password || !form.fullName) {
+      toast({ title: 'Please fill all fields', variant: 'destructive' }); return;
+    }
+    if (form.password.length < 6) {
+      toast({ title: 'Password must be at least 6 characters', variant: 'destructive' }); return;
+    }
+
+    const isTeacher = form.role === 'teacher';
+    if (isTeacher && !canAddTeacher) {
+      toast({ title: 'Teacher seat limit reached', variant: 'destructive' }); return;
+    }
+    if (!isTeacher && !canAddStudent) {
+      toast({ title: 'Student seat limit reached', variant: 'destructive' }); return;
+    }
+
+    setCreating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-school-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          email: form.email.toLowerCase(),
+          password: form.password,
+          fullName: form.fullName,
+          role: form.role,
+          schoolId,
+        }),
+      });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      toast({ title: 'Account created!', description: `${form.fullName} (${form.role}) has been added to the school.` });
+      setForm({ email: '', password: '', fullName: '', role: 'student' });
+      onCreated();
+    } catch (err: any) {
+      toast({ title: 'Error creating account', description: err.message, variant: 'destructive' });
+    }
+    setCreating(false);
+  };
+
+  return (
+    <Card className="border-primary/20 bg-primary/5">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-5 w-5 text-primary" /> Create New Account</CardTitle>
+        <CardDescription>Create a new student or teacher account directly under this school. They'll be able to log in immediately.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">Full Name *</Label>
+            <Input value={form.fullName} onChange={e => setForm(p => ({ ...p, fullName: e.target.value }))} placeholder="John Doe" />
+          </div>
+          <div>
+            <Label className="text-xs">Email *</Label>
+            <Input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="john@school.edu" type="email" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">Password *</Label>
+            <Input value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="Min 6 characters" type="password" />
+          </div>
+          <div>
+            <Label className="text-xs">Role</Label>
+            <Select value={form.role} onValueChange={v => setForm(p => ({ ...p, role: v }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="student" disabled={!canAddStudent}>Student {!canAddStudent && '(limit reached)'}</SelectItem>
+                <SelectItem value="teacher" disabled={!canAddTeacher}>Teacher {!canAddTeacher && '(limit reached)'}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <Button onClick={handleCreate} disabled={creating || !form.email || !form.fullName || !form.password} className="w-full">
+          {creating ? 'Creating...' : `Create ${form.role === 'teacher' ? 'Teacher' : 'Student'} Account`}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ToggleRow({ label, desc, checked, onChange }: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="flex items-center justify-between">
