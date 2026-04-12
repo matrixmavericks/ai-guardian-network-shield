@@ -62,6 +62,8 @@ interface SchoolAISettings {
   subject_restrictions: string[];
 }
 
+const WEBSITE_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
+
 export default function SchoolManagementPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -70,15 +72,36 @@ export default function SchoolManagementPage() {
   const [selectedSchool, setSelectedSchool] = useState<SchoolData | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
+  const isMasterAdmin = user?.email === WEBSITE_ADMIN_EMAIL;
+
   useEffect(() => { fetchSchools(); }, []);
 
   const fetchSchools = async () => {
     setLoading(true);
-    const { data: schoolsData } = await supabase.from('schools').select('*').order('created_at', { ascending: false });
+
+    let schoolsData: any[] = [];
+
+    if (isMasterAdmin) {
+      // Master admin sees all schools
+      const { data } = await supabase.from('schools').select('*').order('created_at', { ascending: false });
+      schoolsData = data || [];
+    } else {
+      // School admin only sees schools they are a member of
+      const { data: myMemberships } = await supabase
+        .from('school_members')
+        .select('school_id')
+        .eq('user_id', user?.id || '');
+      const mySchoolIds = (myMemberships || []).map((m: any) => m.school_id);
+      if (mySchoolIds.length > 0) {
+        const { data } = await supabase.from('schools').select('*').in('id', mySchoolIds).order('created_at', { ascending: false });
+        schoolsData = data || [];
+      }
+    }
+
     const { data: members } = await supabase.from('school_members').select('school_id');
     const { data: classes } = await supabase.from('classes').select('school_id');
 
-    const enriched = (schoolsData || []).map((s: any) => ({
+    const enriched = schoolsData.map((s: any) => ({
       ...s,
       memberCount: (members || []).filter((m: any) => m.school_id === s.id).length,
       classCount: (classes || []).filter((c: any) => c.school_id === s.id).length,
