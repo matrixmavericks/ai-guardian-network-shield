@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import DashboardNav from "@/components/DashboardNav";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import { useSchoolCheck } from '@/hooks/useSchoolCheck';
 import NetworkStatus from "@/components/NetworkStatus";
 import RecentPrompts from "@/components/RecentPrompts";
 import NetworkSettings from "@/components/NetworkSettings";
@@ -21,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 
 const Dashboard = () => {
+  const isInSchool = useSchoolCheck();
   const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState({ totalPrompts: 0, bypassBlocked: 0 });
   const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
@@ -72,6 +74,23 @@ const Dashboard = () => {
       default: return { bg: 'bg-blue-50', border: 'border-blue-100', title: 'text-blue-800', text: 'text-blue-600' };
     }
   };
+
+  if (isInSchool) {
+    return (
+      <div className="flex-1 flex flex-col">
+        <main className="flex-1 p-6">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
+              <Button onClick={fetchDashboardData} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-slate-50">
