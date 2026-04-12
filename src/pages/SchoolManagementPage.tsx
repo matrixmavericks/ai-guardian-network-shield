@@ -57,6 +57,7 @@ const PLAN_FEATURES: Record<string, { customDomain: boolean; whiteLabel: boolean
 };
 
 export default function SchoolManagementPage() {
+  const isInSchool = useSchoolCheck();
   const { user } = useAuth();
   const { toast } = useToast();
   const [schools, setSchools] = useState<SchoolData[]>([]);

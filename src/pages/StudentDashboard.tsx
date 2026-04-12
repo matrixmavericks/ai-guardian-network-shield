@@ -73,6 +73,7 @@ interface Message {
 
 // ─── Component ────────────────────────────────────────────────────────────
 const StudentDashboard = () => {
+  const isInSchool = useSchoolCheck();
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
   const { user } = useAuth();
@@ -300,8 +301,8 @@ const StudentDashboard = () => {
   // ─── Render ─────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex h-screen bg-background">
-        <DashboardSidebar />
+      <div className={isInSchool ? "flex-1 flex items-center justify-center" : "flex h-screen bg-background"}>
+        {!isInSchool && <DashboardSidebar />}
         <div className="flex-1 flex items-center justify-center">
           <Loader className="h-6 w-6 animate-spin text-primary mr-2" />
           <span className="text-muted-foreground">Loading dashboard...</span>
@@ -310,15 +311,13 @@ const StudentDashboard = () => {
     );
   }
 
-  return (
-    <div className="flex h-screen bg-background">
-      <DashboardSidebar />
-      <div className="flex-1 overflow-y-auto">
-        <div className="container py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Student Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, {displayName}!</p>
-          </div>
+  const dashboardContent = (
+    <div className="flex-1 overflow-y-auto">
+      <div className="container py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Student Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back, {displayName}!</p>
+        </div>
 
           <Tabs defaultValue={activeTab}>
             <TabsList className="mb-8 flex-wrap">
