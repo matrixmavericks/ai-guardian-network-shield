@@ -185,8 +185,8 @@ export const ADMIN_PLANS: Record<string, AdminPlanConfig> = {
     name: 'Starter',
     platformFeeMonthly: 1500,
     platformFeeYearly: 13500,
-    perTeacherMonthly: 400,
-    perStudentMonthly: 120,
+    perTeacherMonthly: 200,
+    perStudentMonthly: 60,
     features: [
       'School dashboard & branding',
       'Centralized class management',
@@ -238,8 +238,8 @@ export const ADMIN_PLANS: Record<string, AdminPlanConfig> = {
     name: 'Enterprise',
     platformFeeMonthly: 12000,
     platformFeeYearly: 108000,
-    perTeacherMonthly: 300,
-    perStudentMonthly: 80,
+    perTeacherMonthly: 500,
+    perStudentMonthly: 150,
     features: [
       'Everything in Growth',
       'Custom AI model training',
