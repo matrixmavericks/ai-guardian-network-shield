@@ -127,7 +127,13 @@ export default function SchoolManagementPage() {
     })));
   };
 
-  const currentPlanConfig = adminPlan ? (ADMIN_PLANS[adminPlan.plan_id] || { name: 'Unlimited', platformFee: 0, perTeacher: 0, perStudent: 0, features: ['All features unlocked', 'Unlimited seats', 'Full platform access'] }) : null;
+  const unlimitedPlanConfig: AdminPlanConfig = {
+    id: 'unlimited', name: 'Unlimited (Master Admin)', platformFeeMonthly: 0, platformFeeYearly: 0,
+    perTeacherMonthly: 0, perStudentMonthly: 0,
+    features: ['All features unlocked', 'Unlimited seats', 'Full platform access', 'Master admin controls'],
+    teacherDiscounts: [], studentDiscounts: [],
+  };
+  const currentPlanConfig = adminPlan ? (ADMIN_PLANS[adminPlan.plan_id] || unlimitedPlanConfig) : null;
   const planFeatures = adminPlan ? (PLAN_FEATURES[adminPlan.plan_id] || PLAN_FEATURES.school_enterprise) : null;
 
   return (
