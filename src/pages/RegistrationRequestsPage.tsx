@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { CheckCircle2, XCircle, Clock, ArrowLeft, Search, CreditCard, Users } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ArrowLeft, Search, CreditCard, Users, IndianRupee, TrendingUp } from "lucide-react";
 import DashboardSidebar from "@/components/DashboardSidebar";
-import { ALL_PLAN_LABELS } from "@/lib/planConfigs";
+import { ALL_PLAN_LABELS, STUDENT_PLANS, TEACHER_PLANS, ADMIN_PLANS, calcAdminMonthlyCost } from "@/lib/planConfigs";
 
 interface RegistrationRequest {
   id: string;
@@ -28,8 +28,33 @@ interface RegistrationRequest {
 }
 
 const PLAN_LABELS = ALL_PLAN_LABELS;
-
 const WEBSITE_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
+
+// Helper: calculate payable amount from plan string + seat config
+function getPayableAmount(paymentPlan: string | null, seatConfig: { teachers: number; students: number } | null): { monthly: number; yearly: number; cycle: string } | null {
+  if (!paymentPlan) return null;
+  const parts = paymentPlan.split('_');
+  const cycle = parts[parts.length - 1]; // 'monthly' or 'yearly'
+  const planId = parts.slice(0, -1).join('_');
+
+  // Student plans
+  if (STUDENT_PLANS[planId]) {
+    const p = STUDENT_PLANS[planId];
+    return { monthly: p.monthlyPrice, yearly: p.yearlyPrice, cycle };
+  }
+  // Teacher plans
+  if (TEACHER_PLANS[planId]) {
+    const p = TEACHER_PLANS[planId];
+    return { monthly: p.monthlyPrice, yearly: p.yearlyPrice, cycle };
+  }
+  // Admin plans
+  if (ADMIN_PLANS[planId] && seatConfig) {
+    const costMonthly = calcAdminMonthlyCost(planId, seatConfig.teachers, seatConfig.students, false);
+    const costYearly = calcAdminMonthlyCost(planId, seatConfig.teachers, seatConfig.students, true);
+    return { monthly: costMonthly.total, yearly: costYearly.total * 12, cycle };
+  }
+  return null;
+}
 
 const RegistrationRequestsPage = () => {
   const { user } = useAuth();
@@ -74,12 +99,10 @@ const RegistrationRequestsPage = () => {
   };
 
   const handleApprove = async (req: RegistrationRequest) => {
-    // If student and has a plan, approve directly; otherwise show plan dialog
     if (req.requested_role === 'student') {
       if (req.payment_plan) {
         await doApprove(req, req.payment_plan);
       } else {
-        // Open plan assignment dialog
         setPlanDialog({ open: true, request: req });
       }
     } else {
@@ -157,6 +180,13 @@ const RegistrationRequestsPage = () => {
     r.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Calculate totals for revenue overview
+  const approvedRequests = requests.filter(r => r.status === 'approved' || r.status === 'pending');
+  const totalMonthlyRevenue = approvedRequests.reduce((sum, req) => {
+    const payable = getPayableAmount(req.payment_plan, req.seat_config);
+    return sum + (payable ? payable.monthly : 0);
+  }, 0);
+
   const statusBadge = (status: string) => {
     switch (status) {
       case 'pending': return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
@@ -190,6 +220,31 @@ const RegistrationRequestsPage = () => {
             </div>
           </div>
 
+          {/* Revenue Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardContent className="py-4 px-5">
+                <p className="text-xs font-medium text-green-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" />Est. Monthly Revenue</p>
+                <p className="text-2xl font-bold text-green-800">₹{totalMonthlyRevenue.toLocaleString('en-IN')}</p>
+                <p className="text-xs text-green-600">From {approvedRequests.length} active/pending users</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+              <CardContent className="py-4 px-5">
+                <p className="text-xs font-medium text-amber-600 flex items-center gap-1"><Clock className="h-3 w-3" />Pending Requests</p>
+                <p className="text-2xl font-bold text-amber-800">{requests.filter(r => r.status === 'pending').length}</p>
+                <p className="text-xs text-amber-600">Awaiting your review</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+              <CardContent className="py-4 px-5">
+                <p className="text-xs font-medium text-blue-600 flex items-center gap-1"><Users className="h-3 w-3" />Total Requests</p>
+                <p className="text-2xl font-bold text-blue-800">{requests.length}</p>
+                <p className="text-xs text-blue-600">All time</p>
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="flex flex-wrap gap-2 items-center justify-between">
             <div className="flex gap-2">
               {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
@@ -215,48 +270,72 @@ const RegistrationRequestsPage = () => {
             </div>
           ) : (
             <div className="grid gap-3">
-              {filteredRequests.map(req => (
-                <Card key={req.id}>
-                  <CardContent className="flex items-center justify-between py-4 px-5">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{req.full_name}</span>
-                        {roleBadge(req.requested_role)}
-                        {statusBadge(req.status)}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{req.email}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Submitted: {new Date(req.created_at).toLocaleDateString()} at {new Date(req.created_at).toLocaleTimeString()}
-                      </p>
-                      {req.payment_plan && (
-                        <p className="text-xs font-medium text-indigo-600 flex items-center gap-1">
-                          <CreditCard className="h-3 w-3" />
-                          Plan: {PLAN_LABELS[req.payment_plan] || req.payment_plan}
+              {filteredRequests.map(req => {
+                const payable = getPayableAmount(req.payment_plan, req.seat_config);
+                return (
+                  <Card key={req.id}>
+                    <CardContent className="flex items-center justify-between py-4 px-5">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{req.full_name}</span>
+                          {roleBadge(req.requested_role)}
+                          {statusBadge(req.status)}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{req.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Submitted: {new Date(req.created_at).toLocaleDateString()} at {new Date(req.created_at).toLocaleTimeString()}
                         </p>
-                      )}
-                      {req.seat_config && (
-                        <p className="text-xs font-medium text-violet-600 flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          Seats: {req.seat_config.teachers} teachers, {req.seat_config.students} students
-                        </p>
-                      )}
-                      {req.rejection_reason && (
-                        <p className="text-xs text-red-600">Reason: {req.rejection_reason}</p>
-                      )}
-                    </div>
-                    {req.status === 'pending' && (
-                      <div className="flex gap-2 shrink-0">
-                        <Button size="sm" onClick={() => handleApprove(req)} disabled={processing === req.id}>
-                          <CheckCircle2 className="h-4 w-4 mr-1" /> Approve
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => setRejectDialog({ open: true, request: req })} disabled={processing === req.id}>
-                          <XCircle className="h-4 w-4 mr-1" /> Reject
-                        </Button>
+                        {req.payment_plan && (
+                          <p className="text-xs font-medium text-indigo-600 flex items-center gap-1">
+                            <CreditCard className="h-3 w-3" />
+                            Plan: {PLAN_LABELS[req.payment_plan] || req.payment_plan}
+                          </p>
+                        )}
+                        {req.seat_config && (
+                          <p className="text-xs font-medium text-violet-600 flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            Seats: {req.seat_config.teachers} teachers, {req.seat_config.students} students
+                          </p>
+                        )}
+                        {req.rejection_reason && (
+                          <p className="text-xs text-red-600">Reason: {req.rejection_reason}</p>
+                        )}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+
+                      {/* Payable Amount */}
+                      <div className="flex items-center gap-4 shrink-0">
+                        {payable && (
+                          <div className="text-right border-r pr-4 mr-2">
+                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Payable</p>
+                            <p className="text-lg font-bold text-green-700 flex items-center gap-0.5">
+                              <IndianRupee className="h-3.5 w-3.5" />
+                              {payable.cycle === 'yearly'
+                                ? payable.yearly.toLocaleString('en-IN')
+                                : payable.monthly.toLocaleString('en-IN')}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {payable.cycle === 'yearly' ? '/year' : '/month'}
+                              {payable.cycle === 'monthly' && (
+                                <span className="text-muted-foreground"> · ₹{(payable.monthly * 12).toLocaleString('en-IN')}/yr</span>
+                              )}
+                            </p>
+                          </div>
+                        )}
+                        {req.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => handleApprove(req)} disabled={processing === req.id}>
+                              <CheckCircle2 className="h-4 w-4 mr-1" /> Approve
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => setRejectDialog({ open: true, request: req })} disabled={processing === req.id}>
+                              <XCircle className="h-4 w-4 mr-1" /> Reject
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
