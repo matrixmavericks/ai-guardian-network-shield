@@ -68,7 +68,7 @@ const RegistrationRequestsPage = () => {
     if (error) {
       toast({ title: "Error", description: "Failed to load requests.", variant: "destructive" });
     } else {
-      setRequests(data || []);
+      setRequests((data || []) as any as RegistrationRequest[]);
     }
     setLoading(false);
   };
