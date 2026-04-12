@@ -402,9 +402,60 @@ function SchoolDetail({ school, onBack, userId }: { school: SchoolData; onBack: 
 
         {/* MEMBERS TAB */}
         <TabsContent value="members" className="space-y-4">
+          {/* Seat Limits Card */}
+          {seatLimits && (
+            <Card className="border-indigo-200 bg-gradient-to-r from-indigo-50/50 to-violet-50/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2"><Shield className="h-5 w-5 text-indigo-600" /> Seat Allocation</CardTitle>
+                <CardDescription>Your plan: <strong className="capitalize">{seatLimits.plan_id?.replace(/_/g, ' ')}</strong> ({seatLimits.billing_cycle})</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-lg border bg-white p-3">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">Teacher Seats</p>
+                    <div className="flex items-end gap-1">
+                      <span className="text-2xl font-bold">{members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length}</span>
+                      <span className="text-muted-foreground text-sm mb-0.5">/ {seatLimits.teacher_seats}</span>
+                    </div>
+                    <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length / Math.max(1, seatLimits.teacher_seats)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-white p-3">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">Student Seats</p>
+                    <div className="flex items-end gap-1">
+                      <span className="text-2xl font-bold">{members.filter(m => m.school_role === 'member').length}</span>
+                      <span className="text-muted-foreground text-sm mb-0.5">/ {seatLimits.student_seats}</span>
+                    </div>
+                    <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-violet-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (members.filter(m => m.school_role === 'member').length / Math.max(1, seatLimits.student_seats)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-5 w-5" /> Add Member</CardTitle>
+              {seatLimits && (
+                <CardDescription>
+                  {(() => {
+                    const teachersUsed = members.filter(m => m.school_role === 'teacher' || m.school_role === 'admin').length;
+                    const studentsUsed = members.filter(m => m.school_role === 'member').length;
+                    const tLeft = seatLimits.teacher_seats - teachersUsed;
+                    const sLeft = seatLimits.student_seats - studentsUsed;
+                    return `${tLeft} teacher seat${tLeft !== 1 ? 's' : ''} • ${sLeft} student seat${sLeft !== 1 ? 's' : ''} remaining`;
+                  })()}
+                </CardDescription>
+              )}
             </CardHeader>
             <CardContent>
               <div className="flex gap-2">
