@@ -1,0 +1,2 @@
+ALTER TABLE public.schools ADD COLUMN IF NOT EXISTS subdomain text UNIQUE;
+ALTER TABLE public.schools ADD COLUMN IF NOT EXISTS theme_config jsonb DEFAULT '{"primaryColor": "#3b82f6", "accentColor": "#8b5cf6"}'::jsonb;
