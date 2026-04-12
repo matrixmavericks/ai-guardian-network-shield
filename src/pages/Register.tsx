@@ -137,27 +137,8 @@ const Register = () => {
     }
   };
 
-  // ─── Volume discount calculation for admin plans ───
-  const getAdminDiscount = (planId: string): { discount: number; label: string } | null => {
-    const plan = ADMIN_PLANS[planId];
-    if (!plan) return null;
-    let best: { discount: number; label: string } | null = null;
-    for (const vd of plan.volumeDiscounts) {
-      if (studentCount >= vd.minStudents) best = vd;
-    }
-    return best;
-  };
-
-  const getAdminEffectivePrice = (planId: string): { monthly: number; yearly: number } => {
-    const plan = ADMIN_PLANS[planId];
-    if (!plan) return { monthly: 0, yearly: 0 };
-    const disc = getAdminDiscount(planId);
-    const factor = disc ? (100 - disc.discount) / 100 : 1;
-    return {
-      monthly: Math.round(plan.baseMonthlyPrice * factor),
-      yearly: Math.round(plan.baseYearlyPrice * factor),
-    };
-  };
+  // Admin cost calc using centralized helper
+  const adminCost = calcAdminMonthlyCost(selectedPlan, teacherCount, studentCount, billingCycle === 'yearly');
 
   const renderStatusCard = () => {
     if (requestStatus === 'submitted' || requestStatus === 'pending') {
