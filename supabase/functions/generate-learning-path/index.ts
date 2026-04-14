@@ -54,6 +54,7 @@ serve(async (req) => {
       resourceContent,
       resourceUrl,
       resourceTitle,
+      curriculumType,
     } = await req.json();
 
     if (!title?.trim() || !subject?.trim()) {
@@ -69,6 +70,18 @@ serve(async (req) => {
     if (!fileContent && resourceUrl) {
       fileContent = await fetchFileContent(resourceUrl);
     }
+
+    const curriculumInstructions: Record<string, string> = {
+      ib: "Follow the IB (International Baccalaureate) curriculum framework. Use IB-style assessment criteria (Criterion A-D), TOK connections, ATL skills, and inquiry-based approaches. Structure content around IB subject-specific aims and objectives.",
+      ap: "Follow the AP (Advanced Placement) College Board curriculum. Structure around AP units and learning objectives. Include AP-style free-response and multiple-choice practice. Reference the AP exam format and scoring rubrics.",
+      igcse: "Follow the Cambridge IGCSE curriculum framework. Use IGCSE grading criteria, past-paper style questions, and Cambridge-aligned learning objectives. Cover all syllabus assessment objectives (AO1-AO3).",
+      cbse: "Follow the CBSE (Central Board of Secondary Education) curriculum. Align with NCERT syllabus guidelines, use CBSE marking schemes, and include HOTS (Higher Order Thinking Skills) questions.",
+      a_levels: "Follow the A-Level (GCE Advanced Level) curriculum. Structure around A-Level specification points, include synoptic assessment preparation, and use exam-board aligned mark schemes.",
+    };
+
+    const curriculumNote = curriculumType && curriculumType !== "general" && curriculumType !== "custom"
+      ? `\n- CURRICULUM FRAMEWORK: ${curriculumInstructions[curriculumType] || `Follow the ${curriculumType} curriculum standards and assessment criteria.`}`
+      : "";
 
     const systemPrompt = `You are an expert instructional designer. Return valid JSON only.
 
@@ -92,7 +105,7 @@ Rules:
 - Quizzes must be short assessment topic titles (1-2 per module) that test understanding of the module content.
 - IMPORTANT: The LAST module MUST be a "Capstone Project" module. This module should have a title like "Capstone Project: [topic]", a description that outlines the project requirements and what the student should demonstrate, resources that guide the project (e.g., "Project Planning Guide", "Rubric & Expectations"), and 0 quizzes. Mark it with "isCapstone": true in the module object.
 - suggestedTags should contain 3 to 6 short tags.
-- Tailor language complexity and content depth to the specified grade level and difficulty.
+- Tailor language complexity and content depth to the specified grade level and difficulty.${curriculumNote}
 ${fileContent ? "- IMPORTANT: The user has provided actual document/file content below. Base the learning path heavily on the specific topics, concepts, and material found in this content. Cover the material thoroughly and in a logical teaching order." : ""}`;
 
     let userPrompt = `Build a learning path.

@@ -47,6 +47,7 @@ interface ClassInfo {
   description: string;
   join_code: string;
   teacher_id: string;
+  curriculum_type?: string;
 }
 
 interface ClassAssignment {
