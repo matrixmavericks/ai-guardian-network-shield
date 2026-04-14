@@ -247,6 +247,14 @@ Return valid JSON: { "content": "markdown string" }`;
       // Fourth attempt: extract from code fences
       const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (fenceMatch) return safeJsonParse(fenceMatch[1]);
+      // Fifth attempt: find first { ... } block in the text
+      const braceMatch = raw.match(/\{[\s\S]*\}/);
+      if (braceMatch) {
+        const cleaned = braceMatch[0].replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+        try { return JSON.parse(cleaned); } catch {}
+        const esc2 = cleaned.replace(/"(?:[^"\\]|\\.)*"/g, (m) => m.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t'));
+        try { return JSON.parse(esc2); } catch {}
+      }
       throw new Error("AI returned invalid JSON");
     }
     const parsed = safeJsonParse(content);
