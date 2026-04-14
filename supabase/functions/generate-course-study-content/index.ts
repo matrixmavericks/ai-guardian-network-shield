@@ -15,8 +15,8 @@ const json = (body: unknown, status = 200) =>
   });
 
 const CURRICULUM_CONTEXT: Record<string, string> = {
-  ib: "IB (International Baccalaureate) curriculum. Use IB command terms (State, Explain, Evaluate, Discuss, Analyse). Follow IB assessment criteria and markband descriptors. Reference IB syllabus objectives. Include TOK connections where relevant.",
-  ap: "AP (Advanced Placement / College Board) curriculum. Format questions like AP free-response and multiple choice. Reference the AP exam format. Include AP-style scoring rubrics.",
+  ib: "IB (International Baccalaureate) curriculum. Use IB command terms (State, Explain, Evaluate, Discuss, Analyse, Compare, Contrast, Outline, Describe, Justify, Suggest, To what extent). Follow IB assessment criteria and markband descriptors. Reference IB syllabus objectives. Include TOK connections where relevant.",
+  ap: "AP (Advanced Placement / College Board) curriculum. Format questions like AP free-response and multiple choice. Reference the AP exam format. Include AP-style scoring rubrics. Use the AP scoring guidelines (1-5 scale).",
   igcse: "Cambridge IGCSE curriculum. Use IGCSE assessment objectives (AO1: Knowledge, AO2: Understanding, AO3: Analysis). Include past-paper style questions. Follow Cambridge mark scheme format.",
   a_levels: "GCE A-Level curriculum. Structure content around A-Level specification points. Include synoptic connections. Use exam-board style mark schemes.",
   cbse: "CBSE curriculum. Align with NCERT guidelines. Include HOTS questions. Follow CBSE marking scheme format.",
@@ -41,19 +41,37 @@ serve(async (req) => {
     const courseCtx = `Course: ${courseTitle}\nCurriculum: ${curriculumType?.toUpperCase() || 'General'} ${level || ''}\nSubject: ${subject}\nTopic: ${topicCode ? topicCode + ' - ' : ''}${topicTitle}\nDescription: ${topicDescription || ''}`;
 
     let systemPrompt: string;
-    let responseFormat = { type: "json_object" as const };
 
     if (type === "cheatsheet") {
       systemPrompt = `You are an expert ${curriculumType?.toUpperCase() || ''} ${subject} teacher creating a comprehensive study cheatsheet. Follow the ${currCtx}
 
-Create a detailed, beautifully formatted markdown cheatsheet for the given topic. Include:
-- Key definitions and concepts with precise ${curriculumType?.toUpperCase() || ''} terminology
-- Important formulas, equations, or rules (use Unicode: × ÷ ² ³ √ π ∑ ≤ ≥ ≠, NOT LaTeX)
-- Worked examples with step-by-step solutions
-- Common exam mistakes to avoid
-- Quick-reference tables where applicable
-- Exam tips specific to ${curriculumType?.toUpperCase() || 'this'} papers
-- Connections to other topics in the syllabus
+Create a detailed, beautifully formatted markdown cheatsheet for the given topic. The cheatsheet must be COMPREHENSIVE and DETAILED (at least 1500 words). Include ALL of these sections:
+
+## 📋 Key Definitions
+- Every important term with precise ${curriculumType?.toUpperCase() || ''} terminology
+
+## 📐 Important Formulas & Rules  
+- All relevant formulas using Unicode (× ÷ ² ³ √ π ∑ ≤ ≥ ≠), NOT LaTeX
+- Clearly labeled with when to use each
+
+## 🔍 Worked Examples
+- At least 3 detailed step-by-step worked examples with solutions
+- Show every step clearly
+
+## ⚠️ Common Mistakes to Avoid
+- List of frequent exam errors students make
+- How to avoid each one
+
+## 📊 Quick Reference Tables
+- Summary tables for quick revision
+
+## 💡 Exam Tips
+- Specific tips for ${curriculumType?.toUpperCase() || 'this'} exams
+- ${curriculumType === 'ib' ? 'IB command term guidance: what each command term expects' : curriculumType === 'ap' ? 'AP FRQ strategies and common scoring rubric points' : 'Key mark scheme language to use in answers'}
+- Time management advice
+
+## 🔗 Connections to Other Topics
+- How this topic links to other areas of the syllabus
 
 Return valid JSON: { "content": "markdown string" }`;
     } else if (type === "flashcards") {
@@ -61,7 +79,11 @@ Return valid JSON: { "content": "markdown string" }`;
 
 CRITICAL: Use Unicode for math (× ÷ ² ³ √ π), NOT LaTeX.
 
-Create 15-20 flashcards covering all key concepts, definitions, formulas, and exam-relevant facts for the topic. Mix difficulty levels.
+Create 20 flashcards covering ALL key concepts, definitions, formulas, and exam-relevant facts for the topic. Mix difficulty levels. Include:
+- Definition cards
+- Formula cards  
+- Application/example cards
+- ${curriculumType === 'ib' ? 'IB command term cards (e.g. "What does Evaluate mean in IB?")' : 'Exam technique cards'}
 
 Return valid JSON:
 {
@@ -74,8 +96,8 @@ Return valid JSON:
 
 CRITICAL: Use Unicode for math (× ÷ ² ³ √ π), NOT LaTeX.
 
-Create 8-10 exam-style multiple choice questions that mirror REAL ${curriculumType?.toUpperCase() || ''} past paper questions. Include:
-- A mix of difficulty (easy to challenging)
+Create 10 exam-style multiple choice questions that mirror REAL ${curriculumType?.toUpperCase() || ''} past paper questions. Include:
+- A mix of difficulty (3 easy, 4 medium, 3 hard)
 - Questions that test different assessment objectives
 - Detailed explanations referencing the mark scheme
 - ${curriculumType === 'ib' ? 'IB command terms in the questions' : curriculumType === 'ap' ? 'AP-style question formats' : curriculumType === 'igcse' ? 'Cambridge past-paper style questions' : 'Standard exam-style questions'}
@@ -93,8 +115,77 @@ Return valid JSON:
     }
   ]
 }`;
+    } else if (type === "frq") {
+      systemPrompt = `You are an expert ${curriculumType?.toUpperCase() || ''} ${subject} examiner creating free-response / structured exam questions. Follow the ${currCtx}
+
+CRITICAL: Use Unicode for math (× ÷ ² ³ √ π), NOT LaTeX.
+
+Create 5 free-response questions that mirror REAL ${curriculumType?.toUpperCase() || ''} past paper questions. These should be structured questions with multiple parts (a, b, c, etc.).
+
+${curriculumType === 'ib' ? 'Use IB command terms appropriately (State [1 mark], Explain [2-3 marks], Evaluate [4-5 marks], Discuss [5-6 marks], Analyse [4-5 marks]). Include mark allocations matching IB paper format.' : ''}
+${curriculumType === 'ap' ? 'Format like AP Free Response Questions with clear part labels. Include scoring guidelines matching the AP rubric format.' : ''}
+${curriculumType === 'igcse' ? 'Format like Cambridge structured questions with mark allocations. Use Cambridge assessment objectives (AO1, AO2, AO3).' : ''}
+${curriculumType === 'a_levels' ? 'Format like A-Level structured/essay questions with mark allocations and assessment objective references.' : ''}
+${curriculumType === 'cbse' ? 'Format like CBSE board exam questions including HOTS (Higher Order Thinking Skills) questions. Include mark allocations.' : ''}
+
+Include:
+- Mix of short-answer and extended-response parts
+- Mark allocations for each part
+- Total marks per question (ranging from 6-15 marks)
+- Detailed model answers / marking scheme for each part
+- Examiner tips
+
+Return valid JSON:
+{
+  "questions": [
+    {
+      "question": "Main question stem",
+      "totalMarks": number,
+      "parts": [
+        {
+          "label": "a",
+          "text": "Part question text with command term",
+          "marks": number,
+          "commandTerm": "State|Explain|Evaluate|Discuss|etc",
+          "modelAnswer": "Detailed model answer",
+          "examinerTip": "What examiners look for"
+        }
+      ],
+      "difficulty": "easy|medium|hard",
+      "topic": "specific sub-topic tested"
+    }
+  ]
+}`;
+    } else if (type === "notes") {
+      systemPrompt = `You are an expert ${curriculumType?.toUpperCase() || ''} ${subject} teacher creating comprehensive study notes. Follow the ${currCtx}
+
+CRITICAL: Use Unicode for math (× ÷ ² ³ √ π), NOT LaTeX.
+
+Create DETAILED, comprehensive study notes for the given topic (at least 2000 words). These notes should be like a complete textbook chapter covering everything a student needs to know. Include:
+
+## 📖 Introduction
+- Context and importance of this topic
+
+## 📝 Detailed Content
+- Every key concept explained clearly with examples
+- Step-by-step explanations
+- Diagrams described in text where relevant
+
+## 🧮 Worked Examples  
+- At least 4 fully worked examples showing different question types
+
+## 📌 Key Vocabulary
+- All important terms defined
+
+## 🎯 Learning Objectives Covered
+- Which ${curriculumType?.toUpperCase() || ''} syllabus objectives this covers
+
+## ✅ Self-Check Questions
+- 5 questions students can use to test their understanding (with answers)
+
+Return valid JSON: { "content": "markdown string" }`;
     } else {
-      return json({ success: false, error: "Invalid type. Use cheatsheet, flashcards, or mock_exam." }, 400);
+      return json({ success: false, error: "Invalid type. Use cheatsheet, flashcards, mock_exam, frq, or notes." }, 400);
     }
 
     const controller = new AbortController();
@@ -112,7 +203,7 @@ Return valid JSON:
           { role: "system", content: systemPrompt },
           { role: "user", content: courseCtx },
         ],
-        response_format: responseFormat,
+        response_format: { type: "json_object" as const },
       }),
       signal: controller.signal,
     });
