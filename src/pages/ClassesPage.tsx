@@ -23,7 +23,18 @@ interface ClassItem {
   teacher_id: string;
   created_at: string;
   memberCount?: number;
+  curriculum_type?: string;
 }
+
+const CURRICULUM_LABELS: Record<string, string> = {
+  general: 'General',
+  ib: 'IB',
+  ap: 'AP',
+  igcse: 'IGCSE',
+  cbse: 'CBSE',
+  a_levels: 'A-Levels',
+  custom: 'Custom',
+};
 
 const ClassesPage = () => {
   const { user } = useAuth();
