@@ -114,6 +114,7 @@ Subject: ${subject}
 Difficulty: ${difficulty || "beginner"}
 Grade Level: ${gradeLevel || "self-learner"}
 Estimated hours: ${estimatedHours || 10}
+${curriculumType && curriculumType !== "general" ? `Curriculum: ${curriculumType.toUpperCase()}` : ""}
 Description: ${description || ""}`;
 
     if (resourceTitle) {
