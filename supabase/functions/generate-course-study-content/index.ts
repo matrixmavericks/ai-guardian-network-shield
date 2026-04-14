@@ -199,11 +199,12 @@ Return valid JSON: { "content": "markdown string" }`;
       },
       body: JSON.stringify({
         model: MODEL,
+        temperature: 0.7,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: courseCtx },
+          { role: "user", content: courseCtx + "\n\nIMPORTANT: Return ONLY valid JSON. No markdown, no code fences, no extra text." },
         ],
-        response_format: { type: "json_object" as const },
+        response_format: { type: "json_object" },
       }),
       signal: controller.signal,
     });
@@ -229,7 +230,34 @@ Return valid JSON: { "content": "markdown string" }`;
       completionSource: content,
     });
 
-    const parsed = JSON.parse(content);
+    // Robust JSON parsing: the AI sometimes returns raw control chars inside JSON string values
+    function safeJsonParse(raw: string): any {
+      // First attempt: direct parse
+      try { return JSON.parse(raw); } catch {}
+      // Second attempt: fix control chars inside string values only
+      // Replace unescaped control chars (except already-escaped sequences)
+      const fixed = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+      try { return JSON.parse(fixed); } catch {}
+      // Third attempt: newlines/tabs inside strings — escape them
+      const escaped = fixed.replace(
+        /"(?:[^"\\]|\\.)*"/g,
+        (match) => match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')
+      );
+      try { return JSON.parse(escaped); } catch {}
+      // Fourth attempt: extract from code fences
+      const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (fenceMatch) return safeJsonParse(fenceMatch[1]);
+      // Fifth attempt: find first { ... } block in the text
+      const braceMatch = raw.match(/\{[\s\S]*\}/);
+      if (braceMatch) {
+        const cleaned = braceMatch[0].replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+        try { return JSON.parse(cleaned); } catch {}
+        const esc2 = cleaned.replace(/"(?:[^"\\]|\\.)*"/g, (m) => m.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t'));
+        try { return JSON.parse(esc2); } catch {}
+      }
+      throw new Error("AI returned invalid JSON");
+    }
+    const parsed = safeJsonParse(content);
     return json({ success: true, ...parsed });
   } catch (error) {
     console.error("generate-course-study-content error", error);
