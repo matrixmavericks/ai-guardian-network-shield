@@ -55,6 +55,7 @@ const DashboardSidebar = () => {
     } else {
       return [
         { title: "Overview", href: "/student-dashboard", icon: <TrendingUp className="h-5 w-5" /> },
+        { title: "My Courses", href: "/my-courses", icon: <GraduationCap className="h-5 w-5" /> },
         { title: "Classes", href: "/classes", icon: <Users className="h-5 w-5" /> },
         { title: "Grades", href: "/grades", icon: <GraduationCap className="h-5 w-5" /> },
         { title: "Learning Paths", href: "/learning-paths", icon: <Book className="h-5 w-5" /> },
