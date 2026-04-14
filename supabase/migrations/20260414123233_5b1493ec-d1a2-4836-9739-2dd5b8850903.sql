@@ -1,0 +1,2 @@
+ALTER TABLE public.classes ADD COLUMN IF NOT EXISTS curriculum_type text NOT NULL DEFAULT 'general';
+COMMENT ON COLUMN public.classes.curriculum_type IS 'Curriculum framework: general, ib, ap, igcse, cbse, a_levels, or custom';

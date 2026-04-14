@@ -616,6 +616,7 @@ export type Database = {
       classes: {
         Row: {
           created_at: string
+          curriculum_type: string
           description: string | null
           grading_system_id: string | null
           id: string
@@ -628,6 +629,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          curriculum_type?: string
           description?: string | null
           grading_system_id?: string | null
           id?: string
@@ -640,6 +642,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          curriculum_type?: string
           description?: string | null
           grading_system_id?: string | null
           id?: string
