@@ -112,6 +112,7 @@ const CreateLearningPathPage = () => {
   const [customSubject, setCustomSubject] = useState('');
   const [difficulty, setDifficulty] = useState<LearningDifficulty>('beginner');
   const [gradeLevel, setGradeLevel] = useState('');
+  const [curriculumType, setCurriculumType] = useState('general');
   const [estimatedHours, setEstimatedHours] = useState(10);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -209,6 +210,7 @@ const CreateLearningPathPage = () => {
           difficulty,
           estimatedHours,
           gradeLevel,
+          curriculumType: curriculumType !== 'general' ? curriculumType : undefined,
           resourceContent: resourceContext?.fileContent || syllabusText || undefined,
           resourceUrl: resourceContext?.url || resourceContext?.fileUrl || undefined,
           resourceTitle: resourceContext?.title || undefined,
@@ -466,6 +468,21 @@ const CreateLearningPathPage = () => {
                         <SelectItem value="undergraduate">Undergraduate</SelectItem>
                         <SelectItem value="graduate">Graduate / Professional</SelectItem>
                         <SelectItem value="self-learner">Self-Learner / Any Age</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="curriculumType">Curriculum / Syllabus</Label>
+                    <Select value={curriculumType} onValueChange={setCurriculumType}>
+                      <SelectTrigger id="curriculumType"><SelectValue placeholder="Select curriculum" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="ib">IB (International Baccalaureate)</SelectItem>
+                        <SelectItem value="ap">AP (Advanced Placement)</SelectItem>
+                        <SelectItem value="igcse">IGCSE (Cambridge)</SelectItem>
+                        <SelectItem value="cbse">CBSE</SelectItem>
+                        <SelectItem value="a_levels">A-Levels</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

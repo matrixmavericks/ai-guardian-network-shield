@@ -24,7 +24,7 @@ serve(async (req) => {
     if (!authHeader) return json({ success: false, error: "Unauthorized" }, 401);
 
     const requesterUserId = await getUserIdFromAuthHeader(authHeader);
-    const { type, topic, subject, moduleTitle, moduleDescription, difficulty } = await req.json();
+    const { type, topic, subject, moduleTitle, moduleDescription, difficulty, curriculumType } = await req.json();
 
     if (!topic?.trim()) {
       return json({ success: false, error: "Topic is required." }, 400);
@@ -37,6 +37,10 @@ serve(async (req) => {
 
     let systemPrompt: string;
     let userPrompt: string;
+
+    const curriculumNote = curriculumType && curriculumType !== "general"
+      ? `\n- Follow the ${curriculumType.toUpperCase()} curriculum framework. Use ${curriculumType.toUpperCase()}-specific terminology, assessment criteria, and question styles.`
+      : "";
 
     if (type === "quiz") {
       systemPrompt = `You are an expert educational assessment creator. Return valid JSON only.
@@ -62,7 +66,7 @@ Rules:
 - correctIndex is 0-based.
 - explanation should explain WHY the correct answer is right.
 - Questions should test understanding, not just memorization.
-- Match the difficulty level provided.`;
+- Match the difficulty level provided.${curriculumNote}`;
 
       userPrompt = `Create a quiz assessment.
 Topic: ${topic}
@@ -94,7 +98,7 @@ Rules:
 - Each section should have 2-4 key points.
 - Include 2-3 practice exercises at the end.
 - Match the difficulty level provided.
-- Content should be comprehensive enough for self-study (at least 200 words per section).`;
+- Content should be comprehensive enough for self-study (at least 200 words per section).${curriculumNote}`;
 
       userPrompt = `Create detailed learning content.
 Resource topic: ${topic}

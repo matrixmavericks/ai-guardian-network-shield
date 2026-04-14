@@ -23,7 +23,18 @@ interface ClassItem {
   teacher_id: string;
   created_at: string;
   memberCount?: number;
+  curriculum_type?: string;
 }
+
+const CURRICULUM_LABELS: Record<string, string> = {
+  general: 'General',
+  ib: 'IB',
+  ap: 'AP',
+  igcse: 'IGCSE',
+  cbse: 'CBSE',
+  a_levels: 'A-Levels',
+  custom: 'Custom',
+};
 
 const ClassesPage = () => {
   const { user } = useAuth();
@@ -34,7 +45,7 @@ const ClassesPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [joining, setJoining] = useState(false);
-  const [newClass, setNewClass] = useState({ name: '', subject: 'Mathematics', description: '' });
+  const [newClass, setNewClass] = useState({ name: '', subject: 'Mathematics', description: '', curriculum_type: 'general' });
   const [creating, setCreating] = useState(false);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
@@ -106,11 +117,12 @@ const ClassesPage = () => {
         subject: newClass.subject,
         description: newClass.description.trim(),
         teacher_id: user!.id,
-      });
+        curriculum_type: newClass.curriculum_type,
+      } as any);
       if (error) throw error;
       toast.success('Class created!');
       setCreateOpen(false);
-      setNewClass({ name: '', subject: 'Mathematics', description: '' });
+      setNewClass({ name: '', subject: 'Mathematics', description: '', curriculum_type: 'general' });
       fetchClasses();
     } catch (err: any) {
       console.error(err);
@@ -227,6 +239,21 @@ const ClassesPage = () => {
                         onChange={e => setNewClass(p => ({ ...p, description: e.target.value }))}
                       />
                     </div>
+                    <div>
+                      <Label>Curriculum / Syllabus</Label>
+                      <Select value={newClass.curriculum_type} onValueChange={v => setNewClass(p => ({ ...p, curriculum_type: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="general">General</SelectItem>
+                          <SelectItem value="ib">IB (International Baccalaureate)</SelectItem>
+                          <SelectItem value="ap">AP (Advanced Placement)</SelectItem>
+                          <SelectItem value="igcse">IGCSE (Cambridge)</SelectItem>
+                          <SelectItem value="cbse">CBSE</SelectItem>
+                          <SelectItem value="a_levels">A-Levels</SelectItem>
+                          <SelectItem value="custom">Custom</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <Button onClick={handleCreate} disabled={creating} className="w-full">
                       {creating ? 'Creating...' : 'Create Class'}
                     </Button>
@@ -279,7 +306,14 @@ const ClassesPage = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle className="text-lg">{cls.name}</CardTitle>
-                        <CardDescription>{cls.subject}</CardDescription>
+                        <CardDescription className="flex items-center gap-2">
+                          {cls.subject}
+                          {cls.curriculum_type && cls.curriculum_type !== 'general' && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {CURRICULUM_LABELS[cls.curriculum_type] || cls.curriculum_type}
+                            </Badge>
+                          )}
+                        </CardDescription>
                       </div>
                       {isTeacher && (
                         <Button

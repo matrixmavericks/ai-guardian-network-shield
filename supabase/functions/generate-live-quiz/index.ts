@@ -22,7 +22,7 @@ serve(async (req) => {
     if (!authHeader) return json({ success: false, error: "Unauthorized" }, 401);
 
     const requesterUserId = await getUserIdFromAuthHeader(authHeader);
-    const { topic, subject, difficulty, questionCount, includeRedemption } = await req.json();
+    const { topic, subject, difficulty, questionCount, includeRedemption, curriculumType } = await req.json();
 
     if (!topic?.trim()) return json({ success: false, error: "Topic is required." }, 400);
 
@@ -32,6 +32,10 @@ serve(async (req) => {
     const count = Math.min(Math.max(questionCount || 10, 3), 25);
     const redemptionNote = includeRedemption
       ? `\nAlso include 2-3 "redemption" questions at the end (mark them with "type": "redemption"). These should be easier versions of commonly missed concepts.`
+      : "";
+
+    const curriculumNote = curriculumType && curriculumType !== "general"
+      ? `\n- Follow the ${curriculumType.toUpperCase()} curriculum framework. Use ${curriculumType.toUpperCase()}-aligned question styles, terminology, and assessment criteria.`
       : "";
 
     const systemPrompt = `You are an expert educational quiz creator for live classroom games (like Kahoot). Return valid JSON only.
@@ -57,7 +61,7 @@ Rules:
 - Questions should be engaging, clear, and fun for a live game
 - Explanations should be educational and thorough
 - Match difficulty: ${difficulty || "beginner"}
-- Make questions progressively harder`;
+- Make questions progressively harder${curriculumNote}`;
 
     const userPrompt = `Create a live quiz game.
 Topic: ${topic}

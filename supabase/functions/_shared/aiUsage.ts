@@ -79,8 +79,10 @@ export async function logAiUsage(args: {
 
   try {
     const usage = extractAiUsage({ aiData, model, promptSource, completionSource });
+    const client = getServiceClient();
 
-    await getServiceClient().from("ai_usage_logs").insert({
+    // Insert usage log
+    await client.from("ai_usage_logs").insert({
       user_id: userId,
       session_id: sessionId,
       prompt_tokens: usage.promptTokens,
@@ -89,6 +91,23 @@ export async function logAiUsage(args: {
       estimated_cost_usd: usage.estimatedCostUsd,
       model,
     });
+
+    // Increment tokens_used_this_month in user_plans
+    const { data: planData } = await client
+      .from("user_plans")
+      .select("id, tokens_used_this_month")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (planData) {
+      await client
+        .from("user_plans")
+        .update({
+          tokens_used_this_month: (planData.tokens_used_this_month || 0) + usage.totalTokens,
+        })
+        .eq("id", planData.id);
+    }
   } catch (error) {
     console.error("AI usage logging failed:", error);
   }
