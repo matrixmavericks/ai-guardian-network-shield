@@ -199,11 +199,12 @@ Return valid JSON: { "content": "markdown string" }`;
       },
       body: JSON.stringify({
         model: MODEL,
+        temperature: 0.7,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: courseCtx },
+          { role: "user", content: courseCtx + "\n\nIMPORTANT: Return ONLY valid JSON. No markdown, no code fences, no extra text." },
         ],
-        response_format: { type: "json_object" as const },
+        response_format: { type: "json_object" },
       }),
       signal: controller.signal,
     });
