@@ -306,7 +306,14 @@ const ClassesPage = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle className="text-lg">{cls.name}</CardTitle>
-                        <CardDescription>{cls.subject}</CardDescription>
+                        <CardDescription className="flex items-center gap-2">
+                          {cls.subject}
+                          {cls.curriculum_type && cls.curriculum_type !== 'general' && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {CURRICULUM_LABELS[cls.curriculum_type] || cls.curriculum_type}
+                            </Badge>
+                          )}
+                        </CardDescription>
                       </div>
                       {isTeacher && (
                         <Button
