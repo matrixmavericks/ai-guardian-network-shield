@@ -229,7 +229,31 @@ Return valid JSON: { "content": "markdown string" }`;
       completionSource: content,
     });
 
-    const parsed = JSON.parse(content);
+    // Sanitize control characters that break JSON.parse
+    const sanitized = content.replace(/[\x00-\x1F\x7F]/g, (ch: string) => {
+      if (ch === '\n') return '\\n';
+      if (ch === '\r') return '\\r';
+      if (ch === '\t') return '\\t';
+      return '';
+    });
+    let parsed: any;
+    try {
+      parsed = JSON.parse(sanitized);
+    } catch {
+      // Try extracting JSON from markdown code fences
+      const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (match) {
+        const inner = match[1].replace(/[\x00-\x1F\x7F]/g, (ch: string) => {
+          if (ch === '\n') return '\\n';
+          if (ch === '\r') return '\\r';
+          if (ch === '\t') return '\\t';
+          return '';
+        });
+        parsed = JSON.parse(inner);
+      } else {
+        throw new Error("AI returned invalid JSON");
+      }
+    }
     return json({ success: true, ...parsed });
   } catch (error) {
     console.error("generate-course-study-content error", error);
