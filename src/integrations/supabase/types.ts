@@ -670,6 +670,219 @@ export type Database = {
           },
         ]
       }
+      course_flashcards: {
+        Row: {
+          back: string
+          course_id: string
+          created_at: string
+          difficulty: number | null
+          ease_factor: number | null
+          front: string
+          id: string
+          interval_days: number | null
+          next_review_at: string | null
+          review_count: number | null
+          topic_id: string
+          user_id: string
+        }
+        Insert: {
+          back: string
+          course_id: string
+          created_at?: string
+          difficulty?: number | null
+          ease_factor?: number | null
+          front: string
+          id?: string
+          interval_days?: number | null
+          next_review_at?: string | null
+          review_count?: number | null
+          topic_id: string
+          user_id: string
+        }
+        Update: {
+          back?: string
+          course_id?: string
+          created_at?: string
+          difficulty?: number | null
+          ease_factor?: number | null
+          front?: string
+          id?: string
+          interval_days?: number | null
+          next_review_at?: string | null
+          review_count?: number | null
+          topic_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_flashcards_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_flashcards_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "course_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_study_resources: {
+        Row: {
+          content: string
+          course_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_ai_generated: boolean | null
+          resource_type: string
+          title: string
+          topic_id: string | null
+        }
+        Insert: {
+          content?: string
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_ai_generated?: boolean | null
+          resource_type?: string
+          title: string
+          topic_id?: string | null
+        }
+        Update: {
+          content?: string
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_ai_generated?: boolean | null
+          resource_type?: string
+          title?: string
+          topic_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_study_resources_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_study_resources_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "course_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_topics: {
+        Row: {
+          course_id: string
+          created_at: string
+          description: string | null
+          estimated_hours: number | null
+          id: string
+          parent_topic_id: string | null
+          title: string
+          topic_code: string | null
+          topic_order: number
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          parent_topic_id?: string | null
+          title: string
+          topic_code?: string | null
+          topic_order?: number
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          parent_topic_id?: string | null
+          title?: string
+          topic_code?: string | null
+          topic_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_topics_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_topics_parent_topic_id_fkey"
+            columns: ["parent_topic_id"]
+            isOneToOne: false
+            referencedRelation: "course_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courses: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          curriculum_type: string
+          description: string
+          estimated_hours: number | null
+          icon_emoji: string | null
+          id: string
+          is_official: boolean | null
+          level: string
+          subject: string
+          syllabus_content: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          curriculum_type?: string
+          description?: string
+          estimated_hours?: number | null
+          icon_emoji?: string | null
+          id?: string
+          is_official?: boolean | null
+          level?: string
+          subject: string
+          syllabus_content?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          curriculum_type?: string
+          description?: string
+          estimated_hours?: number | null
+          icon_emoji?: string | null
+          id?: string
+          is_official?: boolean | null
+          level?: string
+          subject?: string
+          syllabus_content?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       curriculum_links: {
         Row: {
           assignment_name: string
@@ -1818,6 +2031,47 @@ export type Database = {
         }
         Relationships: []
       }
+      student_courses: {
+        Row: {
+          course_id: string
+          enrolled_at: string
+          id: string
+          last_studied_at: string | null
+          mastery_score: number | null
+          progress: number | null
+          study_time_minutes: number | null
+          user_id: string
+        }
+        Insert: {
+          course_id: string
+          enrolled_at?: string
+          id?: string
+          last_studied_at?: string | null
+          mastery_score?: number | null
+          progress?: number | null
+          study_time_minutes?: number | null
+          user_id: string
+        }
+        Update: {
+          course_id?: string
+          enrolled_at?: string
+          id?: string
+          last_studied_at?: string | null
+          mastery_score?: number | null
+          progress?: number | null
+          study_time_minutes?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_documents: {
         Row: {
           created_at: string
@@ -1876,6 +2130,60 @@ export type Database = {
             columns: ["resource_id"]
             isOneToOne: false
             referencedRelation: "class_resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_topic_mastery: {
+        Row: {
+          course_id: string
+          id: string
+          last_studied_at: string | null
+          mastery_level: number | null
+          questions_attempted: number | null
+          questions_correct: number | null
+          study_time_minutes: number | null
+          topic_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          course_id: string
+          id?: string
+          last_studied_at?: string | null
+          mastery_level?: number | null
+          questions_attempted?: number | null
+          questions_correct?: number | null
+          study_time_minutes?: number | null
+          topic_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          course_id?: string
+          id?: string
+          last_studied_at?: string | null
+          mastery_level?: number | null
+          questions_attempted?: number | null
+          questions_correct?: number | null
+          study_time_minutes?: number | null
+          topic_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_topic_mastery_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_topic_mastery_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "course_topics"
             referencedColumns: ["id"]
           },
         ]
