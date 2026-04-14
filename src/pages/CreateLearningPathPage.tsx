@@ -471,6 +471,21 @@ const CreateLearningPathPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="curriculumType">Curriculum / Syllabus</Label>
+                    <Select value={curriculumType} onValueChange={setCurriculumType}>
+                      <SelectTrigger id="curriculumType"><SelectValue placeholder="Select curriculum" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="ib">IB (International Baccalaureate)</SelectItem>
+                        <SelectItem value="ap">AP (Advanced Placement)</SelectItem>
+                        <SelectItem value="igcse">IGCSE (Cambridge)</SelectItem>
+                        <SelectItem value="cbse">CBSE</SelectItem>
+                        <SelectItem value="a_levels">A-Levels</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
