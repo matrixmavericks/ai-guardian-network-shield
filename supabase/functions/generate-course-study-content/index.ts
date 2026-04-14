@@ -229,31 +229,26 @@ Return valid JSON: { "content": "markdown string" }`;
       completionSource: content,
     });
 
-    // Sanitize control characters that break JSON.parse
-    const sanitized = content.replace(/[\x00-\x1F\x7F]/g, (ch: string) => {
-      if (ch === '\n') return '\\n';
-      if (ch === '\r') return '\\r';
-      if (ch === '\t') return '\\t';
-      return '';
-    });
-    let parsed: any;
-    try {
-      parsed = JSON.parse(sanitized);
-    } catch {
-      // Try extracting JSON from markdown code fences
-      const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (match) {
-        const inner = match[1].replace(/[\x00-\x1F\x7F]/g, (ch: string) => {
-          if (ch === '\n') return '\\n';
-          if (ch === '\r') return '\\r';
-          if (ch === '\t') return '\\t';
-          return '';
-        });
-        parsed = JSON.parse(inner);
-      } else {
-        throw new Error("AI returned invalid JSON");
-      }
+    // Robust JSON parsing: the AI sometimes returns raw control chars inside JSON string values
+    function safeJsonParse(raw: string): any {
+      // First attempt: direct parse
+      try { return JSON.parse(raw); } catch {}
+      // Second attempt: fix control chars inside string values only
+      // Replace unescaped control chars (except already-escaped sequences)
+      const fixed = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+      try { return JSON.parse(fixed); } catch {}
+      // Third attempt: newlines/tabs inside strings — escape them
+      const escaped = fixed.replace(
+        /"(?:[^"\\]|\\.)*"/g,
+        (match) => match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')
+      );
+      try { return JSON.parse(escaped); } catch {}
+      // Fourth attempt: extract from code fences
+      const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (fenceMatch) return safeJsonParse(fenceMatch[1]);
+      throw new Error("AI returned invalid JSON");
     }
+    const parsed = safeJsonParse(content);
     return json({ success: true, ...parsed });
   } catch (error) {
     console.error("generate-course-study-content error", error);
