@@ -112,6 +112,7 @@ const CreateLearningPathPage = () => {
   const [customSubject, setCustomSubject] = useState('');
   const [difficulty, setDifficulty] = useState<LearningDifficulty>('beginner');
   const [gradeLevel, setGradeLevel] = useState('');
+  const [curriculumType, setCurriculumType] = useState('general');
   const [estimatedHours, setEstimatedHours] = useState(10);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -209,6 +210,7 @@ const CreateLearningPathPage = () => {
           difficulty,
           estimatedHours,
           gradeLevel,
+          curriculumType: curriculumType !== 'general' ? curriculumType : undefined,
           resourceContent: resourceContext?.fileContent || syllabusText || undefined,
           resourceUrl: resourceContext?.url || resourceContext?.fileUrl || undefined,
           resourceTitle: resourceContext?.title || undefined,
