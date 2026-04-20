@@ -112,14 +112,14 @@ const Register = () => {
       const paymentPlanValue = `${selectedPlan}_${billingCycle}`;
       const seatConfig = role === 'admin' ? { teachers: teacherCount, students: studentCount } : null;
 
-      const { error } = await supabase.from('registration_requests').insert({
+      const { data: inserted, error } = await supabase.from('registration_requests').insert({
         full_name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         requested_role: formData.requested_role,
         status: 'pending',
         payment_plan: paymentPlanValue,
         seat_config: seatConfig,
-      } as any);
+      } as any).select('id').single();
 
       if (error) {
         if (error.code === '23505') {
@@ -130,8 +130,10 @@ const Register = () => {
         throw error;
       }
 
-      setRequestStatus('submitted');
-      toast({ title: "Request submitted!", description: "Your registration request has been sent for admin approval." });
+      toast({ title: "Request submitted!", description: "Redirecting to secure payment..." });
+      // Send the user straight to Stripe-powered checkout
+      navigate(`/pay/${inserted.id}`);
+      return;
     } catch (error: any) {
       toast({ title: "Submission failed", description: error?.message || "Could not submit your request.", variant: "destructive" });
     } finally {
