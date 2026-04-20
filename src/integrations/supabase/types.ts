@@ -470,6 +470,48 @@ export type Database = {
           },
         ]
       }
+      class_courses: {
+        Row: {
+          added_by: string
+          auto_enroll: boolean
+          class_id: string
+          course_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          added_by: string
+          auto_enroll?: boolean
+          class_id: string
+          course_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          added_by?: string
+          auto_enroll?: boolean
+          class_id?: string
+          course_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_courses_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_members: {
         Row: {
           class_id: string
@@ -843,11 +885,13 @@ export type Database = {
           id: string
           is_official: boolean | null
           level: string
+          school_id: string | null
           subject: string
           syllabus_content: string | null
           tags: string[] | null
           title: string
           updated_at: string
+          visibility: string
         }
         Insert: {
           created_at?: string
@@ -859,11 +903,13 @@ export type Database = {
           id?: string
           is_official?: boolean | null
           level?: string
+          school_id?: string | null
           subject: string
           syllabus_content?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string
+          visibility?: string
         }
         Update: {
           created_at?: string
@@ -875,13 +921,23 @@ export type Database = {
           id?: string
           is_official?: boolean | null
           level?: string
+          school_id?: string | null
           subject?: string
           syllabus_content?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string
+          visibility?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "courses_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       curriculum_links: {
         Row: {

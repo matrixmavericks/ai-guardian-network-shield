@@ -36,6 +36,7 @@ import PlatformWorkflowPage from './pages/PlatformWorkflowPage';
 import SchoolRoutes from './pages/SchoolRoutes';
 import MyCoursesPage from './pages/MyCoursesPage';
 import CourseStudyPage from './pages/CourseStudyPage';
+import CreateCoursePage from './pages/CreateCoursePage';
 
 const ProtectedRoute = ({ 
   children, 
@@ -101,6 +102,7 @@ function App() {
           <Route path="/portfolio/shared/:token" element={<SharedPortfolioPage />} />
           <Route path="/portfolio/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher']}><PortfolioProjectPage /></ProtectedRoute>} />
           <Route path="/my-courses" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><MyCoursesPage /></ProtectedRoute>} />
+          <Route path="/course/create" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><CreateCoursePage /></ProtectedRoute>} />
           <Route path="/course/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><CourseStudyPage /></ProtectedRoute>} />
 
           {/* School subdomain routes - all features scoped to school */}
