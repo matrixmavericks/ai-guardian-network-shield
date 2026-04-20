@@ -33,6 +33,7 @@ import LiveQuizList from '@/components/livequiz/LiveQuizList';
 import CreateLiveQuiz from '@/components/livequiz/CreateLiveQuiz';
 import LiveQuizPlayer from '@/components/livequiz/LiveQuizPlayer';
 import QuizResults from '@/components/livequiz/QuizResults';
+import ClassCoursesManager from '@/components/ClassCoursesManager';
 
 interface Student {
   student_id: string;
@@ -573,6 +574,9 @@ const ClassDetailPage = () => {
                 </TabsTrigger>
                 <TabsTrigger value="learning-paths">
                   <Book className="mr-2 h-4 w-4" /> Learning Paths
+                </TabsTrigger>
+                <TabsTrigger value="courses">
+                  <GraduationCap className="mr-2 h-4 w-4" /> Courses
                 </TabsTrigger>
                 <TabsTrigger value="settings">
                   <Settings className="mr-2 h-4 w-4" /> Settings
