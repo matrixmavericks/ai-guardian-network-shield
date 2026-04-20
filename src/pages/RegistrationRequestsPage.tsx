@@ -321,6 +321,11 @@ const RegistrationRequestsPage = () => {
                             </p>
                           </div>
                         )}
+                        {(req.status === 'pending' || req.status === 'approved') && req.payment_plan && (
+                          <Button size="sm" variant="outline" onClick={() => window.open(`/pay/${req.id}`, '_blank')}>
+                            <CreditCard className="h-4 w-4 mr-1" /> Pay link
+                          </Button>
+                        )}
                         {req.status === 'pending' && (
                           <div className="flex gap-2">
                             <Button size="sm" onClick={() => handleApprove(req)} disabled={processing === req.id}>
