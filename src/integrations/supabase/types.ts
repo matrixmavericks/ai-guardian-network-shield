@@ -972,6 +972,54 @@ export type Database = {
         }
         Relationships: []
       }
+      discount_codes: {
+        Row: {
+          applies_to_plans: string[] | null
+          code: string
+          created_at: string
+          created_by: string
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          notes: string | null
+          updated_at: string
+          uses_count: number
+        }
+        Insert: {
+          applies_to_plans?: string[] | null
+          code: string
+          created_at?: string
+          created_by: string
+          discount_type: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          notes?: string | null
+          updated_at?: string
+          uses_count?: number
+        }
+        Update: {
+          applies_to_plans?: string[] | null
+          code?: string
+          created_at?: string
+          created_by?: string
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          notes?: string | null
+          updated_at?: string
+          uses_count?: number
+        }
+        Relationships: []
+      }
       ethical_badges: {
         Row: {
           badge_description: string | null
@@ -1484,6 +1532,39 @@ export type Database = {
         }
         Relationships: []
       }
+      paddle_price_ids: {
+        Row: {
+          billing_cycle: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          paddle_price_id: string
+          plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          billing_cycle: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          paddle_price_id: string
+          plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          billing_cycle?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          paddle_price_id?: string
+          plan_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       parent_child_links: {
         Row: {
           child_id: string
@@ -1504,6 +1585,59 @@ export type Database = {
           parent_id?: string
         }
         Relationships: []
+      }
+      payment_transactions: {
+        Row: {
+          amount_inr: number
+          created_at: string
+          currency: string
+          discount_amount: number | null
+          discount_code: string | null
+          id: string
+          paddle_customer_id: string | null
+          paddle_transaction_id: string | null
+          raw_event: Json | null
+          registration_request_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_inr: number
+          created_at?: string
+          currency?: string
+          discount_amount?: number | null
+          discount_code?: string | null
+          id?: string
+          paddle_customer_id?: string | null
+          paddle_transaction_id?: string | null
+          raw_event?: Json | null
+          registration_request_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_inr?: number
+          created_at?: string
+          currency?: string
+          discount_amount?: number | null
+          discount_code?: string | null
+          id?: string
+          paddle_customer_id?: string | null
+          paddle_transaction_id?: string | null
+          raw_event?: Json | null
+          registration_request_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_registration_request_id_fkey"
+            columns: ["registration_request_id"]
+            isOneToOne: false
+            referencedRelation: "registration_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       portfolio_collaborators: {
         Row: {
@@ -1762,10 +1896,17 @@ export type Database = {
       registration_requests: {
         Row: {
           created_at: string
+          discount_amount: number | null
+          discount_code: string | null
           email: string
           full_name: string
           id: string
+          paddle_checkout_url: string | null
+          paddle_transaction_id: string | null
+          paid_at: string | null
+          payment_amount_inr: number | null
           payment_plan: string | null
+          payment_status: string | null
           rejection_reason: string | null
           requested_role: string
           reviewed_at: string | null
@@ -1776,10 +1917,17 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          discount_amount?: number | null
+          discount_code?: string | null
           email: string
           full_name: string
           id?: string
+          paddle_checkout_url?: string | null
+          paddle_transaction_id?: string | null
+          paid_at?: string | null
+          payment_amount_inr?: number | null
           payment_plan?: string | null
+          payment_status?: string | null
           rejection_reason?: string | null
           requested_role?: string
           reviewed_at?: string | null
@@ -1790,10 +1938,17 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          discount_amount?: number | null
+          discount_code?: string | null
           email?: string
           full_name?: string
           id?: string
+          paddle_checkout_url?: string | null
+          paddle_transaction_id?: string | null
+          paid_at?: string | null
+          payment_amount_inr?: number | null
           payment_plan?: string | null
+          payment_status?: string | null
           rejection_reason?: string | null
           requested_role?: string
           reviewed_at?: string | null
