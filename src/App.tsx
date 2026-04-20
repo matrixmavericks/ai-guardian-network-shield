@@ -37,6 +37,8 @@ import SchoolRoutes from './pages/SchoolRoutes';
 import MyCoursesPage from './pages/MyCoursesPage';
 import CourseStudyPage from './pages/CourseStudyPage';
 import CreateCoursePage from './pages/CreateCoursePage';
+import PayPage from './pages/PayPage';
+import CheckoutReturn from './pages/CheckoutReturn';
 
 const ProtectedRoute = ({ 
   children, 
@@ -73,6 +75,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/pay/:requestId" element={<PayPage />} />
+          <Route path="/checkout/return" element={<CheckoutReturn />} />
 
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><Dashboard /></ProtectedRoute>} />
           <Route path="/admin-overview" element={<ProtectedRoute allowedRoles={['admin']}><AdminOverviewPage /></ProtectedRoute>} />
