@@ -1913,6 +1913,9 @@ export type Database = {
           reviewed_by: string | null
           seat_config: Json | null
           status: string
+          stripe_customer_id: string | null
+          stripe_session_id: string | null
+          stripe_subscription_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1934,6 +1937,9 @@ export type Database = {
           reviewed_by?: string | null
           seat_config?: Json | null
           status?: string
+          stripe_customer_id?: string | null
+          stripe_session_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1955,6 +1961,9 @@ export type Database = {
           reviewed_by?: string | null
           seat_config?: Json | null
           status?: string
+          stripe_customer_id?: string | null
+          stripe_session_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2395,6 +2404,77 @@ export type Database = {
             columns: ["topic_id"]
             isOneToOne: false
             referencedRelation: "course_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          billing_cycle: string | null
+          cancel_at_period_end: boolean | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          environment: string
+          id: string
+          metadata: Json | null
+          plan_id: string | null
+          price_id: string | null
+          product_id: string | null
+          registration_request_id: string | null
+          status: string
+          stripe_customer_id: string | null
+          stripe_session_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          billing_cycle?: string | null
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          metadata?: Json | null
+          plan_id?: string | null
+          price_id?: string | null
+          product_id?: string | null
+          registration_request_id?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_session_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          billing_cycle?: string | null
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          metadata?: Json | null
+          plan_id?: string | null
+          price_id?: string | null
+          product_id?: string | null
+          registration_request_id?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_session_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_registration_request_id_fkey"
+            columns: ["registration_request_id"]
+            isOneToOne: false
+            referencedRelation: "registration_requests"
             referencedColumns: ["id"]
           },
         ]
