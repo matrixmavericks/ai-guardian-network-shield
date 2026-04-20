@@ -1122,6 +1122,11 @@ const ClassDetailPage = () => {
                 </div>
               </TabsContent>
 
+              {/* ===== COURSES TAB ===== */}
+              <TabsContent value="courses">
+                <ClassCoursesManager classId={id!} isTeacher={isTeacher} />
+              </TabsContent>
+
               {/* ===== SETTINGS TAB ===== */}
               <TabsContent value="settings">
                 <div className="max-w-2xl space-y-6">
