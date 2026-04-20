@@ -24,6 +24,7 @@ import {
   CreditCard, TrendingUp, ArrowUpRight, CheckCircle2,
   Palette, Crown, Zap, UserCheck, ExternalLink
 } from 'lucide-react';
+import SchoolEnrollmentManager from '@/components/SchoolEnrollmentManager';
 import { ADMIN_PLANS, calcAdminMonthlyCost, type AdminPlanConfig } from '@/lib/planConfigs';
 
 const AI_MODELS = [
@@ -938,12 +939,14 @@ function SchoolDetail({ school, onBack, userId, planFeatures, adminPlanId, billi
             </CardContent>
           </Card>
 
-          {/* Assign Students to Classes */}
+          {/* Bulk enrollment manager (multi student → multi class/course) */}
+          <SchoolEnrollmentManager schoolId={school.id} />
+
+          {/* Quick single-student enroller (kept for fast inline assignments) */}
           {classes.length > 0 && studentMembers.length > 0 && (
-            <Card className="border-primary/20 bg-primary/5">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><UserCheck className="h-5 w-5 text-primary" /> Assign Students to Classes</CardTitle>
-                <CardDescription>Enroll school students directly into classes</CardDescription>
+                <CardTitle className="text-base flex items-center gap-2"><UserCheck className="h-5 w-5 text-primary" /> Quick Assign (single student → single class)</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 flex-wrap">
