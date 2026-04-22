@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { STUDENT_PLANS, TEACHER_PLANS, ADMIN_PLANS, calcAdminMonthlyCost } from "@/lib/planConfigs";
 import { Slider } from "@/components/ui/slider";
+import { usePaymentsEnabled } from "@/hooks/usePlatformSettings";
 
 // ─── Plan card data ───
 const STUDENT_PLAN_CARDS = [
@@ -44,6 +45,7 @@ const Register = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { paymentsEnabled } = usePaymentsEnabled();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -130,9 +132,13 @@ const Register = () => {
         throw error;
       }
 
-      toast({ title: "Request submitted!", description: "Redirecting to secure payment..." });
-      // Send the user straight to Stripe-powered checkout
-      navigate(`/pay/${inserted.id}`);
+      if (paymentsEnabled) {
+        toast({ title: "Request submitted!", description: "Redirecting to secure payment..." });
+        navigate(`/pay/${inserted.id}`);
+      } else {
+        setRequestStatus('submitted');
+        toast({ title: "Request submitted!", description: "An administrator will review and approve your account." });
+      }
       return;
     } catch (error: any) {
       toast({ title: "Submission failed", description: error?.message || "Could not submit your request.", variant: "destructive" });
