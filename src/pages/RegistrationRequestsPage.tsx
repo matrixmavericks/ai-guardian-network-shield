@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { CheckCircle2, XCircle, Clock, ArrowLeft, Search, CreditCard, Users, IndianRupee, TrendingUp } from "lucide-react";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { ALL_PLAN_LABELS, STUDENT_PLANS, TEACHER_PLANS, ADMIN_PLANS, calcAdminMonthlyCost } from "@/lib/planConfigs";
+import { Switch } from "@/components/ui/switch";
+import { usePaymentsEnabled, setPaymentsEnabled } from "@/hooks/usePlatformSettings";
 
 interface RegistrationRequest {
   id: string;
@@ -72,6 +74,25 @@ const RegistrationRequestsPage = () => {
   const [assignBilling, setAssignBilling] = useState("monthly");
 
   const isWebsiteAdmin = user?.email === WEBSITE_ADMIN_EMAIL;
+  const { paymentsEnabled, loading: paymentsLoading } = usePaymentsEnabled();
+  const [savingToggle, setSavingToggle] = useState(false);
+
+  const handleTogglePayments = async (next: boolean) => {
+    setSavingToggle(true);
+    try {
+      await setPaymentsEnabled(next, user?.id);
+      toast({
+        title: next ? "Payments enabled" : "Payments disabled",
+        description: next
+          ? "New registrations will go through Stripe checkout."
+          : "New registrations will use the manual approval flow (no payment).",
+      });
+    } catch (e: any) {
+      toast({ title: "Could not update setting", description: e?.message, variant: "destructive" });
+    } finally {
+      setSavingToggle(false);
+    }
+  };
 
   useEffect(() => {
     if (!isWebsiteAdmin) return;
@@ -244,6 +265,33 @@ const RegistrationRequestsPage = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Payments toggle (master admin only) */}
+          <Card className="border-2">
+            <CardContent className="py-4 px-5 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-semibold">Require payment at registration</p>
+                  <p className="text-xs text-muted-foreground">
+                    {paymentsEnabled
+                      ? "ON — users are redirected to Stripe checkout after submitting a request."
+                      : "OFF — users submit a request and you approve manually (no payment)."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={paymentsEnabled ? "default" : "secondary"}>
+                  {paymentsEnabled ? "Payments ON" : "Payments OFF"}
+                </Badge>
+                <Switch
+                  checked={paymentsEnabled}
+                  disabled={paymentsLoading || savingToggle}
+                  onCheckedChange={handleTogglePayments}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="flex flex-wrap gap-2 items-center justify-between">
             <div className="flex gap-2">
