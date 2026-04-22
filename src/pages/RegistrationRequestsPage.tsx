@@ -74,20 +74,23 @@ const RegistrationRequestsPage = () => {
   const [assignBilling, setAssignBilling] = useState("monthly");
 
   const isWebsiteAdmin = user?.email === WEBSITE_ADMIN_EMAIL;
-  const { paymentsEnabled, loading: paymentsLoading } = usePaymentsEnabled();
+  const { paymentsEnabled, loading: paymentsLoading, refresh: refreshPayments, setLocal: setLocalPayments } = usePaymentsEnabled();
   const [savingToggle, setSavingToggle] = useState(false);
 
   const handleTogglePayments = async (next: boolean) => {
     setSavingToggle(true);
+    setLocalPayments(next); // optimistic flip
     try {
       await setPaymentsEnabled(next, user?.id);
+      await refreshPayments();
       toast({
         title: next ? "Payments enabled" : "Payments disabled",
         description: next
-          ? "New registrations will go through Stripe checkout."
+          ? "New registrations will be redirected to secure checkout."
           : "New registrations will use the manual approval flow (no payment).",
       });
     } catch (e: any) {
+      setLocalPayments(!next); // revert on failure
       toast({ title: "Could not update setting", description: e?.message, variant: "destructive" });
     } finally {
       setSavingToggle(false);
