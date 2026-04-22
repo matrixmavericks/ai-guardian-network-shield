@@ -36,7 +36,10 @@ const DashboardSidebar = () => {
         { title: "Security Keys", href: "/security-keys", icon: <Shield className="h-5 w-5" /> },
         ...(user?.email === 'info.aiconditioner@gmail.com' ? [
           { title: "Registrations", href: "/registration-requests", icon: <ClipboardList className="h-5 w-5" /> },
-          { title: "Platform Docs", href: "/platform-workflow", icon: <Workflow className="h-5 w-5" /> },
+          { title: "Create Account", href: "/create-account", icon: <UserPlus className="h-5 w-5" /> },
+          { title: "Pilot Analysis", href: "/pilot-analysis", icon: <Activity className="h-5 w-5" /> },
+          { title: "Platform Docs", href: "/platform-docs", icon: <BookOpen className="h-5 w-5" /> },
+          { title: "Workflow", href: "/platform-workflow", icon: <Workflow className="h-5 w-5" /> },
         ] : []),
         { title: "Settings", href: "/settings", icon: <Settings className="h-5 w-5" /> },
       ];

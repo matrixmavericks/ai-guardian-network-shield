@@ -11,9 +11,8 @@ export function usePaymentsEnabled() {
       .select("value")
       .eq("key", "payments_enabled")
       .maybeSingle();
-    // value is jsonb -> boolean true/false; default true if missing
     const v = (data as any)?.value;
-    setEnabled(v === false ? false : true);
+    setEnabled(v === false || v === "false" ? false : true);
     setLoading(false);
   }, []);
 
@@ -32,7 +31,10 @@ export function usePaymentsEnabled() {
     };
   }, [refresh]);
 
-  return { paymentsEnabled: enabled, loading, refresh };
+  // Allow callers to optimistically set value
+  const setLocal = (v: boolean) => setEnabled(v);
+
+  return { paymentsEnabled: enabled, loading, refresh, setLocal };
 }
 
 export async function setPaymentsEnabled(enabled: boolean, userId?: string) {
