@@ -8,10 +8,25 @@ import Testimonials from "@/components/Testimonials";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section (includes its own navbar + background video) */}
-      <HeroSection />
+    <div className="min-h-screen bg-white">
+      {/* Navigation */}
+      <nav className="bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 py-4 px-6 md:px-10 flex justify-between items-center sticky top-0 z-50">
+        <div className="flex items-center">
+          <Shield className="h-7 w-7 text-blue-400 mr-2" />
+          <span className="text-xl font-bold text-white">Refyn Technologies</span>
+        </div>
+        <div className="flex gap-3">
+          <Link to="/login">
+            <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800">Login</Button>
+          </Link>
+          <Link to="/signup">
+            <Button className="bg-blue-500 hover:bg-blue-600 text-white">Sign Up</Button>
+          </Link>
+        </div>
+      </nav>
 
+      {/* Hero Section */}
+      <HeroSection />
 
       {/* Feature Cards */}
       <FeatureCards />
