@@ -266,6 +266,33 @@ const RegistrationRequestsPage = () => {
             </Card>
           </div>
 
+          {/* Payments toggle (master admin only) */}
+          <Card className="border-2">
+            <CardContent className="py-4 px-5 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-semibold">Require payment at registration</p>
+                  <p className="text-xs text-muted-foreground">
+                    {paymentsEnabled
+                      ? "ON — users are redirected to Stripe checkout after submitting a request."
+                      : "OFF — users submit a request and you approve manually (no payment)."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={paymentsEnabled ? "default" : "secondary"}>
+                  {paymentsEnabled ? "Payments ON" : "Payments OFF"}
+                </Badge>
+                <Switch
+                  checked={paymentsEnabled}
+                  disabled={paymentsLoading || savingToggle}
+                  onCheckedChange={handleTogglePayments}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex flex-wrap gap-2 items-center justify-between">
             <div className="flex gap-2">
               {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
