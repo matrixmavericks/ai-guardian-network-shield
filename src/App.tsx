@@ -39,6 +39,9 @@ import CourseStudyPage from './pages/CourseStudyPage';
 import CreateCoursePage from './pages/CreateCoursePage';
 import PayPage from './pages/PayPage';
 import CheckoutReturn from './pages/CheckoutReturn';
+import PlatformDocsPage from './pages/PlatformDocsPage';
+import PilotAnalysisPage from './pages/PilotAnalysisPage';
+import CreateUserAccountPage from './pages/CreateUserAccountPage';
 
 const ProtectedRoute = ({ 
   children, 
@@ -86,6 +89,9 @@ function App() {
           <Route path="/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
           <Route path="/registration-requests" element={<ProtectedRoute allowedRoles={['admin']}><RegistrationRequestsPage /></ProtectedRoute>} />
           <Route path="/platform-workflow" element={<ProtectedRoute allowedRoles={['admin']}><PlatformWorkflowPage /></ProtectedRoute>} />
+          <Route path="/platform-docs" element={<ProtectedRoute allowedRoles={['admin']}><PlatformDocsPage /></ProtectedRoute>} />
+          <Route path="/pilot-analysis" element={<ProtectedRoute allowedRoles={['admin']}><PilotAnalysisPage /></ProtectedRoute>} />
+          <Route path="/create-account" element={<ProtectedRoute allowedRoles={['admin']}><CreateUserAccountPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
           <Route path="/student-dashboard" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />
