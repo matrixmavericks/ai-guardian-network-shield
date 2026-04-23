@@ -53,9 +53,9 @@ import {
   deleteAssignment, 
   Assignment, 
   generateId, 
-  getCurrentUser,
   getGradesByAssignment
 } from "@/services/localStorageService";
+import { useAuth } from "@/contexts/AuthContext";
 
 const subjects = [
   "Mathematics", 
@@ -86,7 +86,7 @@ const AssignmentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
   const { toast } = useToast();
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     loadAssignments();
