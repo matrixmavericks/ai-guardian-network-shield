@@ -42,6 +42,7 @@ import CheckoutReturn from './pages/CheckoutReturn';
 import PlatformDocsPage from './pages/PlatformDocsPage';
 import PilotAnalysisPage from './pages/PilotAnalysisPage';
 import CreateUserAccountPage from './pages/CreateUserAccountPage';
+import SecurityOverviewPage from './pages/SecurityOverviewPage';
 
 const ProtectedRoute = ({ 
   children, 
@@ -92,6 +93,7 @@ function App() {
           <Route path="/platform-docs" element={<ProtectedRoute allowedRoles={['admin']}><PlatformDocsPage /></ProtectedRoute>} />
           <Route path="/pilot-analysis" element={<ProtectedRoute allowedRoles={['admin']}><PilotAnalysisPage /></ProtectedRoute>} />
           <Route path="/create-account" element={<ProtectedRoute allowedRoles={['admin']}><CreateUserAccountPage /></ProtectedRoute>} />
+          <Route path="/security-overview" element={<ProtectedRoute allowedRoles={['admin']}><SecurityOverviewPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
           <Route path="/student-dashboard" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />

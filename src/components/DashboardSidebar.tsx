@@ -38,6 +38,7 @@ const DashboardSidebar = () => {
           { title: "Registrations", href: "/registration-requests", icon: <ClipboardList className="h-5 w-5" /> },
           { title: "Create Account", href: "/create-account", icon: <UserPlus className="h-5 w-5" /> },
           { title: "Pilot Analysis", href: "/pilot-analysis", icon: <Activity className="h-5 w-5" /> },
+          { title: "Security & Data", href: "/security-overview", icon: <Shield className="h-5 w-5" /> },
           { title: "Platform Docs", href: "/platform-docs", icon: <BookOpen className="h-5 w-5" /> },
           { title: "Workflow", href: "/platform-workflow", icon: <Workflow className="h-5 w-5" /> },
         ] : []),
