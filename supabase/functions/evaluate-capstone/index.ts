@@ -55,14 +55,22 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // SECURITY: require valid JWT
     const authHeader = req.headers.get("Authorization");
-    const authUserId = await getUserIdFromAuthHeader(authHeader);
+    if (!authHeader?.startsWith("Bearer ")) return json({ success: false, error: "Unauthorized" }, 401);
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const authClient = createClient(supabaseUrl, anonKey);
+    const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) return json({ success: false, error: "Unauthorized" }, 401);
+    const authUserId = claimsData.claims.sub as string;
+
     const { submissionId } = await req.json();
     if (!submissionId) return json({ success: false, error: "submissionId required" }, 400);
 
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     if (!lovableApiKey) return json({ success: false, error: "AI not configured" }, 500);
 
     const sb = createClient(supabaseUrl, serviceKey);
@@ -74,6 +82,20 @@ serve(async (req) => {
       .eq("id", submissionId)
       .single();
     if (fetchErr || !submission) return json({ success: false, error: "Submission not found" }, 404);
+
+    // SECURITY: verify caller owns the submission OR is a teacher of the student's class OR is admin
+    if (submission.user_id !== authUserId) {
+      const { data: isTeacher } = await sb
+        .from("class_members")
+        .select("class_id, classes!inner(teacher_id)")
+        .eq("student_id", submission.user_id);
+      const isClassTeacher = (isTeacher || []).some((r: any) => r.classes?.teacher_id === authUserId);
+      const { data: roleRows } = await sb.from("user_roles").select("role").eq("user_id", authUserId);
+      const isAdmin = (roleRows || []).some((r: any) => r.role === "admin");
+      if (!isClassTeacher && !isAdmin) {
+        return json({ success: false, error: "Forbidden" }, 403);
+      }
+    }
 
     // Fetch learning path for context
     const { data: path } = await sb
