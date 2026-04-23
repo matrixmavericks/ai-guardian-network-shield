@@ -101,7 +101,7 @@ const Register = () => {
     // Validate inputs (security: prevent oversized/malformed data)
     const parsed = registrationSchema.safeParse(formData);
     if (!parsed.success) {
-      const firstError = parsed.error.errors[0]?.message || "Invalid form data";
+      const firstError = parsed.error.issues[0]?.message || "Invalid form data";
       toast({ title: "Validation error", description: firstError, variant: "destructive" });
       return;
     }
