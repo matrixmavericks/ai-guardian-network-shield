@@ -43,6 +43,8 @@ import PlatformDocsPage from './pages/PlatformDocsPage';
 import PilotAnalysisPage from './pages/PilotAnalysisPage';
 import CreateUserAccountPage from './pages/CreateUserAccountPage';
 import SecurityOverviewPage from './pages/SecurityOverviewPage';
+import LegalDocPage from './pages/LegalDocPage';
+import LegalAdminPage from './pages/LegalAdminPage';
 
 const ProtectedRoute = ({ 
   children, 
@@ -81,6 +83,8 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/pay/:requestId" element={<PayPage />} />
           <Route path="/checkout/return" element={<CheckoutReturn />} />
+          <Route path="/legal/:doc" element={<LegalDocPage />} />
+          <Route path="/legal-admin" element={<ProtectedRoute allowedRoles={['admin']}><LegalAdminPage /></ProtectedRoute>} />
 
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><Dashboard /></ProtectedRoute>} />
           <Route path="/admin-overview" element={<ProtectedRoute allowedRoles={['admin']}><AdminOverviewPage /></ProtectedRoute>} />
