@@ -13,7 +13,6 @@ export interface User {
   lastActive: string;
   active: boolean;
   securityKeys?: string[];
-  password?: string; // Added for authentication
 }
 
 export interface Assignment {
@@ -115,13 +114,9 @@ const STORAGE_KEYS = {
 
 // Initialize storage with demo data if it doesn't exist
 const initializeStorage = () => {
-  console.log("Initializing storage...");
-  
-  // Check if users already exist
   // NOTE: never reset existing storage here, otherwise user-created data gets wiped on reload
   if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
-    console.log("Creating demo data...");
-    // Create demo users
+    // Create demo users (no credentials — auth is handled by Supabase)
     const demoUsers: User[] = [
       {
         id: '1',
@@ -131,7 +126,6 @@ const initializeStorage = () => {
         department: 'Administration',
         lastActive: new Date().toISOString(),
         active: true,
-        password: 'password123', // Demo password
       },
       {
         id: '2',
@@ -141,7 +135,6 @@ const initializeStorage = () => {
         department: 'Science',
         lastActive: new Date().toISOString(),
         active: true,
-        password: 'password123', // Demo password
       },
       {
         id: '3',
@@ -151,7 +144,6 @@ const initializeStorage = () => {
         class: 'Grade 11A',
         lastActive: new Date().toISOString(),
         active: true,
-        password: 'password123', // Demo password
       },
       {
         id: '4',
@@ -160,11 +152,9 @@ const initializeStorage = () => {
         role: 'parent',
         lastActive: new Date().toISOString(),
         active: true,
-        password: 'password123', // Demo password
       }
     ];
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(demoUsers));
-    console.log("Demo users created:", demoUsers);
     
     // Create demo assignments
     const demoAssignments: Assignment[] = [
@@ -391,82 +381,11 @@ export const deleteUser = (id: string): void => {
   localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
 };
 
-// Authentication methods
-export const getCurrentUser = (): User | null => {
-  initializeStorage();
-  const userJson = localStorage.getItem(STORAGE_KEYS.CURRENT_USER) || 
-                   sessionStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-  
-  if (!userJson) {
-    console.log("No current user found");
-    return null;
-  }
-  
-  try {
-    const userData = JSON.parse(userJson);
-    console.log("Current user data from storage:", userData);
-    
-    // Verify the user still exists in the database
-    const user = getUserById(userData.id);
-    
-    if (!user || !user.active) {
-      console.log("User no longer exists or is inactive");
-      logout();
-      return null;
-    }
-    
-    console.log("Current user validated:", user);
-    return user;
-  } catch (error) {
-    console.error("Error parsing user data:", error);
-    logout();
-    return null;
-  }
-};
+// NOTE: All auth functions (getCurrentUser, login, logout, registerUser) have been
+// removed from this module. Authentication is handled exclusively by Supabase via
+// `useAuth()` from `@/contexts/AuthContext`. Storing passwords or sessions in
+// localStorage is insecure and is no longer supported.
 
-export const login = (email: string, password: string, remember: boolean = false): User | null => {
-  // Force initialize storage to make sure we have the demo users with passwords
-  initializeStorage();
-  
-  // In a real app, we'd check the password hash against the stored password
-  // For this demo, we'll just check if the email and password match
-  const users = getUsers();
-  console.log("Login attempt with:", { email, password });
-  
-  // Log all users in storage for debugging
-  users.forEach(u => {
-    console.log(`User in storage: ${u.email}, has password: ${u.password !== undefined}`);
-  });
-  
-  const user = users.find(u => 
-    u.email.toLowerCase() === email.toLowerCase() && 
-    u.password === password && 
-    u.active
-  );
-  
-  console.log("Found user:", user);
-  
-  if (user) {
-    // Update last active
-    user.lastActive = new Date().toISOString();
-    saveUser(user);
-    
-    // Store in the appropriate storage
-    const storage = remember ? localStorage : sessionStorage;
-    storage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    console.log("User logged in successfully:", user);
-    return user;
-  }
-  
-  console.log("Login failed: no matching user found");
-  return null;
-};
-
-export const logout = (): void => {
-  console.log("Logging out user");
-  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-  sessionStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-};
 
 // Registration method
 export const registerUser = (user: Omit<User, 'id' | 'lastActive'>): User | null => {
