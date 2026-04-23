@@ -489,6 +489,36 @@ const SecurityOverviewPage = () => {
             </TabsContent>
           </Tabs>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ScrollText className="h-5 w-5" /> Legal & Policy Documents
+              </CardTitle>
+              <CardDescription>
+                Live policies served from <code>platform_settings</code>. Edit them in the Legal & Policies editor — changes are immediate.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid md:grid-cols-3 gap-3">
+              <a href="/legal/terms" target="_blank" rel="noreferrer" className="border rounded-md p-4 hover:bg-muted/50 transition">
+                <div className="font-semibold mb-1">Terms & Conditions</div>
+                <div className="text-xs text-muted-foreground">Platform usage rules, acceptable use, AI safety obligations.</div>
+              </a>
+              <a href="/legal/privacy" target="_blank" rel="noreferrer" className="border rounded-md p-4 hover:bg-muted/50 transition">
+                <div className="font-semibold mb-1">Privacy Policy</div>
+                <div className="text-xs text-muted-foreground">Data collected, lawful basis, retention, rights, sub-processors.</div>
+              </a>
+              <a href="/legal/data-protection" target="_blank" rel="noreferrer" className="border rounded-md p-4 hover:bg-muted/50 transition">
+                <div className="font-semibold mb-1">Data Protection Policy</div>
+                <div className="text-xs text-muted-foreground">Technical & organizational measures (GDPR / FERPA / COPPA).</div>
+              </a>
+              <div className="md:col-span-3 print:hidden">
+                <Button asChild variant="outline" size="sm">
+                  <a href="/legal-admin">Open editor →</a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="bg-muted/30 print:hidden">
             <CardContent className="pt-6 text-xs text-muted-foreground">
               <p className="flex items-start gap-2">
