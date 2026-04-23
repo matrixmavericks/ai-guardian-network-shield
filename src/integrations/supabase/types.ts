@@ -2272,6 +2272,39 @@ export type Database = {
         }
         Relationships: []
       }
+      security_keys: {
+        Row: {
+          api_key: string
+          created_at: string
+          created_by: string
+          id: string
+          last_used: string | null
+          name: string
+          service: string
+          updated_at: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          created_by: string
+          id?: string
+          last_used?: string | null
+          name: string
+          service: string
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          last_used?: string | null
+          name?: string
+          service?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       student_courses: {
         Row: {
           course_id: string
@@ -2568,6 +2601,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_registration_payment_info: {
+        Args: { _request_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+          payment_amount_inr: number
+          payment_plan: string
+          payment_status: string
+          seat_config: Json
+        }[]
+      }
+      get_registration_status_by_email: {
+        Args: { _email: string }
+        Returns: {
+          payment_status: string
+          rejection_reason: string
+          status: string
+        }[]
+      }
       get_user_contacts: {
         Args: { _user_id: string }
         Returns: {

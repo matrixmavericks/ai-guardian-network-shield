@@ -15,13 +15,25 @@ serve(async (req) => {
   }
 
   try {
-    const authUserId = await getUserIdFromAuthHeader(req.headers.get("Authorization"));
-    const { prompt, subject, gradeLevel, userId } = await req.json();
-    console.log('Moderating prompt:', { prompt, subject, gradeLevel, userId });
-
-    const effectiveUserId = authUserId || userId || null;
+    // SECURITY: require valid JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const token = authHeader.replace("Bearer ", "");
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const authClient = createClient(supabaseUrl, anonKey);
+    const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const verifiedUserId = claimsData.claims.sub as string;
+
+    const { prompt, subject, gradeLevel } = await req.json();
+    // Use only the verified JWT sub — never trust body-supplied userId
+    const effectiveUserId = verifiedUserId;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: config } = await supabase

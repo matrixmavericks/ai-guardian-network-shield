@@ -14,6 +14,14 @@ import { cn } from "@/lib/utils";
 import { STUDENT_PLANS, TEACHER_PLANS, ADMIN_PLANS, calcAdminMonthlyCost } from "@/lib/planConfigs";
 import { Slider } from "@/components/ui/slider";
 import { usePaymentsEnabled } from "@/hooks/usePlatformSettings";
+import { z } from "zod";
+
+// Input validation schema (security: prevent injection / oversized inputs)
+const registrationSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name too long"),
+  email: z.string().trim().toLowerCase().email("Invalid email address").max(255),
+  requested_role: z.enum(["student", "teacher", "admin", "parent"]),
+});
 
 // ─── Plan card data ───
 const STUDENT_PLAN_CARDS = [
@@ -60,12 +68,9 @@ const Register = () => {
   };
 
   const checkExistingRequest = async (email: string) => {
+    // Use SECURITY DEFINER RPC so we don't need broad SELECT on registration_requests
     const { data, error } = await supabase
-      .from('registration_requests')
-      .select('status, rejection_reason')
-      .eq('email', email.trim().toLowerCase())
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .rpc('get_registration_status_by_email', { _email: email.trim().toLowerCase() });
     if (error || !data || data.length === 0) return null;
     return data[0];
   };
@@ -92,14 +97,19 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email) {
-      toast({ title: "Missing information", description: "Please fill in all required fields.", variant: "destructive" });
+
+    // Validate inputs (security: prevent oversized/malformed data)
+    const parsed = registrationSchema.safeParse(formData);
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || "Invalid form data";
+      toast({ title: "Validation error", description: firstError, variant: "destructive" });
       return;
     }
+    const validated = parsed.data;
 
     setIsSubmitting(true);
     try {
-      const existing = await checkExistingRequest(formData.email);
+      const existing = await checkExistingRequest(validated.email);
       if (existing?.status === 'pending') {
         setRequestStatus('pending');
         toast({ title: "Request already pending", description: "You already have a pending registration request." });
@@ -112,12 +122,12 @@ const Register = () => {
       }
 
       const paymentPlanValue = `${selectedPlan}_${billingCycle}`;
-      const seatConfig = role === 'admin' ? { teachers: teacherCount, students: studentCount } : null;
+      const seatConfig = validated.requested_role === 'admin' ? { teachers: teacherCount, students: studentCount } : null;
 
       const { data: inserted, error } = await supabase.from('registration_requests').insert({
-        full_name: formData.name.trim(),
-        email: formData.email.trim().toLowerCase(),
-        requested_role: formData.requested_role,
+        full_name: validated.name,
+        email: validated.email,
+        requested_role: validated.requested_role,
         status: 'pending',
         payment_plan: paymentPlanValue,
         seat_config: seatConfig,

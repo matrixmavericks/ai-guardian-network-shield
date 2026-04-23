@@ -63,17 +63,16 @@ export default function PayPage() {
   useEffect(() => {
     (async () => {
       if (!requestId) return;
+      // Use SECURITY DEFINER RPC — table is no longer publicly readable
       const { data, error } = await supabase
-        .from("registration_requests")
-        .select("id, email, full_name, payment_plan, payment_amount_inr, payment_status, seat_config")
-        .eq("id", requestId)
-        .maybeSingle();
-      if (error || !data) {
+        .rpc("get_registration_payment_info", { _request_id: requestId });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (error || !row) {
         toast.error("Registration request not found");
         navigate("/");
         return;
       }
-      setRequest(data as RegRequest);
+      setRequest(row as RegRequest);
       setLoading(false);
     })();
   }, [requestId, navigate]);
