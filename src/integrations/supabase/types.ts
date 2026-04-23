@@ -2272,39 +2272,6 @@ export type Database = {
         }
         Relationships: []
       }
-      security_keys: {
-        Row: {
-          api_key: string
-          created_at: string
-          created_by: string
-          id: string
-          last_used: string | null
-          name: string
-          service: string
-          updated_at: string
-        }
-        Insert: {
-          api_key: string
-          created_at?: string
-          created_by: string
-          id?: string
-          last_used?: string | null
-          name: string
-          service: string
-          updated_at?: string
-        }
-        Update: {
-          api_key?: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          last_used?: string | null
-          name?: string
-          service?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       student_courses: {
         Row: {
           course_id: string
