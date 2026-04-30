@@ -487,6 +487,9 @@ const SecurityOverviewPage = () => {
                     <CardContent className="text-sm space-y-1">
                       <p><span className="font-semibold">Contains:</span> {b.contains}</p>
                       <p><span className="font-semibold">Access:</span> {b.access}</p>
+                      <a href={bucketUrl(b.name)} target="_blank" rel="noreferrer" className="text-xs underline text-primary inline-block mt-1">
+                        Open bucket in Lovable Cloud Storage ↗
+                      </a>
                     </CardContent>
                   </Card>
                 ))}
