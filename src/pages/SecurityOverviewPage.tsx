@@ -443,14 +443,17 @@ const SecurityOverviewPage = () => {
                 <CardContent className="pt-6">
                   <div className="space-y-2">
                     {edgeFunctions.map((fn, i) => (
-                      <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-                        <div className="flex items-center gap-3">
-                          <Activity className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-mono text-sm">{fn.name}</span>
+                      <div key={i} className="flex items-center justify-between gap-2 py-2 border-b last:border-0 flex-wrap">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Activity className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="font-mono text-sm truncate">{fn.name}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-xs flex-wrap">
                           <Badge variant="outline">{fn.auth}</Badge>
                           <Badge variant={fn.risk.includes('Hardened') ? 'default' : 'secondary'}>{fn.risk}</Badge>
+                          <a href={fnUrl(fn.name)} target="_blank" rel="noreferrer" className="underline text-primary">Console ↗</a>
+                          <a href={fnLogsUrl(fn.name)} target="_blank" rel="noreferrer" className="underline text-primary">Logs ↗</a>
+                          <span className="font-mono text-muted-foreground">supabase/functions/{fn.name}/index.ts</span>
                         </div>
                       </div>
                     ))}
