@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users, DollarSign, Briefcase, Activity, Building2, ClipboardList, Workflow } from 'lucide-react';
+import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users, DollarSign, Briefcase, Activity, Building2, ClipboardList, Workflow, Code } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSchoolCheck } from '@/hooks/useSchoolCheck';
 
@@ -39,6 +39,7 @@ const DashboardSidebar = () => {
           { title: "Create Account", href: "/create-account", icon: <UserPlus className="h-5 w-5" /> },
           { title: "Pilot Analysis", href: "/pilot-analysis", icon: <Activity className="h-5 w-5" /> },
           { title: "Security & Data", href: "/security-overview", icon: <Shield className="h-5 w-5" /> },
+          { title: "Source Code", href: "/source-code", icon: <Code className="h-5 w-5" /> },
           { title: "Legal & Policies", href: "/legal-admin", icon: <ClipboardList className="h-5 w-5" /> },
           { title: "Platform Docs", href: "/platform-docs", icon: <BookOpen className="h-5 w-5" /> },
           { title: "Workflow", href: "/platform-workflow", icon: <Workflow className="h-5 w-5" /> },
