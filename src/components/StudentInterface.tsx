@@ -83,9 +83,11 @@ const StudentInterface = () => {
   }, [user]);
 
   const loadSessions = async () => {
+    if (!user) return;
     const { data } = await (supabase as any)
       .from('ai_chat_sessions')
       .select('id, title, subject, updated_at')
+      .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(20);
     if (data) setSessions(data);
@@ -181,6 +183,9 @@ const StudentInterface = () => {
         await (supabase as any).from('ai_chat_sessions').update({ title }).eq('id', sessionId);
       }
 
+      // Build conversation history (prior turns) to send for context
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+
       // Call AI
       const { data, error } = await supabase.functions.invoke("ai-chat", {
         body: {
@@ -189,6 +194,7 @@ const StudentInterface = () => {
           gradeLevel: "high-school",
           processTeaching: isProcessTeaching,
           sessionId,
+          history,
           resourceContext: resourceContext
             ? `Title: ${resourceContext.title}\nDescription: ${resourceContext.description}${resourceContext.url ? `\nURL: ${resourceContext.url}` : ""}`
             : null,
