@@ -22,84 +22,103 @@ const DOCS = {
     {
       q: "How do I approve a new registration?",
       a: "Go to **Registration Requests**. Each row shows the user, role, and payment status. Click **Approve** to set the request to approved (the user will be activated on their next login). For paid plans, you can also click **Pay link** to send them straight to Stripe checkout.",
+      code: ["src/pages/RegistrationRequestsPage.tsx", "supabase/functions/create-checkout/index.ts"],
     },
     {
       q: "How do I turn payments on/off globally?",
       a: "On the **Registration Requests** page there's a 'Require payment at registration' switch. ON = users get redirected to Stripe checkout after signing up. OFF = users go into the manual approval queue and you approve/reject by hand.",
+      code: ["src/hooks/usePlatformSettings.tsx", "src/pages/RegistrationRequestsPage.tsx"],
     },
     {
       q: "How do I create a comp (free) account?",
       a: "Open **Create Account** (admin sidebar). Fill in name, email, password, role and pick any plan + billing cycle. The account is created instantly with full access — no payment needed. Useful for pilot users, internal staff, and partner schools.",
+      code: ["src/pages/CreateUserAccountPage.tsx", "supabase/functions/admin-comp-account/index.ts"],
     },
     {
       q: "How does the school per-seat billing work?",
       a: "School plans (Starter / Growth / Enterprise) charge per teacher seat + per student seat. When a school admin invites a user we check `school_seat_limits` and reject the invite if seats are full. They can upgrade their plan to add more seats.",
+      code: ["supabase/functions/create-school-user/index.ts", "src/pages/SchoolManagementPage.tsx"],
     },
     {
       q: "Where do I see AI usage and costs?",
       a: "**AI Usage** page shows token consumption and estimated USD cost per user per month. School-level caps live in `school_ai_settings.max_monthly_cost_usd`.",
+      code: ["src/pages/AIUsagePage.tsx", "src/components/AIUsageDashboard.tsx", "supabase/functions/_shared/aiUsage.ts"],
     },
     {
       q: "How do I add discount codes?",
       a: "Use the `discount_codes` table. Each code can be percent-off or flat-amount-off, time-limited, and capped to N uses. Codes are validated server-side in the `create-checkout` edge function.",
+      code: ["supabase/functions/create-checkout/index.ts"],
     },
   ],
   teacher: [
     {
       q: "How do I create a class?",
       a: "**Classes → New Class**. Pick subject, curriculum (IB / IGCSE / US / etc.), and grading system. You'll get a 6-character join code to share with students.",
+      code: ["src/pages/ClassesPage.tsx", "src/pages/ClassDetailPage.tsx"],
     },
     {
       q: "How do AI-generated learning paths work?",
       a: "On **Learning Paths**, click 'Generate with AI'. Provide a topic, level, and target hours. The AI builds a multi-module path with a final capstone project. You can edit it before assigning.",
+      code: ["src/pages/CreateLearningPathPage.tsx", "supabase/functions/generate-learning-path/index.ts", "src/services/learningPathService.ts"],
     },
     {
       q: "What is Process Teaching Mode?",
       a: "It's a moderation layer that detects when a student is asking for a direct answer ('write my essay', 'solve this for me') and rewrites the request into a guided learning prompt. It's enforced platform-wide and you can extend the blocked-keyword list in school settings.",
+      code: ["supabase/functions/moderate-prompt/index.ts", "src/pages/AIConfigurationPage.tsx"],
     },
     {
       q: "How do I run a Live Quiz?",
       a: "**Live Quizzes → Create Quiz**. Choose teacher-paced or self-paced, set time per question and powerups. Students join with a code (Kahoot-style). You can also generate questions with AI from any topic.",
+      code: ["src/components/livequiz/CreateLiveQuiz.tsx", "src/components/livequiz/LiveQuizPlayer.tsx", "supabase/functions/generate-live-quiz/index.ts"],
     },
     {
       q: "How do I review portfolios?",
       a: "Go to **Student Portfolios**. You can see published projects, leave comments, and provide capstone scores that flow into the student's grade book.",
+      code: ["src/pages/TeacherPortfolioReviewPage.tsx", "src/pages/PortfolioProjectPage.tsx"],
     },
   ],
   student: [
     {
       q: "How do I join a class?",
       a: "**Classes → Join with code**, then enter the 6-character code your teacher shared.",
+      code: ["src/pages/ClassesPage.tsx"],
     },
     {
       q: "What can the AI assistant help with?",
       a: "It tutors you on any subject without giving direct answers. It guides your thinking, asks Socratic questions, and lets you build understanding — not copy answers.",
+      code: ["src/components/StudentInterface.tsx", "supabase/functions/ai-chat/index.ts"],
     },
     {
       q: "How are my AI tokens used?",
       a: "Each AI conversation uses tokens from your monthly plan limit. **Settings → Usage** shows what you've used this month. Free unused tokens reset at the start of each month.",
+      code: ["src/hooks/useStudentPlan.ts", "supabase/functions/_shared/aiUsage.ts"],
     },
     {
       q: "How do I publish my portfolio?",
       a: "**Portfolio → New Project**. Add description, media, links. Toggle 'Publish' to get a public share link on refyntech.online.",
+      code: ["src/pages/PortfolioPage.tsx", "src/pages/SharedPortfolioPage.tsx", "src/lib/publicUrl.ts"],
     },
   ],
   parent: [
     {
       q: "How do I see what my child is doing?",
       a: "Sign in to the **Parent Dashboard**. You'll see filtered AI activity (by child, date, severity), grades, and learning path progress. Sensitive prompts are flagged for your review.",
+      code: ["src/pages/ParentDashboard.tsx", "src/components/ParentSidebar.tsx"],
     },
     {
       q: "Is my child's chat private?",
       a: "Conversations are visible to (a) the student, (b) their teachers, (c) the school admin, and (d) you as their parent. We never sell student data.",
+      code: ["src/pages/ParentDashboard.tsx"],
     },
     {
       q: "How is billing handled?",
       a: "If you registered for the paid plan, you can manage billing from **Settings → Manage Billing**. This opens the Stripe portal where you can update card, view invoices, or cancel.",
+      code: ["src/pages/SettingsPage.tsx", "supabase/functions/create-portal-session/index.ts"],
     },
     {
       q: "What if my child tries to misuse the AI?",
       a: "Process Teaching Mode blocks attempts to get direct answers. Repeated misuse is logged in `bypass_attempts` and surfaced to teachers and admins.",
+      code: ["supabase/functions/moderate-prompt/index.ts", "src/pages/AdminMonitoring.tsx"],
     },
   ],
 };
@@ -212,6 +231,16 @@ const PlatformDocsPage = () => {
                               <AccordionTrigger className="text-left">{d.q}</AccordionTrigger>
                               <AccordionContent className="text-sm text-muted-foreground whitespace-pre-line">
                                 {d.a}
+                                {(d as any).code && (d as any).code.length > 0 && (
+                                  <div className="mt-3 pt-3 border-t">
+                                    <div className="text-xs uppercase font-semibold text-foreground/70 mb-1">Where it lives in the codebase</div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {(d as any).code.map((c: string) => (
+                                        <code key={c} className="text-[11px] bg-muted px-1.5 py-0.5 rounded font-mono">{c}</code>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </AccordionContent>
                             </AccordionItem>
                           ))}

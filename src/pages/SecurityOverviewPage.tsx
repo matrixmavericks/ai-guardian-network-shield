@@ -16,6 +16,27 @@ import {
 
 const MASTER_ADMIN_EMAIL = 'info.aiconditioner@gmail.com';
 
+// Backend (Lovable Cloud / Supabase) project console base — used to deep-link
+// each table, function, secret, and bucket directly to the live admin console.
+const BACKEND_PROJECT_REF = 'kvblawqwgjoibzkunhqv';
+const BACKEND_BASE = `https://supabase.com/dashboard/project/${BACKEND_PROJECT_REF}`;
+const tableUrl = (t: string) => {
+  // Strip schema prefixes like "auth.users (managed)" → "users"
+  const clean = t.replace(/^\w+\./, '').replace(/\s*\(.+\)\s*$/, '').trim();
+  return `${BACKEND_BASE}/editor?schema=public&table=${encodeURIComponent(clean)}`;
+};
+const fnUrl = (n: string) => `${BACKEND_BASE}/functions/${encodeURIComponent(n)}`;
+const fnLogsUrl = (n: string) => `${BACKEND_BASE}/functions/${encodeURIComponent(n)}/logs`;
+const fnCodeUrl = (n: string) => `https://github.com/lovable-dev/refyn/tree/main/supabase/functions/${encodeURIComponent(n)}/index.ts`;
+const bucketUrl = (n: string) => `${BACKEND_BASE}/storage/buckets/${encodeURIComponent(n)}`;
+const secretsUrl = `${BACKEND_BASE}/settings/functions`;
+const authUrl = `${BACKEND_BASE}/auth/users`;
+const policiesUrl = `${BACKEND_BASE}/auth/policies`;
+const sqlUrl = `${BACKEND_BASE}/sql/new`;
+const logsUrl = `${BACKEND_BASE}/logs/explorer`;
+// In-repo source paths (relative) for cross-referencing code that touches each surface
+const repoPath = (p: string) => `/${p.replace(/^\/+/, '')}`;
+
 const SecurityOverviewPage = () => {
   const { user } = useAuth();
   const [printing, setPrinting] = useState(false);
@@ -38,6 +59,7 @@ const SecurityOverviewPage = () => {
       access: 'Owner only (auth.uid() = user_id). Teachers can read chats only for students enrolled in classes they personally teach. School admins can read chats for members of their own school. Master admin has global read access for moderation oversight.',
       retention: 'Indefinite by default. Master admin can purge per-user records via SQL on request (GDPR right-to-erasure).',
       protection: 'Row-Level Security (RLS) enforced on every read/write. INSERT restricted to auth.uid()=user_id. UPDATE/DELETE blocked on ai_chat_messages and prompt_logs (immutable audit log).',
+      code: ['supabase/functions/ai-chat/index.ts', 'supabase/functions/moderate-prompt/index.ts', 'src/components/StudentInterface.tsx', 'src/components/RecentPrompts.tsx'],
     },
     {
       name: 'AI Token Usage & Cost',
@@ -47,6 +69,7 @@ const SecurityOverviewPage = () => {
       access: 'Users see their own. Teachers see students in their classes. Admins see all. INSERT only by service role (edge functions).',
       retention: 'Indefinite for billing reconciliation.',
       protection: 'No UPDATE/DELETE allowed. Inserts only via authenticated service-role calls inside edge functions.',
+      code: ['supabase/functions/_shared/aiUsage.ts', 'src/components/AIUsageDashboard.tsx', 'src/pages/AIUsagePage.tsx'],
     },
     {
       name: 'User Identity & Profile',
@@ -56,6 +79,7 @@ const SecurityOverviewPage = () => {
       access: 'Passwords NEVER readable from app code — only Supabase Auth verifies them. Profiles readable by authenticated users (display purposes). Role assignment is admin-only; users may only self-assign student/parent — admin/teacher self-assignment is blocked at the policy level.',
       retention: 'Until account deletion request.',
       protection: 'Passwords hashed with bcrypt by Supabase Auth. JWT sessions (RS256) with short access tokens + refresh rotation. Role escalation prevented by RLS. Optional Leaked-Password (HIBP) check available.',
+      code: ['src/contexts/AuthContext.tsx', 'src/hooks/useUserRole.tsx', 'src/pages/Login.tsx', 'src/pages/Signup.tsx'],
     },
     {
       name: 'Payment & Registration Data',
@@ -65,6 +89,7 @@ const SecurityOverviewPage = () => {
       access: 'Owner (matched on auth email) and admins. Anonymous status checks go through SECURITY DEFINER RPC `get_registration_status_by_email` which returns ONLY status fields — never IDs or PII.',
       retention: 'Indefinite (financial record).',
       protection: 'Stripe webhooks verified with HMAC signature. Sensitive lookup restricted to RPC with explicit column allow-list.',
+      code: ['supabase/functions/create-checkout/index.ts', 'supabase/functions/payments-webhook/index.ts', 'src/pages/RegistrationRequestsPage.tsx', 'src/pages/PayPage.tsx'],
     },
     {
       name: 'Classroom Content',
@@ -74,6 +99,7 @@ const SecurityOverviewPage = () => {
       access: 'Class members + class teacher only. Teachers can grade. Students can update only ungraded submissions.',
       retention: 'Until class is deleted by owning teacher.',
       protection: 'RLS via SECURITY DEFINER helpers `is_class_member` and `is_class_teacher` (avoid recursive policy issues).',
+      code: ['src/pages/ClassesPage.tsx', 'src/pages/ClassDetailPage.tsx', 'src/components/ClassResourceManager.tsx', 'src/pages/AssignmentsPage.tsx'],
     },
     {
       name: 'Learning Paths & Capstones',
@@ -83,6 +109,7 @@ const SecurityOverviewPage = () => {
       access: 'Owner + assigned teacher. Public learning paths readable by all authenticated users.',
       retention: 'Indefinite — student-owned portfolio artifact.',
       protection: 'RLS on user_id. Teacher access scoped to their class roster.',
+      code: ['supabase/functions/generate-learning-path/index.ts', 'supabase/functions/evaluate-capstone/index.ts', 'src/services/learningPathService.ts', 'src/pages/LearningPathDetail.tsx'],
     },
     {
       name: 'Portfolios (Student Work)',
@@ -92,6 +119,7 @@ const SecurityOverviewPage = () => {
       access: 'Owner + invited collaborators always. Publicly published projects readable via opaque share token only.',
       retention: 'Indefinite (student property).',
       protection: 'Share tokens are 32-byte URL-safe random. Unpublished projects fully private.',
+      code: ['src/pages/PortfolioPage.tsx', 'src/pages/PortfolioProjectPage.tsx', 'src/pages/SharedPortfolioPage.tsx', 'src/lib/publicUrl.ts'],
     },
     {
       name: 'School & Multi-Tenant Data',
@@ -101,6 +129,7 @@ const SecurityOverviewPage = () => {
       access: 'Members of the school only. Cross-school data is fully isolated by RLS using `is_school_member` helper.',
       retention: 'Until school is deleted by owner or master admin.',
       protection: 'Tenant isolation enforced at every policy. School admin cannot access another school\'s data even with valid JWT.',
+      code: ['src/contexts/SchoolContext.tsx', 'src/pages/SchoolPortalPage.tsx', 'src/pages/SchoolManagementPage.tsx', 'supabase/functions/create-school-user/index.ts'],
     },
     {
       name: 'Live Quiz Sessions',
@@ -110,6 +139,7 @@ const SecurityOverviewPage = () => {
       access: 'Teacher (owner) + class members during the session.',
       retention: 'Indefinite for analytics.',
       protection: 'Players insert only their own answers. Teacher controls session state.',
+      code: ['src/components/livequiz/LiveQuizPlayer.tsx', 'src/components/livequiz/CreateLiveQuiz.tsx', 'supabase/functions/generate-live-quiz/index.ts'],
     },
     {
       name: 'Security & Audit',
@@ -119,6 +149,7 @@ const SecurityOverviewPage = () => {
       access: 'Admin SELECT only. INSERT restricted to service_role (edge functions) or authenticated owner.',
       retention: 'Indefinite (forensic record).',
       protection: 'Append-only — no UPDATE or DELETE permitted at the policy level.',
+      code: ['src/pages/AdminMonitoring.tsx', 'supabase/functions/moderate-prompt/index.ts'],
     },
     {
       name: 'AI Configuration & Training',
@@ -128,15 +159,17 @@ const SecurityOverviewPage = () => {
       access: 'Admins (global) and school admins (their school only). Teachers may view global config; students never.',
       retention: 'Indefinite — governance baseline.',
       protection: 'Admin role required for write. Training data pairs require admin approval flag before use.',
+      code: ['src/pages/AIConfigurationPage.tsx', 'src/pages/ModelTrainingPage.tsx', 'src/components/AITrainingWizard.tsx'],
     },
     {
       name: 'Platform Settings (Feature Toggles)',
       tables: ['platform_settings'],
       location: 'Lovable Cloud Postgres.',
-      contains: 'Master switches like payments_enabled, registration mode.',
+      contains: 'Master switches like payments_enabled, registration mode, legal documents (terms/privacy/data-protection JSON).',
       access: 'Master admin write. All authenticated users may read (needed for client-side gating).',
       retention: 'Indefinite.',
       protection: 'Write restricted to has_role(admin).',
+      code: ['src/hooks/usePlatformSettings.tsx', 'src/lib/legalDocs.ts', 'src/pages/LegalAdminPage.tsx'],
     },
   ];
 
@@ -275,6 +308,17 @@ const SecurityOverviewPage = () => {
                 </AlertDescription>
               </Alert>
 
+              <Card className="bg-muted/30">
+                <CardContent className="pt-4 text-xs flex flex-wrap gap-2">
+                  <span className="text-muted-foreground self-center">Quick backend links:</span>
+                  <a href={`${BACKEND_BASE}/editor`} target="_blank" rel="noreferrer" className="underline text-primary">Table editor</a>
+                  <a href={policiesUrl} target="_blank" rel="noreferrer" className="underline text-primary">RLS policies</a>
+                  <a href={sqlUrl} target="_blank" rel="noreferrer" className="underline text-primary">SQL editor</a>
+                  <a href={authUrl} target="_blank" rel="noreferrer" className="underline text-primary">Auth users</a>
+                  <a href={logsUrl} target="_blank" rel="noreferrer" className="underline text-primary">Logs explorer</a>
+                </CardContent>
+              </Card>
+
               <Accordion type="multiple" className="space-y-2">
                 {dataStores.map((store, i) => (
                   <AccordionItem key={i} value={`store-${i}`} className="border rounded-lg px-4 bg-card">
@@ -311,6 +355,35 @@ const SecurityOverviewPage = () => {
                           <div className="font-semibold text-xs uppercase text-muted-foreground mb-1">Protection Mechanisms</div>
                           <p>{store.protection}</p>
                         </div>
+                        <div className="md:col-span-2">
+                          <div className="font-semibold text-xs uppercase text-muted-foreground mb-1">Direct backend access</div>
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            {store.tables.map((t) => (
+                              <a
+                                key={t}
+                                href={tableUrl(t)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="border rounded px-2 py-1 font-mono hover:bg-muted"
+                                title={`Open ${t} in Lovable Cloud table editor`}
+                              >
+                                {t} ↗
+                              </a>
+                            ))}
+                            <a href={policiesUrl} target="_blank" rel="noreferrer" className="border rounded px-2 py-1 hover:bg-muted">RLS policies ↗</a>
+                            <a href={sqlUrl} target="_blank" rel="noreferrer" className="border rounded px-2 py-1 hover:bg-muted">SQL editor ↗</a>
+                          </div>
+                          {(store as any).code && (store as any).code.length > 0 && (
+                            <div className="mt-2">
+                              <div className="font-semibold text-xs uppercase text-muted-foreground mb-1">In-repo code</div>
+                              <div className="flex flex-wrap gap-2 text-xs font-mono">
+                                {(store as any).code.map((c: string) => (
+                                  <span key={c} className="border rounded px-2 py-1 bg-muted/30">{repoPath(c)}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </AccordionContent>
                   </AccordionItem>
@@ -329,6 +402,11 @@ const SecurityOverviewPage = () => {
                   ever bundled into the browser application.
                 </AlertDescription>
               </Alert>
+              <div className="text-xs">
+                <a href={secretsUrl} target="_blank" rel="noreferrer" className="underline text-primary">
+                  Manage all secrets in Lovable Cloud → Functions settings ↗
+                </a>
+              </div>
               <div className="space-y-3">
                 {secrets.map((s, i) => (
                   <Card key={i}>
@@ -340,6 +418,9 @@ const SecurityOverviewPage = () => {
                           <div className="text-sm"><span className="font-semibold">Purpose:</span> {s.purpose}</div>
                           <div className="text-sm"><span className="font-semibold">Stored in:</span> {s.location}</div>
                           <div className="text-sm text-muted-foreground"><span className="font-semibold">Exposure:</span> {s.exposure}</div>
+                          <a href={secretsUrl} target="_blank" rel="noreferrer" className="text-xs underline text-primary inline-block mt-1">
+                            Open in secrets vault ↗
+                          </a>
                         </div>
                       </div>
                     </CardContent>
@@ -362,14 +443,17 @@ const SecurityOverviewPage = () => {
                 <CardContent className="pt-6">
                   <div className="space-y-2">
                     {edgeFunctions.map((fn, i) => (
-                      <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-                        <div className="flex items-center gap-3">
-                          <Activity className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-mono text-sm">{fn.name}</span>
+                      <div key={i} className="flex items-center justify-between gap-2 py-2 border-b last:border-0 flex-wrap">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Activity className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="font-mono text-sm truncate">{fn.name}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-xs flex-wrap">
                           <Badge variant="outline">{fn.auth}</Badge>
                           <Badge variant={fn.risk.includes('Hardened') ? 'default' : 'secondary'}>{fn.risk}</Badge>
+                          <a href={fnUrl(fn.name)} target="_blank" rel="noreferrer" className="underline text-primary">Console ↗</a>
+                          <a href={fnLogsUrl(fn.name)} target="_blank" rel="noreferrer" className="underline text-primary">Logs ↗</a>
+                          <span className="font-mono text-muted-foreground">supabase/functions/{fn.name}/index.ts</span>
                         </div>
                       </div>
                     ))}
@@ -403,6 +487,9 @@ const SecurityOverviewPage = () => {
                     <CardContent className="text-sm space-y-1">
                       <p><span className="font-semibold">Contains:</span> {b.contains}</p>
                       <p><span className="font-semibold">Access:</span> {b.access}</p>
+                      <a href={bucketUrl(b.name)} target="_blank" rel="noreferrer" className="text-xs underline text-primary inline-block mt-1">
+                        Open bucket in Lovable Cloud Storage ↗
+                      </a>
                     </CardContent>
                   </Card>
                 ))}
