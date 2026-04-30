@@ -132,6 +132,7 @@ serve(async (req) => {
   let processTeaching: boolean;
   let sessionId: string | null;
   let resourceContext: string | null;
+  let history: Array<{ role: string; content: string }> = [];
 
   try {
     const body = await req.json();
@@ -141,6 +142,11 @@ serve(async (req) => {
     processTeaching = body.processTeaching !== false;
     sessionId = body.sessionId || null;
     resourceContext = body.resourceContext || null;
+    if (Array.isArray(body.history)) {
+      history = body.history
+        .filter((m: any) => m && typeof m.content === 'string' && (m.role === 'user' || m.role === 'assistant'))
+        .slice(-20); // keep last 20 turns to bound token usage
+    }
   } catch {
     return json({ success: false, reply: FALLBACK_REPLY, error: 'Invalid request body', meta: null }, 400);
   }
