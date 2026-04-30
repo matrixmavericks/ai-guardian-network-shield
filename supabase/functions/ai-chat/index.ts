@@ -295,6 +295,7 @@ IMPORTANT: You are in Process Teaching Mode.
         model: (schoolSettings?.allowed_ai_models?.length > 0 ? schoolSettings.allowed_ai_models[0] : 'google/gemini-3-flash-preview'),
         messages: [
           { role: 'system', content: systemMessage },
+          ...history.map(h => ({ role: h.role, content: h.content })),
           { role: 'user', content: effectivePrompt },
         ],
       }),
