@@ -83,9 +83,11 @@ const StudentInterface = () => {
   }, [user]);
 
   const loadSessions = async () => {
+    if (!user) return;
     const { data } = await (supabase as any)
       .from('ai_chat_sessions')
       .select('id, title, subject, updated_at')
+      .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(20);
     if (data) setSessions(data);
