@@ -296,6 +296,17 @@ const SecurityOverviewPage = () => {
                 </AlertDescription>
               </Alert>
 
+              <Card className="bg-muted/30">
+                <CardContent className="pt-4 text-xs flex flex-wrap gap-2">
+                  <span className="text-muted-foreground self-center">Quick backend links:</span>
+                  <a href={`${BACKEND_BASE}/editor`} target="_blank" rel="noreferrer" className="underline text-primary">Table editor</a>
+                  <a href={policiesUrl} target="_blank" rel="noreferrer" className="underline text-primary">RLS policies</a>
+                  <a href={sqlUrl} target="_blank" rel="noreferrer" className="underline text-primary">SQL editor</a>
+                  <a href={authUrl} target="_blank" rel="noreferrer" className="underline text-primary">Auth users</a>
+                  <a href={logsUrl} target="_blank" rel="noreferrer" className="underline text-primary">Logs explorer</a>
+                </CardContent>
+              </Card>
+
               <Accordion type="multiple" className="space-y-2">
                 {dataStores.map((store, i) => (
                   <AccordionItem key={i} value={`store-${i}`} className="border rounded-lg px-4 bg-card">
@@ -331,6 +342,35 @@ const SecurityOverviewPage = () => {
                         <div className="md:col-span-2">
                           <div className="font-semibold text-xs uppercase text-muted-foreground mb-1">Protection Mechanisms</div>
                           <p>{store.protection}</p>
+                        </div>
+                        <div className="md:col-span-2">
+                          <div className="font-semibold text-xs uppercase text-muted-foreground mb-1">Direct backend access</div>
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            {store.tables.map((t) => (
+                              <a
+                                key={t}
+                                href={tableUrl(t)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="border rounded px-2 py-1 font-mono hover:bg-muted"
+                                title={`Open ${t} in Lovable Cloud table editor`}
+                              >
+                                {t} ↗
+                              </a>
+                            ))}
+                            <a href={policiesUrl} target="_blank" rel="noreferrer" className="border rounded px-2 py-1 hover:bg-muted">RLS policies ↗</a>
+                            <a href={sqlUrl} target="_blank" rel="noreferrer" className="border rounded px-2 py-1 hover:bg-muted">SQL editor ↗</a>
+                          </div>
+                          {(store as any).code && (store as any).code.length > 0 && (
+                            <div className="mt-2">
+                              <div className="font-semibold text-xs uppercase text-muted-foreground mb-1">In-repo code</div>
+                              <div className="flex flex-wrap gap-2 text-xs font-mono">
+                                {(store as any).code.map((c: string) => (
+                                  <span key={c} className="border rounded px-2 py-1 bg-muted/30">{repoPath(c)}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </AccordionContent>
