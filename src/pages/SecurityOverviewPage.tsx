@@ -402,6 +402,11 @@ const SecurityOverviewPage = () => {
                   ever bundled into the browser application.
                 </AlertDescription>
               </Alert>
+              <div className="text-xs">
+                <a href={secretsUrl} target="_blank" rel="noreferrer" className="underline text-primary">
+                  Manage all secrets in Lovable Cloud → Functions settings ↗
+                </a>
+              </div>
               <div className="space-y-3">
                 {secrets.map((s, i) => (
                   <Card key={i}>
@@ -413,6 +418,9 @@ const SecurityOverviewPage = () => {
                           <div className="text-sm"><span className="font-semibold">Purpose:</span> {s.purpose}</div>
                           <div className="text-sm"><span className="font-semibold">Stored in:</span> {s.location}</div>
                           <div className="text-sm text-muted-foreground"><span className="font-semibold">Exposure:</span> {s.exposure}</div>
+                          <a href={secretsUrl} target="_blank" rel="noreferrer" className="text-xs underline text-primary inline-block mt-1">
+                            Open in secrets vault ↗
+                          </a>
                         </div>
                       </div>
                     </CardContent>
