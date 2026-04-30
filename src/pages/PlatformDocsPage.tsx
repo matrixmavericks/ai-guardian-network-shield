@@ -231,6 +231,16 @@ const PlatformDocsPage = () => {
                               <AccordionTrigger className="text-left">{d.q}</AccordionTrigger>
                               <AccordionContent className="text-sm text-muted-foreground whitespace-pre-line">
                                 {d.a}
+                                {(d as any).code && (d as any).code.length > 0 && (
+                                  <div className="mt-3 pt-3 border-t">
+                                    <div className="text-xs uppercase font-semibold text-foreground/70 mb-1">Where it lives in the codebase</div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {(d as any).code.map((c: string) => (
+                                        <code key={c} className="text-[11px] bg-muted px-1.5 py-0.5 rounded font-mono">{c}</code>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </AccordionContent>
                             </AccordionItem>
                           ))}
