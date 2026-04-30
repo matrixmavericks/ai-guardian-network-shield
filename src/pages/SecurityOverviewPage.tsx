@@ -16,6 +16,27 @@ import {
 
 const MASTER_ADMIN_EMAIL = 'info.aiconditioner@gmail.com';
 
+// Backend (Lovable Cloud / Supabase) project console base — used to deep-link
+// each table, function, secret, and bucket directly to the live admin console.
+const BACKEND_PROJECT_REF = 'kvblawqwgjoibzkunhqv';
+const BACKEND_BASE = `https://supabase.com/dashboard/project/${BACKEND_PROJECT_REF}`;
+const tableUrl = (t: string) => {
+  // Strip schema prefixes like "auth.users (managed)" → "users"
+  const clean = t.replace(/^\w+\./, '').replace(/\s*\(.+\)\s*$/, '').trim();
+  return `${BACKEND_BASE}/editor?schema=public&table=${encodeURIComponent(clean)}`;
+};
+const fnUrl = (n: string) => `${BACKEND_BASE}/functions/${encodeURIComponent(n)}`;
+const fnLogsUrl = (n: string) => `${BACKEND_BASE}/functions/${encodeURIComponent(n)}/logs`;
+const fnCodeUrl = (n: string) => `https://github.com/lovable-dev/refyn/tree/main/supabase/functions/${encodeURIComponent(n)}/index.ts`;
+const bucketUrl = (n: string) => `${BACKEND_BASE}/storage/buckets/${encodeURIComponent(n)}`;
+const secretsUrl = `${BACKEND_BASE}/settings/functions`;
+const authUrl = `${BACKEND_BASE}/auth/users`;
+const policiesUrl = `${BACKEND_BASE}/auth/policies`;
+const sqlUrl = `${BACKEND_BASE}/sql/new`;
+const logsUrl = `${BACKEND_BASE}/logs/explorer`;
+// In-repo source paths (relative) for cross-referencing code that touches each surface
+const repoPath = (p: string) => `/${p.replace(/^\/+/, '')}`;
+
 const SecurityOverviewPage = () => {
   const { user } = useAuth();
   const [printing, setPrinting] = useState(false);
