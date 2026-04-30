@@ -59,6 +59,7 @@ const SecurityOverviewPage = () => {
       access: 'Owner only (auth.uid() = user_id). Teachers can read chats only for students enrolled in classes they personally teach. School admins can read chats for members of their own school. Master admin has global read access for moderation oversight.',
       retention: 'Indefinite by default. Master admin can purge per-user records via SQL on request (GDPR right-to-erasure).',
       protection: 'Row-Level Security (RLS) enforced on every read/write. INSERT restricted to auth.uid()=user_id. UPDATE/DELETE blocked on ai_chat_messages and prompt_logs (immutable audit log).',
+      code: ['supabase/functions/ai-chat/index.ts', 'supabase/functions/moderate-prompt/index.ts', 'src/components/StudentInterface.tsx', 'src/components/RecentPrompts.tsx'],
     },
     {
       name: 'AI Token Usage & Cost',
@@ -68,6 +69,7 @@ const SecurityOverviewPage = () => {
       access: 'Users see their own. Teachers see students in their classes. Admins see all. INSERT only by service role (edge functions).',
       retention: 'Indefinite for billing reconciliation.',
       protection: 'No UPDATE/DELETE allowed. Inserts only via authenticated service-role calls inside edge functions.',
+      code: ['supabase/functions/_shared/aiUsage.ts', 'src/components/AIUsageDashboard.tsx', 'src/pages/AIUsagePage.tsx'],
     },
     {
       name: 'User Identity & Profile',
@@ -77,6 +79,7 @@ const SecurityOverviewPage = () => {
       access: 'Passwords NEVER readable from app code — only Supabase Auth verifies them. Profiles readable by authenticated users (display purposes). Role assignment is admin-only; users may only self-assign student/parent — admin/teacher self-assignment is blocked at the policy level.',
       retention: 'Until account deletion request.',
       protection: 'Passwords hashed with bcrypt by Supabase Auth. JWT sessions (RS256) with short access tokens + refresh rotation. Role escalation prevented by RLS. Optional Leaked-Password (HIBP) check available.',
+      code: ['src/contexts/AuthContext.tsx', 'src/hooks/useUserRole.tsx', 'src/pages/Login.tsx', 'src/pages/Signup.tsx'],
     },
     {
       name: 'Payment & Registration Data',
@@ -86,6 +89,7 @@ const SecurityOverviewPage = () => {
       access: 'Owner (matched on auth email) and admins. Anonymous status checks go through SECURITY DEFINER RPC `get_registration_status_by_email` which returns ONLY status fields — never IDs or PII.',
       retention: 'Indefinite (financial record).',
       protection: 'Stripe webhooks verified with HMAC signature. Sensitive lookup restricted to RPC with explicit column allow-list.',
+      code: ['supabase/functions/create-checkout/index.ts', 'supabase/functions/payments-webhook/index.ts', 'src/pages/RegistrationRequestsPage.tsx', 'src/pages/PayPage.tsx'],
     },
     {
       name: 'Classroom Content',
@@ -95,6 +99,7 @@ const SecurityOverviewPage = () => {
       access: 'Class members + class teacher only. Teachers can grade. Students can update only ungraded submissions.',
       retention: 'Until class is deleted by owning teacher.',
       protection: 'RLS via SECURITY DEFINER helpers `is_class_member` and `is_class_teacher` (avoid recursive policy issues).',
+      code: ['src/pages/ClassesPage.tsx', 'src/pages/ClassDetailPage.tsx', 'src/components/ClassResourceManager.tsx', 'src/pages/AssignmentsPage.tsx'],
     },
     {
       name: 'Learning Paths & Capstones',
@@ -104,6 +109,7 @@ const SecurityOverviewPage = () => {
       access: 'Owner + assigned teacher. Public learning paths readable by all authenticated users.',
       retention: 'Indefinite — student-owned portfolio artifact.',
       protection: 'RLS on user_id. Teacher access scoped to their class roster.',
+      code: ['supabase/functions/generate-learning-path/index.ts', 'supabase/functions/evaluate-capstone/index.ts', 'src/services/learningPathService.ts', 'src/pages/LearningPathDetail.tsx'],
     },
     {
       name: 'Portfolios (Student Work)',
@@ -113,6 +119,7 @@ const SecurityOverviewPage = () => {
       access: 'Owner + invited collaborators always. Publicly published projects readable via opaque share token only.',
       retention: 'Indefinite (student property).',
       protection: 'Share tokens are 32-byte URL-safe random. Unpublished projects fully private.',
+      code: ['src/pages/PortfolioPage.tsx', 'src/pages/PortfolioProjectPage.tsx', 'src/pages/SharedPortfolioPage.tsx', 'src/lib/publicUrl.ts'],
     },
     {
       name: 'School & Multi-Tenant Data',
@@ -122,6 +129,7 @@ const SecurityOverviewPage = () => {
       access: 'Members of the school only. Cross-school data is fully isolated by RLS using `is_school_member` helper.',
       retention: 'Until school is deleted by owner or master admin.',
       protection: 'Tenant isolation enforced at every policy. School admin cannot access another school\'s data even with valid JWT.',
+      code: ['src/contexts/SchoolContext.tsx', 'src/pages/SchoolPortalPage.tsx', 'src/pages/SchoolManagementPage.tsx', 'supabase/functions/create-school-user/index.ts'],
     },
     {
       name: 'Live Quiz Sessions',
@@ -131,6 +139,7 @@ const SecurityOverviewPage = () => {
       access: 'Teacher (owner) + class members during the session.',
       retention: 'Indefinite for analytics.',
       protection: 'Players insert only their own answers. Teacher controls session state.',
+      code: ['src/components/livequiz/LiveQuizPlayer.tsx', 'src/components/livequiz/CreateLiveQuiz.tsx', 'supabase/functions/generate-live-quiz/index.ts'],
     },
     {
       name: 'Security & Audit',
@@ -140,6 +149,7 @@ const SecurityOverviewPage = () => {
       access: 'Admin SELECT only. INSERT restricted to service_role (edge functions) or authenticated owner.',
       retention: 'Indefinite (forensic record).',
       protection: 'Append-only — no UPDATE or DELETE permitted at the policy level.',
+      code: ['src/pages/AdminMonitoring.tsx', 'supabase/functions/moderate-prompt/index.ts'],
     },
     {
       name: 'AI Configuration & Training',
@@ -149,15 +159,17 @@ const SecurityOverviewPage = () => {
       access: 'Admins (global) and school admins (their school only). Teachers may view global config; students never.',
       retention: 'Indefinite — governance baseline.',
       protection: 'Admin role required for write. Training data pairs require admin approval flag before use.',
+      code: ['src/pages/AIConfigurationPage.tsx', 'src/pages/ModelTrainingPage.tsx', 'src/components/AITrainingWizard.tsx'],
     },
     {
       name: 'Platform Settings (Feature Toggles)',
       tables: ['platform_settings'],
       location: 'Lovable Cloud Postgres.',
-      contains: 'Master switches like payments_enabled, registration mode.',
+      contains: 'Master switches like payments_enabled, registration mode, legal documents (terms/privacy/data-protection JSON).',
       access: 'Master admin write. All authenticated users may read (needed for client-side gating).',
       retention: 'Indefinite.',
       protection: 'Write restricted to has_role(admin).',
+      code: ['src/hooks/usePlatformSettings.tsx', 'src/lib/legalDocs.ts', 'src/pages/LegalAdminPage.tsx'],
     },
   ];
 
