@@ -1866,6 +1866,42 @@ export type Database = {
         }
         Relationships: []
       }
+      project_nelo_applicants: {
+        Row: {
+          applicant_name: string
+          created_at: string
+          created_by: string | null
+          id: string
+          letter_body: string
+          letter_title: string | null
+          normalized_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applicant_name: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          letter_body: string
+          letter_title?: string | null
+          normalized_name: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          applicant_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          letter_body?: string
+          letter_title?: string | null
+          normalized_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       prompt_logs: {
         Row: {
           ai_engine: Database["public"]["Enums"]["ai_engine"] | null
