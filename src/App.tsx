@@ -46,8 +46,6 @@ import SecurityOverviewPage from './pages/SecurityOverviewPage';
 import LegalDocPage from './pages/LegalDocPage';
 import LegalAdminPage from './pages/LegalAdminPage';
 import SourceCodeDownloadPage from './pages/SourceCodeDownloadPage';
-import ProjectNeloAdminPage from './pages/ProjectNeloAdminPage';
-import ProjectNeloPublicPage from './pages/ProjectNeloPublicPage';
 
 const ProtectedRoute = ({ 
   children, 
@@ -87,8 +85,6 @@ function App() {
           <Route path="/pay/:requestId" element={<PayPage />} />
           <Route path="/checkout/return" element={<CheckoutReturn />} />
           <Route path="/legal/:doc" element={<LegalDocPage />} />
-          <Route path="/project-nelo" element={<ProjectNeloPublicPage />} />
-          <Route path="/project-nelo-admin" element={<ProtectedRoute allowedRoles={['admin']}><ProjectNeloAdminPage /></ProtectedRoute>} />
           <Route path="/legal-admin" element={<ProtectedRoute allowedRoles={['admin']}><LegalAdminPage /></ProtectedRoute>} />
 
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><Dashboard /></ProtectedRoute>} />
