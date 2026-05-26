@@ -81,7 +81,8 @@ const BootTerminal: React.FC<{ name: string; status: 'accepted' | 'rejected'; on
           </div>
         </div>
         <div ref={scrollRef} className="p-5 font-mono text-[13px] text-emerald-300 h-72 overflow-y-auto leading-relaxed">
-          {lines.map((l, idx) => {
+          {lines.map((raw, idx) => {
+            const l = raw ?? '';
             const greenMatch = l.includes('ACCESS_GRANTED');
             const redMatch = l.includes('ACCESS_DENIED');
             const cleaned = l.replace(/\x1b\[\d+m/g, '');
