@@ -53,7 +53,10 @@ const BootTerminal: React.FC<{ name: string; status: 'accepted' | 'rejected'; on
 
     let i = 0;
     const interval = setInterval(() => {
-      setLines((prev) => [...prev, sequence[i]]);
+      const next = sequence[i];
+      if (next !== undefined) {
+        setLines((prev) => [...prev, next]);
+      }
       i++;
       if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       if (i >= sequence.length) {
