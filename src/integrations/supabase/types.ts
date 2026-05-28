@@ -1974,6 +1974,7 @@ export type Database = {
           stripe_session_id: string | null
           stripe_subscription_id: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1998,6 +1999,7 @@ export type Database = {
           stripe_session_id?: string | null
           stripe_subscription_id?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -2022,6 +2024,7 @@ export type Database = {
           stripe_session_id?: string | null
           stripe_subscription_id?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -2604,6 +2607,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_class_by_join_code: {
+        Args: { _code: string }
+        Returns: {
+          id: string
+          name: string
+          school_id: string
+          subject: string
+          teacher_id: string
+        }[]
+      }
       get_registration_payment_info: {
         Args: { _request_id: string }
         Returns: {
@@ -2622,6 +2635,16 @@ export type Database = {
           payment_status: string
           rejection_reason: string
           status: string
+        }[]
+      }
+      get_school_branding: {
+        Args: { _subdomain: string }
+        Returns: {
+          description: string
+          id: string
+          logo_url: string
+          name: string
+          subdomain: string
         }[]
       }
       get_user_contacts: {
@@ -2668,6 +2691,15 @@ export type Database = {
       is_school_member: {
         Args: { _school_id: string; _user_id: string }
         Returns: boolean
+      }
+      validate_discount_code: {
+        Args: { _code: string }
+        Returns: {
+          applies_to_plans: string[]
+          discount_type: string
+          discount_value: number
+          valid: boolean
+        }[]
       }
     }
     Enums: {
