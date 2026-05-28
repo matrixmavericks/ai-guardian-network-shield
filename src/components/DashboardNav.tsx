@@ -9,6 +9,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 const DashboardNav = () => {
   const { toast } = useToast();
