@@ -111,16 +111,22 @@ const DashboardSidebar = () => {
       
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
-          {getNavItems().map((item, index) =>
-            <li key={index}>
-              <NavLink to={item.href}
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-md text-sm ${isActive ? "bg-blue-100 text-blue-700 font-medium" : "text-slate-600 hover:bg-slate-100"}`
-                }>
-                <span className="mr-3">{item.icon}</span>
-                {item.title}
-              </NavLink>
-            </li>
+          {getNavItems().map((item: any, index) =>
+            item.divider ? (
+              <li key={index} className="pt-4 pb-1 px-2 text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                {item.title.replace(/—/g, '').trim()}
+              </li>
+            ) : (
+              <li key={index}>
+                <NavLink to={item.href}
+                  className={({ isActive }) =>
+                    `flex items-center px-4 py-2 rounded-md text-sm ${isActive ? "bg-blue-100 text-blue-700 font-medium" : "text-slate-600 hover:bg-slate-100"}`
+                  }>
+                  <span className="mr-3">{item.icon}</span>
+                  {item.title}
+                </NavLink>
+              </li>
+            )
           )}
         </ul>
       </nav>
