@@ -37,6 +37,7 @@ const DashboardNav = () => {
           <Input type="search" placeholder="Search..." className="w-full pl-9 bg-muted/50 border-border" />
         </div>
         <div className="flex items-center space-x-4">
+          <ThemeSwitcher />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
