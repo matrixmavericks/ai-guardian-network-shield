@@ -88,6 +88,7 @@ const ProtectedRoute = ({
 
 function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
