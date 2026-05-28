@@ -35,10 +35,10 @@ const ThinkingReplayPage = () => {
               ctaLabel="Replay my thinking"
             >
               <Label className="text-sm">Focus on a specific session (optional)</Label>
-              <Select value={sessionId} onValueChange={setSessionId}>
+              <Select value={sessionId || "__all__"} onValueChange={(v) => setSessionId(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="mt-2"><SelectValue placeholder="All recent sessions" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All recent sessions</SelectItem>
+                  <SelectItem value="__all__">All recent sessions</SelectItem>
                   {sessions.map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.title || "Untitled"} — {new Date(s.created_at).toLocaleDateString()}</SelectItem>
                   ))}
