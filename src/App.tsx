@@ -159,6 +159,7 @@ function App() {
       </BrowserRouter>
     </AuthProvider>
     </ThemeProvider>
+  );
 }
 
 export default App;
