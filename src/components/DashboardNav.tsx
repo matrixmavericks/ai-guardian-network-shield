@@ -9,6 +9,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 const DashboardNav = () => {
   const { toast } = useToast();
@@ -29,13 +30,14 @@ const DashboardNav = () => {
   };
 
   return (
-    <header className="bg-white border-b border-slate-200 px-6 py-3">
+    <header className="bg-card/80 backdrop-blur-sm border-b border-border px-6 py-3">
       <div className="flex items-center justify-between">
         <div className="relative w-full max-w-md">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-          <Input type="search" placeholder="Search..." className="w-full pl-9 bg-slate-50 border-slate-200" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input type="search" placeholder="Search..." className="w-full pl-9 bg-muted/50 border-border" />
         </div>
         <div className="flex items-center space-x-4">
+          <ThemeSwitcher />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
