@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users, DollarSign, Briefcase, Activity, Building2, ClipboardList, Workflow, Code, Sparkles } from 'lucide-react';
+import { Shield, LogOut, TrendingUp, BookOpen, GraduationCap, Settings, UserPlus, Layers, Brain, MessageSquare, Book, Users, DollarSign, Briefcase, Activity, Building2, ClipboardList, Workflow, Code, Sparkles, Rocket, Radar, FlaskConical, Network, Mail, CalendarClock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSchoolCheck } from '@/hooks/useSchoolCheck';
 
@@ -45,6 +45,12 @@ const DashboardSidebar = () => {
           { title: "Platform Docs", href: "/platform-docs", icon: <BookOpen className="h-5 w-5" /> },
           { title: "Workflow", href: "/platform-workflow", icon: <Workflow className="h-5 w-5" /> },
         ] : []),
+        { title: "— Intelligence —", href: "#", icon: <Sparkles className="h-5 w-5" />, divider: true },
+        { title: "At-Risk Radar", href: "/intel/at-risk-radar", icon: <Radar className="h-5 w-5" /> },
+        { title: "Policy Sandbox", href: "/intel/policy-sandbox", icon: <FlaskConical className="h-5 w-5" /> },
+        { title: "Budget Optimizer", href: "/intel/budget-optimizer", icon: <DollarSign className="h-5 w-5" /> },
+        { title: "Refyn Graph", href: "/intel/refyn-graph", icon: <Network className="h-5 w-5" /> },
+        { title: "Curriculum Conflicts", href: "/intel/curriculum-conflict", icon: <CalendarClock className="h-5 w-5" /> },
         { title: "Settings", href: "/settings", icon: <Settings className="h-5 w-5" /> },
       ];
     } else if (role === 'teacher') {
@@ -58,6 +64,11 @@ const DashboardSidebar = () => {
         { title: "Messages", href: "/messages", icon: <MessageSquare className="h-5 w-5" /> },
         { title: "AI Assistant", href: "/ai-learning-assistant", icon: <Brain className="h-5 w-5" /> },
         { title: "AI Usage", href: "/ai-usage", icon: <DollarSign className="h-5 w-5" /> },
+        { title: "— Intelligence —", href: "#", icon: <Sparkles className="h-5 w-5" />, divider: true },
+        { title: "Auto-Differentiate", href: "/intel/auto-iep", icon: <Layers className="h-5 w-5" /> },
+        { title: "Parent Briefs", href: "/intel/parent-brief", icon: <Mail className="h-5 w-5" /> },
+        { title: "Curriculum Conflicts", href: "/intel/curriculum-conflict", icon: <CalendarClock className="h-5 w-5" /> },
+        { title: "At-Risk Radar", href: "/intel/at-risk-radar", icon: <Radar className="h-5 w-5" /> },
       ];
     } else {
       return [
@@ -69,6 +80,10 @@ const DashboardSidebar = () => {
         { title: "Portfolio", href: "/portfolio", icon: <Briefcase className="h-5 w-5" /> },
         { title: "AI Assistant", href: "/ai-learning-assistant", icon: <Brain className="h-5 w-5" /> },
         { title: "Messages", href: "/messages", icon: <MessageSquare className="h-5 w-5" /> },
+        { title: "— Intelligence —", href: "#", icon: <Sparkles className="h-5 w-5" />, divider: true },
+        { title: "Thinking Replay", href: "/intel/thinking-replay", icon: <Brain className="h-5 w-5" /> },
+        { title: "Future Self", href: "/intel/future-self", icon: <Rocket className="h-5 w-5" /> },
+        { title: "Peer Benchmark", href: "/intel/peer-compare", icon: <Users className="h-5 w-5" /> },
       ];
     }
   };

@@ -48,6 +48,16 @@ import LegalAdminPage from './pages/LegalAdminPage';
 import SourceCodeDownloadPage from './pages/SourceCodeDownloadPage';
 import ProjectNeloAdminPage from './pages/ProjectNeloAdminPage';
 import ProjectNeloPublicPage from './pages/ProjectNeloPublicPage';
+import ThinkingReplayPage from './pages/intelligence/ThinkingReplayPage';
+import FutureSelfPage from './pages/intelligence/FutureSelfPage';
+import PeerComparePage from './pages/intelligence/PeerComparePage';
+import AutoIEPPage from './pages/intelligence/AutoIEPPage';
+import CurriculumConflictPage from './pages/intelligence/CurriculumConflictPage';
+import ParentBriefPage from './pages/intelligence/ParentBriefPage';
+import AtRiskRadarPage from './pages/intelligence/AtRiskRadarPage';
+import PolicySandboxPage from './pages/intelligence/PolicySandboxPage';
+import BudgetOptimizerPage from './pages/intelligence/BudgetOptimizerPage';
+import RefynGraphPage from './pages/intelligence/RefynGraphPage';
 
 const ProtectedRoute = ({ 
   children, 
@@ -126,6 +136,18 @@ function App() {
           <Route path="/my-courses" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><MyCoursesPage /></ProtectedRoute>} />
           <Route path="/course/create" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><CreateCoursePage /></ProtectedRoute>} />
           <Route path="/course/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><CourseStudyPage /></ProtectedRoute>} />
+
+          {/* Refyn Intelligence — revolutionary AI features */}
+          <Route path="/intel/thinking-replay" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><ThinkingReplayPage /></ProtectedRoute>} />
+          <Route path="/intel/future-self" element={<ProtectedRoute allowedRoles={['student']}><FutureSelfPage /></ProtectedRoute>} />
+          <Route path="/intel/peer-compare" element={<ProtectedRoute allowedRoles={['student']}><PeerComparePage /></ProtectedRoute>} />
+          <Route path="/intel/auto-iep" element={<ProtectedRoute allowedRoles={['teacher','admin']}><AutoIEPPage /></ProtectedRoute>} />
+          <Route path="/intel/curriculum-conflict" element={<ProtectedRoute allowedRoles={['teacher','admin']}><CurriculumConflictPage /></ProtectedRoute>} />
+          <Route path="/intel/parent-brief" element={<ProtectedRoute allowedRoles={['teacher','admin']}><ParentBriefPage /></ProtectedRoute>} />
+          <Route path="/intel/at-risk-radar" element={<ProtectedRoute allowedRoles={['admin','teacher']}><AtRiskRadarPage /></ProtectedRoute>} />
+          <Route path="/intel/policy-sandbox" element={<ProtectedRoute allowedRoles={['admin']}><PolicySandboxPage /></ProtectedRoute>} />
+          <Route path="/intel/budget-optimizer" element={<ProtectedRoute allowedRoles={['admin']}><BudgetOptimizerPage /></ProtectedRoute>} />
+          <Route path="/intel/refyn-graph" element={<ProtectedRoute allowedRoles={['admin']}><RefynGraphPage /></ProtectedRoute>} />
 
           {/* School subdomain routes - all features scoped to school */}
           <Route path="/s/:subdomain/*" element={<SchoolRoutes />} />
