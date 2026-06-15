@@ -60,6 +60,17 @@ import AtRiskRadarPage from './pages/intelligence/AtRiskRadarPage';
 import PolicySandboxPage from './pages/intelligence/PolicySandboxPage';
 import BudgetOptimizerPage from './pages/intelligence/BudgetOptimizerPage';
 import RefynGraphPage from './pages/intelligence/RefynGraphPage';
+import TeacherStudio from './pages/TeacherStudio';
+import { getStudioConfig } from './lib/mispStudioConfigs';
+
+// Auto-route Mahindra spotlight teachers to their custom studio
+const DashboardRouter = () => {
+  const { user } = useAuth();
+  if (user && getStudioConfig(user.email)) {
+    return <Navigate to="/studio" replace />;
+  }
+  return <Dashboard />;
+};
 
 const ProtectedRoute = ({ 
   children, 
@@ -104,7 +115,8 @@ function App() {
           <Route path="/project-nelo-admin" element={<ProtectedRoute allowedRoles={['admin']}><ProjectNeloAdminPage /></ProtectedRoute>} />
           <Route path="/legal-admin" element={<ProtectedRoute allowedRoles={['admin']}><LegalAdminPage /></ProtectedRoute>} />
 
-          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><DashboardRouter /></ProtectedRoute>} />
+          <Route path="/studio" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TeacherStudio /></ProtectedRoute>} />
           <Route path="/admin-overview" element={<ProtectedRoute allowedRoles={['admin']}><AdminOverviewPage /></ProtectedRoute>} />
           <Route path="/school-management" element={<ProtectedRoute allowedRoles={['admin']}><SchoolManagementPage /></ProtectedRoute>} />
           <Route path="/security-keys" element={<ProtectedRoute allowedRoles={['admin']}><SecurityKeysPage /></ProtectedRoute>} />
