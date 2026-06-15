@@ -42,6 +42,7 @@ import PayPage from './pages/PayPage';
 import CheckoutReturn from './pages/CheckoutReturn';
 import PlatformDocsPage from './pages/PlatformDocsPage';
 import PilotAnalysisPage from './pages/PilotAnalysisPage';
+import PilotMahindraConsole from './pages/PilotMahindraConsole';
 import CreateUserAccountPage from './pages/CreateUserAccountPage';
 import SecurityOverviewPage from './pages/SecurityOverviewPage';
 import LegalDocPage from './pages/LegalDocPage';
