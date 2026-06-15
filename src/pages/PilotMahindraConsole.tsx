@@ -1,0 +1,331 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { Navigate, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import {
+  Activity, AlertTriangle, BookOpen, GraduationCap, Layers, MessageSquare,
+  ShieldCheck, Sparkles, Users, Zap, RefreshCcw, ExternalLink,
+} from "lucide-react";
+
+const SUBDOMAIN = "mahindra-pune";
+const MASTER_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
+
+type SchoolRow = { id: string; name: string; subdomain: string; description: string | null };
+type TeacherView = {
+  user_id: string;
+  full_name: string;
+  email: string;
+  classes: number;
+  students: number;
+  prompts_7d: number;
+  flagged_7d: number;
+  tokens_used: number;
+  token_limit: number;
+};
+
+const formatNum = (n: number) => new Intl.NumberFormat().format(n);
+
+const Stat = ({
+  icon: Icon, label, value, sub, tone = "default",
+}: { icon: any; label: string; value: React.ReactNode; sub?: string; tone?: "default" | "success" | "warn" | "danger" }) => {
+  const toneCls =
+    tone === "success" ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/5"
+    : tone === "warn" ? "text-amber-400 border-amber-500/30 bg-amber-500/5"
+    : tone === "danger" ? "text-rose-400 border-rose-500/30 bg-rose-500/5"
+    : "text-slate-200 border-slate-700/60 bg-slate-900/40";
+  return (
+    <div className={`rounded-xl border ${toneCls} backdrop-blur p-5 transition-colors`}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-mono tracking-[0.18em] uppercase text-slate-400">{label}</span>
+        <Icon className="h-4 w-4 opacity-70" />
+      </div>
+      <div className="text-3xl font-semibold tracking-tight">{value}</div>
+      {sub && <div className="text-xs text-slate-400 mt-1">{sub}</div>}
+    </div>
+  );
+};
+
+const PilotMahindraConsole: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [school, setSchool] = useState<SchoolRow | null>(null);
+  const [teachers, setTeachers] = useState<TeacherView[]>([]);
+  const [totals, setTotals] = useState({
+    classes: 0, students: 0, prompts_7d: 0, flagged_7d: 0,
+    tokens_used: 0, token_limit: 0, paths: 0, capstones: 0, bypass_7d: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Authorize: master admin OR school admin member of mahindra
+  useEffect(() => {
+    if (isLoading) return;
+    (async () => {
+      if (!user) { setAuthorized(false); return; }
+      if (user.email?.toLowerCase() === MASTER_ADMIN_EMAIL) { setAuthorized(true); return; }
+      const { data: s } = await supabase.from("schools").select("id").eq("subdomain", SUBDOMAIN).maybeSingle();
+      if (!s) { setAuthorized(false); return; }
+      const { data: m } = await supabase
+        .from("school_members")
+        .select("school_role")
+        .eq("school_id", s.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      setAuthorized(!!m && m.school_role === "admin");
+    })();
+  }, [user, isLoading]);
+
+  useEffect(() => {
+    if (!authorized) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const { data: s } = await supabase.from("schools")
+          .select("id, name, subdomain, description").eq("subdomain", SUBDOMAIN).maybeSingle();
+        if (!s) { setLoading(false); return; }
+        setSchool(s);
+
+        const { data: members } = await supabase
+          .from("school_members").select("user_id, school_role").eq("school_id", s.id);
+        const teacherIds = (members ?? []).filter(m => m.school_role === "teacher").map(m => m.user_id);
+
+        const { data: profiles } = await supabase
+          .from("profiles").select("user_id, full_name, email").in("user_id", teacherIds.length ? teacherIds : ["00000000-0000-0000-0000-000000000000"]);
+
+        const { data: classes } = await supabase
+          .from("classes").select("id, teacher_id").eq("school_id", s.id);
+
+        const classIds = (classes ?? []).map(c => c.id);
+        const { data: classMembers } = classIds.length
+          ? await supabase.from("class_members").select("student_id, class_id").in("class_id", classIds)
+          : { data: [] as any[] };
+
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+
+        const teacherUserSet = new Set(teacherIds);
+        const studentSet = new Set((classMembers ?? []).map(m => m.student_id));
+        const allMemberIds = [...teacherUserSet, ...studentSet];
+
+        const { data: logs } = allMemberIds.length
+          ? await supabase
+              .from("ai_usage_logs")
+              .select("user_id, was_flagged, tokens_used, created_at")
+              .in("user_id", allMemberIds)
+              .gte("created_at", sevenDaysAgo)
+          : { data: [] as any[] };
+
+        const { data: plans } = teacherIds.length
+          ? await supabase.from("user_plans").select("user_id, tokens_used_this_month, monthly_token_limit, status")
+              .in("user_id", teacherIds).eq("status", "active")
+          : { data: [] as any[] };
+
+        const { data: paths } = teacherIds.length
+          ? await supabase.from("learning_paths").select("id").in("created_by", teacherIds)
+          : { data: [] as any[] };
+
+        const { data: caps } = classIds.length
+          ? await supabase.from("capstone_submissions").select("id").in("class_id", classIds)
+          : { data: [] as any[] };
+
+        const { data: bypass } = allMemberIds.length
+          ? await supabase.from("bypass_attempts").select("id, created_at").in("user_id", allMemberIds).gte("created_at", sevenDaysAgo)
+          : { data: [] as any[] };
+
+        // Aggregate per teacher
+        const teacherView: TeacherView[] = (profiles ?? []).map(p => {
+          const teacherClasses = (classes ?? []).filter(c => c.teacher_id === p.user_id);
+          const tClassIds = teacherClasses.map(c => c.id);
+          const tStudents = new Set(
+            (classMembers ?? []).filter(m => tClassIds.includes(m.class_id)).map(m => m.student_id)
+          );
+          const tStudentIds = [...tStudents];
+          const tLogs = (logs ?? []).filter(l => l.user_id === p.user_id || tStudentIds.includes(l.user_id));
+          const plan = (plans ?? []).find(pl => pl.user_id === p.user_id);
+          return {
+            user_id: p.user_id,
+            full_name: p.full_name ?? p.email ?? "Teacher",
+            email: p.email ?? "",
+            classes: teacherClasses.length,
+            students: tStudents.size,
+            prompts_7d: tLogs.length,
+            flagged_7d: tLogs.filter(l => l.was_flagged).length,
+            tokens_used: plan?.tokens_used_this_month ?? 0,
+            token_limit: plan?.monthly_token_limit ?? 0,
+          };
+        });
+        teacherView.sort((a, b) => b.prompts_7d - a.prompts_7d);
+        setTeachers(teacherView);
+
+        setTotals({
+          classes: (classes ?? []).length,
+          students: studentSet.size,
+          prompts_7d: (logs ?? []).length,
+          flagged_7d: (logs ?? []).filter(l => l.was_flagged).length,
+          tokens_used: (plans ?? []).reduce((s, p) => s + (p.tokens_used_this_month ?? 0), 0),
+          token_limit: (plans ?? []).reduce((s, p) => s + (p.monthly_token_limit ?? 0), 0),
+          paths: (paths ?? []).length,
+          capstones: (caps ?? []).length,
+          bypass_7d: (bypass ?? []).length,
+        });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [authorized, refreshKey]);
+
+  const tokenPct = useMemo(
+    () => totals.token_limit ? Math.min(100, Math.round((totals.tokens_used / totals.token_limit) * 100)) : 0,
+    [totals],
+  );
+
+  if (isLoading || authorized === null) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-300">Loading pilot console…</div>;
+  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (!authorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-200 p-8">
+        <Card className="max-w-md w-full border-rose-500/30 bg-slate-900/60">
+          <CardHeader><CardTitle className="text-rose-400 flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Access restricted</CardTitle></CardHeader>
+          <CardContent className="text-sm text-slate-400">
+            This console is reserved for the Refyn master admin and the Mahindra International School Pune pilot administrator.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-950 to-[#0a1a2e] text-slate-100">
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        {/* Header */}
+        <div className="flex flex-wrap items-end justify-between gap-6 mb-10">
+          <div>
+            <div className="text-[10px] font-mono tracking-[0.3em] uppercase text-amber-400 mb-2">Refyn × Mahindra Pilot Console</div>
+            <h1 className="text-4xl font-semibold tracking-tight">{school?.name ?? "Mahindra International School Pune"}</h1>
+            <p className="text-slate-400 mt-2 max-w-2xl text-sm">
+              Live operational snapshot of the pilot deployment — teacher activity, AI governance signals, token economy and learning artefacts.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="border-emerald-500/40 text-emerald-300">Pilot active</Badge>
+            <Button variant="outline" size="sm" onClick={() => setRefreshKey(k => k + 1)} className="border-slate-700">
+              <RefreshCcw className="h-3.5 w-3.5 mr-1.5" /> Refresh
+            </Button>
+            <Link to={`/s/${SUBDOMAIN}`}>
+              <Button size="sm" className="bg-amber-500 hover:bg-amber-400 text-slate-950">
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> School portal
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* KPI grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+          <Stat icon={GraduationCap} label="Teachers" value={teachers.length} sub="Onboarded" />
+          <Stat icon={Layers}        label="Classes"  value={totals.classes}  sub="Active" />
+          <Stat icon={Users}         label="Students" value={totals.students} sub="Enrolled" />
+          <Stat icon={MessageSquare} label="Prompts · 7d" value={formatNum(totals.prompts_7d)} sub={`${formatNum(totals.flagged_7d)} flagged`} tone={totals.flagged_7d > 0 ? "warn" : "default"} />
+          <Stat icon={BookOpen}      label="Learning paths" value={totals.paths} sub="Authored" />
+          <Stat icon={Sparkles}      label="Capstones" value={totals.capstones} sub="Submissions" />
+        </div>
+
+        {/* Token economy + governance */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+          <Card className="lg:col-span-2 border-slate-800 bg-slate-900/50">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2"><Zap className="h-4 w-4 text-amber-400" /> Token economy</CardTitle>
+              <span className="text-xs text-slate-400">{formatNum(totals.tokens_used)} / {formatNum(totals.token_limit)} tokens</span>
+            </CardHeader>
+            <CardContent>
+              <Progress value={tokenPct} className="h-2" />
+              <div className="grid grid-cols-3 gap-4 mt-6 text-sm">
+                <div><div className="text-slate-400 text-xs">Used this month</div><div className="text-lg font-medium">{formatNum(totals.tokens_used)}</div></div>
+                <div><div className="text-slate-400 text-xs">Remaining</div><div className="text-lg font-medium">{formatNum(Math.max(0, totals.token_limit - totals.tokens_used))}</div></div>
+                <div><div className="text-slate-400 text-xs">Utilisation</div><div className="text-lg font-medium">{tokenPct}%</div></div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-800 bg-slate-900/50">
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-rose-400" /> Governance · 7d</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between"><span className="text-slate-400">Flagged prompts</span><span className={totals.flagged_7d > 0 ? "text-amber-300" : ""}>{totals.flagged_7d}</span></div>
+              <div className="flex items-center justify-between"><span className="text-slate-400">Bypass attempts</span><span className={totals.bypass_7d > 0 ? "text-rose-300" : ""}>{totals.bypass_7d}</span></div>
+              <div className="flex items-center justify-between"><span className="text-slate-400">Health</span>
+                <Badge variant="outline" className={totals.bypass_7d > 0 || totals.flagged_7d > 5 ? "border-amber-500/40 text-amber-300" : "border-emerald-500/40 text-emerald-300"}>
+                  {totals.bypass_7d > 0 || totals.flagged_7d > 5 ? "Review needed" : "All green"}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Teacher table */}
+        <Card className="border-slate-800 bg-slate-900/50">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2"><Activity className="h-4 w-4 text-amber-400" /> Teacher activity</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[10px] font-mono uppercase tracking-[0.18em] text-slate-500 border-b border-slate-800">
+                    <th className="py-3 px-4">Teacher</th>
+                    <th className="py-3 px-4">Classes</th>
+                    <th className="py-3 px-4">Students</th>
+                    <th className="py-3 px-4">Prompts · 7d</th>
+                    <th className="py-3 px-4">Flagged</th>
+                    <th className="py-3 px-4 w-[28%]">Token usage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && (
+                    <tr><td colSpan={6} className="text-center py-10 text-slate-500">Loading teachers…</td></tr>
+                  )}
+                  {!loading && teachers.length === 0 && (
+                    <tr><td colSpan={6} className="text-center py-10 text-slate-500">No teachers found yet.</td></tr>
+                  )}
+                  {teachers.map(t => {
+                    const pct = t.token_limit ? Math.min(100, Math.round((t.tokens_used / t.token_limit) * 100)) : 0;
+                    return (
+                      <tr key={t.user_id} className="border-b border-slate-800/60 hover:bg-slate-900/40">
+                        <td className="py-3 px-4">
+                          <div className="font-medium">{t.full_name}</div>
+                          <div className="text-xs text-slate-500">{t.email}</div>
+                        </td>
+                        <td className="py-3 px-4">{t.classes}</td>
+                        <td className="py-3 px-4">{t.students}</td>
+                        <td className="py-3 px-4">{formatNum(t.prompts_7d)}</td>
+                        <td className="py-3 px-4">
+                          {t.flagged_7d > 0
+                            ? <Badge variant="outline" className="border-amber-500/40 text-amber-300">{t.flagged_7d}</Badge>
+                            : <span className="text-slate-500">0</span>}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <Progress value={pct} className="h-1.5 flex-1" />
+                            <span className="text-xs text-slate-400 whitespace-nowrap">{formatNum(t.tokens_used)} / {formatNum(t.token_limit)}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="mt-8 text-center text-xs text-slate-500 font-mono tracking-[0.18em] uppercase">
+          Pilot console · v1 · Refyn Technologies
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PilotMahindraConsole;
