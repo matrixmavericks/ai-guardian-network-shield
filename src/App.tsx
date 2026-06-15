@@ -115,7 +115,8 @@ function App() {
           <Route path="/project-nelo-admin" element={<ProtectedRoute allowedRoles={['admin']}><ProjectNeloAdminPage /></ProtectedRoute>} />
           <Route path="/legal-admin" element={<ProtectedRoute allowedRoles={['admin']}><LegalAdminPage /></ProtectedRoute>} />
 
-          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><DashboardRouter /></ProtectedRoute>} />
+          <Route path="/studio" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TeacherStudio /></ProtectedRoute>} />
           <Route path="/admin-overview" element={<ProtectedRoute allowedRoles={['admin']}><AdminOverviewPage /></ProtectedRoute>} />
           <Route path="/school-management" element={<ProtectedRoute allowedRoles={['admin']}><SchoolManagementPage /></ProtectedRoute>} />
           <Route path="/security-keys" element={<ProtectedRoute allowedRoles={['admin']}><SecurityKeysPage /></ProtectedRoute>} />
