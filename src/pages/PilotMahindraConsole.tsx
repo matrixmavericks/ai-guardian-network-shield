@@ -139,7 +139,7 @@ const PilotMahindraConsole: React.FC = () => {
         }
         let caps: any[] = [];
         if (classIds.length) {
-          const res = await supabase.from("capstone_submissions").select("id").in("class_id", classIds);
+          const res = await (supabase.from("capstone_submissions") as any).select("id").in("class_id", classIds);
           caps = (res.data as any[]) ?? [];
         }
         let bypass: any[] = [];
