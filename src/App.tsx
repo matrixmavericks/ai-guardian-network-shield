@@ -60,6 +60,17 @@ import AtRiskRadarPage from './pages/intelligence/AtRiskRadarPage';
 import PolicySandboxPage from './pages/intelligence/PolicySandboxPage';
 import BudgetOptimizerPage from './pages/intelligence/BudgetOptimizerPage';
 import RefynGraphPage from './pages/intelligence/RefynGraphPage';
+import TeacherStudio from './pages/TeacherStudio';
+import { getStudioConfig } from './lib/mispStudioConfigs';
+
+// Auto-route Mahindra spotlight teachers to their custom studio
+const DashboardRouter = () => {
+  const { user } = useAuth();
+  if (user && getStudioConfig(user.email)) {
+    return <Navigate to="/studio" replace />;
+  }
+  return <Dashboard />;
+};
 
 const ProtectedRoute = ({ 
   children, 
