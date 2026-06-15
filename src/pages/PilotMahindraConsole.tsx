@@ -123,17 +123,22 @@ const PilotMahindraConsole: React.FC = () => {
               .in("user_id", teacherIds).eq("status", "active")
           : { data: [] as any[] };
 
-        const { data: paths } = teacherIds.length
-          ? await supabase.from("learning_paths").select("id").in("created_by", teacherIds)
-          : { data: [] as any[] };
-
-        const { data: caps } = classIds.length
-          ? await supabase.from("capstone_submissions").select("id").in("class_id", classIds)
-          : { data: [] as any[] };
-
-        const { data: bypass } = allMemberIds.length
-          ? await supabase.from("bypass_attempts").select("id, created_at").in("user_id", allMemberIds).gte("created_at", sevenDaysAgo)
-          : { data: [] as any[] };
+        let paths: any[] = [];
+        if (teacherIds.length) {
+          const res = await supabase.from("learning_paths").select("id").in("created_by", teacherIds);
+          paths = (res.data as any[]) ?? [];
+        }
+        let caps: any[] = [];
+        if (classIds.length) {
+          const res = await supabase.from("capstone_submissions").select("id").in("class_id", classIds);
+          caps = (res.data as any[]) ?? [];
+        }
+        let bypass: any[] = [];
+        if (allMemberIds.length) {
+          const res = await supabase.from("bypass_attempts").select("id, created_at")
+            .in("user_id", allMemberIds).gte("created_at", sevenDaysAgo);
+          bypass = (res.data as any[]) ?? [];
+        }
 
         // Aggregate per teacher
         const teacherView: TeacherView[] = (profiles ?? []).map(p => {
