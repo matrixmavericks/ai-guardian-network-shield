@@ -100,28 +100,37 @@ const PilotMahindraConsole: React.FC = () => {
           .from("classes").select("id, teacher_id").eq("school_id", s.id);
 
         const classIds = (classes ?? []).map(c => c.id);
-        const { data: classMembers } = classIds.length
-          ? await supabase.from("class_members").select("student_id, class_id").in("class_id", classIds)
-          : { data: [] as any[] };
+        let classMembers: any[] = [];
+        if (classIds.length) {
+          const res = await supabase.from("class_members").select("student_id, class_id").in("class_id", classIds);
+          classMembers = (res.data as any[]) ?? [];
+        }
 
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
 
         const teacherUserSet = new Set(teacherIds);
-        const studentSet = new Set((classMembers ?? []).map(m => m.student_id));
+        const studentSet = new Set(classMembers.map(m => m.student_id));
         const allMemberIds = [...teacherUserSet, ...studentSet];
 
-        const { data: logs } = allMemberIds.length
-          ? await supabase
-              .from("ai_usage_logs")
-              .select("user_id, was_flagged, tokens_used, created_at")
-              .in("user_id", allMemberIds)
-              .gte("created_at", sevenDaysAgo)
-          : { data: [] as any[] };
+        let logs: any[] = [];
+        if (allMemberIds.length) {
+          const res = await supabase
+            .from("ai_usage_logs")
+            .select("user_id, was_flagged, tokens_used, created_at")
+            .in("user_id", allMemberIds)
+            .gte("created_at", sevenDaysAgo);
+          logs = (res.data as any[]) ?? [];
+        }
 
-        const { data: plans } = teacherIds.length
-          ? await supabase.from("user_plans").select("user_id, tokens_used_this_month, monthly_token_limit, status")
-              .in("user_id", teacherIds).eq("status", "active")
-          : { data: [] as any[] };
+        let plans: any[] = [];
+        if (teacherIds.length) {
+          const res = await supabase
+            .from("user_plans")
+            .select("user_id, tokens_used_this_month, monthly_token_limit, status")
+            .in("user_id", teacherIds)
+            .eq("status", "active");
+          plans = (res.data as any[]) ?? [];
+        }
 
         let paths: any[] = [];
         if (teacherIds.length) {
