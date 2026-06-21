@@ -248,10 +248,10 @@ const RunRecipeDialog = ({ recipe, onClose }: { recipe: Recipe; onClose: () => v
     try {
       const filled = recipe.prompt_template.split("{{input}}").join(input);
       const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: { messages: [{ role: "user", content: filled }] },
+        body: { prompt: filled, subject: recipe.subject || "general", processTeaching: false },
       });
       if (error) throw error;
-      const text = data?.reply || data?.message || data?.content || JSON.stringify(data);
+      const text = data?.reply || JSON.stringify(data);
       setReply(text);
       await supabase.from("prompt_recipes").update({ uses_count: recipe.uses_count + 1 }).eq("id", recipe.id);
     } catch (e: any) {
