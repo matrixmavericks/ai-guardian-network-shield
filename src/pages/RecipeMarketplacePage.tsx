@@ -246,7 +246,7 @@ const RunRecipeDialog = ({ recipe, onClose }: { recipe: Recipe; onClose: () => v
     setRunning(true);
     setReply("");
     try {
-      const filled = recipe.prompt_template.replaceAll("{{input}}", input);
+      const filled = recipe.prompt_template.split("{{input}}").join(input);
       const { data, error } = await supabase.functions.invoke("ai-chat", {
         body: { messages: [{ role: "user", content: filled }] },
       });
