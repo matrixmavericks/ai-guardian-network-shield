@@ -65,6 +65,7 @@ import SubjectLabsPage from './pages/intelligence/SubjectLabsPage';
 import PYPUnitGeneratorPage from './pages/intelligence/PYPUnitGeneratorPage';
 import LearnerProfilePortfolioPage from './pages/intelligence/LearnerProfilePortfolioPage';
 import RecipeMarketplacePage from './pages/RecipeMarketplacePage';
+import DemoShowcasePage from './pages/DemoShowcasePage';
 import TeacherStudio from './pages/TeacherStudio';
 import PrimaryPlayground from './pages/PrimaryPlayground';
 import { getStudioConfig } from './lib/mispStudioConfigs';
