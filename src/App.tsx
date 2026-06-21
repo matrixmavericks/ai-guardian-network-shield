@@ -118,6 +118,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/demo" element={<DemoShowcasePage />} />
+          <Route path="/tour" element={<GuidedTourPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/register" element={<Register />} />
