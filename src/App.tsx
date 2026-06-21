@@ -61,13 +61,18 @@ import PolicySandboxPage from './pages/intelligence/PolicySandboxPage';
 import BudgetOptimizerPage from './pages/intelligence/BudgetOptimizerPage';
 import RefynGraphPage from './pages/intelligence/RefynGraphPage';
 import TeacherStudio from './pages/TeacherStudio';
+import PrimaryPlayground from './pages/PrimaryPlayground';
 import { getStudioConfig } from './lib/mispStudioConfigs';
+import { getPrimaryConfig } from './lib/mispPrimaryConfig';
 
-// Auto-route Mahindra spotlight teachers to their custom studio
+// Auto-route Mahindra spotlight teachers to their custom surface
 const DashboardRouter = () => {
   const { user } = useAuth();
   if (user && getStudioConfig(user.email)) {
     return <Navigate to="/studio" replace />;
+  }
+  if (user && getPrimaryConfig(user.email)) {
+    return <Navigate to="/playground" replace />;
   }
   return <Dashboard />;
 };
@@ -117,6 +122,7 @@ function App() {
 
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><DashboardRouter /></ProtectedRoute>} />
           <Route path="/studio" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TeacherStudio /></ProtectedRoute>} />
+          <Route path="/playground" element={<ProtectedRoute allowedRoles={['teacher','admin']}><PrimaryPlayground /></ProtectedRoute>} />
           <Route path="/admin-overview" element={<ProtectedRoute allowedRoles={['admin']}><AdminOverviewPage /></ProtectedRoute>} />
           <Route path="/school-management" element={<ProtectedRoute allowedRoles={['admin']}><SchoolManagementPage /></ProtectedRoute>} />
           <Route path="/security-keys" element={<ProtectedRoute allowedRoles={['admin']}><SecurityKeysPage /></ProtectedRoute>} />
