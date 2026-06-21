@@ -357,6 +357,34 @@ async function loadContext(supabase: any, feature: string, userId: string, param
       ]);
       return `Classes: ${JSON.stringify(classes)}\nResources: ${JSON.stringify(resources)}\nRecent chat subjects: ${JSON.stringify(sessions)}`;
     }
+    case "ib_mapper": {
+      const content = params?.content?.toString() || "";
+      const sessionId = params?.sessionId;
+      let extra = "";
+      if (sessionId) {
+        const { data: msgs } = await supabase.from("ai_chat_messages").select("role, content").eq("session_id", sessionId).order("created_at", { ascending: true }).limit(80);
+        extra = "\n\nChat transcript:\n" + (msgs || []).map((m: any) => `[${m.role}] ${m.content}`).join("\n");
+      }
+      return `Programme hint: ${params?.programme || "auto-detect"}\nSubject hint: ${params?.subject || "auto-detect"}\nGrade level: ${params?.gradeLevel || "unspecified"}\n\nContent to map:\n${content}${extra}`;
+    }
+    case "subject_lab": {
+      const labType = params?.labType || "math_step_solver";
+      const input = params?.input?.toString() || "";
+      return `Lab type: ${labType}\nLevel (SL/HL/MYP/etc): ${params?.level || "unspecified"}\nSubject context: ${params?.subject || "unspecified"}\n\nTeacher/student input:\n${input}`;
+    }
+    case "pyp_uoi": {
+      return `Grade band: ${params?.gradeBand || "Primary 3"}\nTransdisciplinary theme: ${params?.theme || "How We Express Ourselves"}\nFocus subject(s): ${params?.subjects || "integrated"}\nTeacher notes: ${params?.notes || "(none)"}`;
+    }
+    case "learner_profile_badges": {
+      const studentId = params?.studentId || userId;
+      const [{ data: msgs }, { data: updates }, { data: subs }] = await Promise.all([
+        supabase.from("ai_chat_messages").select("role, content, created_at").eq("user_id", studentId).order("created_at", { ascending: false }).limit(120),
+        supabase.from("portfolio_updates").select("title, content, created_at").eq("user_id", studentId).order("created_at", { ascending: false }).limit(30),
+        supabase.from("assignment_submissions").select("feedback, content, grade, max_grade, submitted_at").eq("student_id", studentId).order("submitted_at", { ascending: false }).limit(30),
+      ]);
+      const { data: profile } = await supabase.from("profiles").select("full_name, grade_level").eq("user_id", studentId).maybeSingle();
+      return `Student profile: ${JSON.stringify(profile)}\n\nRecent chats (${msgs?.length || 0}):\n${(msgs || []).map((m: any) => `[${m.role}] ${m.content}`).join("\n").slice(0, 8000)}\n\nPortfolio updates:\n${JSON.stringify(updates)}\n\nRecent submissions:\n${JSON.stringify(subs)}`;
+    }
     default:
       return "No context loader for this feature.";
   }
