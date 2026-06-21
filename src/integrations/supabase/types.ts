@@ -1950,6 +1950,106 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_recipe_ratings: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          recipe_id: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          recipe_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          recipe_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_recipe_ratings_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_recipes: {
+        Row: {
+          author_id: string
+          avg_rating: number
+          created_at: string
+          description: string | null
+          example_output: string | null
+          grade_band: string | null
+          id: string
+          is_public: boolean
+          prompt_template: string
+          ratings_count: number
+          school_id: string | null
+          subject: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          uses_count: number
+        }
+        Insert: {
+          author_id: string
+          avg_rating?: number
+          created_at?: string
+          description?: string | null
+          example_output?: string | null
+          grade_band?: string | null
+          id?: string
+          is_public?: boolean
+          prompt_template: string
+          ratings_count?: number
+          school_id?: string | null
+          subject?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          uses_count?: number
+        }
+        Update: {
+          author_id?: string
+          avg_rating?: number
+          created_at?: string
+          description?: string | null
+          example_output?: string | null
+          grade_band?: string | null
+          id?: string
+          is_public?: boolean
+          prompt_template?: string
+          ratings_count?: number
+          school_id?: string | null
+          subject?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          uses_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_recipes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       registration_requests: {
         Row: {
           created_at: string

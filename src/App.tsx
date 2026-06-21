@@ -60,6 +60,11 @@ import AtRiskRadarPage from './pages/intelligence/AtRiskRadarPage';
 import PolicySandboxPage from './pages/intelligence/PolicySandboxPage';
 import BudgetOptimizerPage from './pages/intelligence/BudgetOptimizerPage';
 import RefynGraphPage from './pages/intelligence/RefynGraphPage';
+import IBStandardsMapperPage from './pages/intelligence/IBStandardsMapperPage';
+import SubjectLabsPage from './pages/intelligence/SubjectLabsPage';
+import PYPUnitGeneratorPage from './pages/intelligence/PYPUnitGeneratorPage';
+import LearnerProfilePortfolioPage from './pages/intelligence/LearnerProfilePortfolioPage';
+import RecipeMarketplacePage from './pages/RecipeMarketplacePage';
 import TeacherStudio from './pages/TeacherStudio';
 import PrimaryPlayground from './pages/PrimaryPlayground';
 import { getStudioConfig } from './lib/mispStudioConfigs';
@@ -170,6 +175,11 @@ function App() {
           <Route path="/intel/policy-sandbox" element={<ProtectedRoute allowedRoles={['admin']}><PolicySandboxPage /></ProtectedRoute>} />
           <Route path="/intel/budget-optimizer" element={<ProtectedRoute allowedRoles={['admin']}><BudgetOptimizerPage /></ProtectedRoute>} />
           <Route path="/intel/refyn-graph" element={<ProtectedRoute allowedRoles={['admin']}><RefynGraphPage /></ProtectedRoute>} />
+          <Route path="/intel/ib-mapper" element={<ProtectedRoute allowedRoles={['teacher','admin']}><IBStandardsMapperPage /></ProtectedRoute>} />
+          <Route path="/intel/subject-labs" element={<ProtectedRoute allowedRoles={['teacher','admin']}><SubjectLabsPage /></ProtectedRoute>} />
+          <Route path="/intel/pyp-uoi" element={<ProtectedRoute allowedRoles={['teacher','admin']}><PYPUnitGeneratorPage /></ProtectedRoute>} />
+          <Route path="/intel/learner-profile" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><LearnerProfilePortfolioPage /></ProtectedRoute>} />
+          <Route path="/marketplace" element={<ProtectedRoute allowedRoles={['teacher','admin']}><RecipeMarketplacePage /></ProtectedRoute>} />
 
           {/* School subdomain routes - all features scoped to school */}
           <Route path="/s/:subdomain/*" element={<SchoolRoutes />} />
