@@ -270,7 +270,7 @@ export const PRIMARY_TEACHERS: PrimaryConfig[] = [
     bgGradient: "from-amber-50 via-orange-50 to-rose-50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-rose-950/40",
   },
   {
-    email: "primary5.teacher@misp.org",
+    email: "primary5.homeroom@mahindra-pilot.refyntech.us",
     displayName: "Primary 5 Homeroom",
     homeroomGrade: "Primary 5",
     accent: "from-sky-300 via-indigo-300 to-violet-300",
