@@ -721,4 +721,41 @@ const PilotMahindraConsole: React.FC = () => {
   );
 };
 
+const TrendCard = ({ title, config, data, keys, type }: {
+  title: string; config: any; data: any[]; keys: string[]; type: "area" | "line";
+}) => (
+  <Card className="border-slate-800 bg-slate-900/50">
+    <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-200">{title}</CardTitle></CardHeader>
+    <CardContent>
+      <div className="h-56">
+        <ChartContainer config={config} className="h-full w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            {type === "area" ? (
+              <AreaChart data={data} margin={{ left: 4, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
+                <YAxis stroke="#64748b" fontSize={11} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                {keys.map(k => (
+                  <Area key={k} type="monotone" dataKey={k} stroke={`var(--color-${k})`} fill={`var(--color-${k})`} fillOpacity={0.25} strokeWidth={2} />
+                ))}
+              </AreaChart>
+            ) : (
+              <LineChart data={data} margin={{ left: 4, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
+                <YAxis stroke="#64748b" fontSize={11} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                {keys.map(k => (
+                  <Line key={k} type="monotone" dataKey={k} stroke={`var(--color-${k})`} strokeWidth={2} dot={{ r: 3 }} />
+                ))}
+              </LineChart>
+            )}
+          </ResponsiveContainer>
+        </ChartContainer>
+      </div>
+    </CardContent>
+  </Card>
+);
+
 export default PilotMahindraConsole;
