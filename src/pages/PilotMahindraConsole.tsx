@@ -269,6 +269,20 @@ const PilotMahindraConsole: React.FC = () => {
     [totals],
   );
 
+  // Load pilot_metrics trend history
+  useEffect(() => {
+    if (!school?.id) return;
+    (async () => {
+      setTrendLoading(true);
+      try {
+        const { data } = await supabase.from("pilot_metrics")
+          .select("*").eq("school_id", school.id).order("snapshot_date", { ascending: true });
+        setTrendRows((data ?? []) as any[]);
+      } finally { setTrendLoading(false); }
+    })();
+  }, [school?.id, refreshKey]);
+
+
   const callIntel = async (action: "briefing" | "spotlights" | "health") => {
     const { data, error } = await supabase.functions.invoke("pilot-mahindra-intelligence", { body: { action } });
     if (error) throw error;
