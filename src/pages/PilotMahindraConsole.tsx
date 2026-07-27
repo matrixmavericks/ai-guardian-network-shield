@@ -92,6 +92,7 @@ const PilotMahindraConsole: React.FC = () => {
   // Trends state
   const [trendRows, setTrendRows] = useState<any[]>([]);
   const [trendLoading, setTrendLoading] = useState(false);
+  const [feedbackRows, setFeedbackRows] = useState<any[]>([]);
 
   // Authorize
   useEffect(() => {
@@ -281,6 +282,19 @@ const PilotMahindraConsole: React.FC = () => {
       } finally { setTrendLoading(false); }
     })();
   }, [school?.id, refreshKey]);
+
+  // Load NPS feedback
+  useEffect(() => {
+    if (!school?.id) return;
+    (async () => {
+      const { data } = await supabase.from("pilot_feedback")
+        .select("nps_score, comment, role, created_at")
+        .eq("school_id", school.id)
+        .order("created_at", { ascending: false });
+      setFeedbackRows((data ?? []) as any[]);
+    })();
+  }, [school?.id, refreshKey]);
+
 
 
   const callIntel = async (action: "briefing" | "spotlights" | "health") => {
@@ -707,6 +721,9 @@ const PilotMahindraConsole: React.FC = () => {
                     <TrendCard title="Token cost (USD · 7d)" config={{ cost_7d_usd: chartConfig.cost_7d_usd }} data={data} keys={["cost_7d_usd"]} type="line" />
                     <TrendCard title="Learning path completion %" config={{ learning_path_completion_pct: chartConfig.learning_path_completion_pct }} data={data} keys={["learning_path_completion_pct"]} type="line" />
                   </div>
+
+                  <NpsCard rows={feedbackRows} />
+
                 </>
               );
             })()}
@@ -718,6 +735,49 @@ const PilotMahindraConsole: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const NpsCard = ({ rows }: { rows: any[] }) => {
+  const total = rows.length;
+  if (!total) return (
+    <Card className="border-slate-800 bg-slate-900/50">
+      <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-200">NPS & feedback</CardTitle></CardHeader>
+      <CardContent><p className="text-sm text-slate-500">No feedback yet — prompts appear in-app for students and teachers.</p></CardContent>
+    </Card>
+  );
+  const promoters = rows.filter(r => r.nps_score >= 9).length;
+  const detractors = rows.filter(r => r.nps_score <= 6).length;
+  const passives = total - promoters - detractors;
+  const nps = Math.round(((promoters - detractors) / total) * 100);
+  const recent = rows.filter(r => (r.comment ?? "").trim()).slice(0, 5);
+  return (
+    <Card className="border-slate-800 bg-slate-900/50">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm text-slate-200">NPS & feedback</CardTitle>
+        <Badge variant="outline" className="border-slate-700 text-slate-300">{total} responses</Badge>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-baseline gap-4">
+          <div className="text-5xl font-bold text-amber-300">{nps}</div>
+          <div className="text-xs text-slate-400 font-mono uppercase tracking-wider">
+            <div>Promoters {promoters} · Passives {passives} · Detractors {detractors}</div>
+            <div className="text-slate-500 mt-1">NPS = %promoters − %detractors</div>
+          </div>
+        </div>
+        {recent.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-xs text-slate-500 font-mono uppercase tracking-wider">Recent comments</div>
+            {recent.map((r, i) => (
+              <div key={i} className="text-sm text-slate-300 border-l-2 border-amber-500/40 pl-3">
+                "{r.comment}"
+                <div className="text-[10px] text-slate-500 mt-0.5 font-mono uppercase">{r.role || "user"} · {r.nps_score}/10</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

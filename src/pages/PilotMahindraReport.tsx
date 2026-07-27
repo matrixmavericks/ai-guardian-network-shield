@@ -35,6 +35,7 @@ const PilotMahindraReport: React.FC = () => {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [school, setSchool] = useState<School | null>(null);
   const [rows, setRows] = useState<MetricRow[]>([]);
+  const [feedback, setFeedback] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -62,6 +63,10 @@ const PilotMahindraReport: React.FC = () => {
         const { data } = await supabase.from("pilot_metrics")
           .select("*").eq("school_id", s.id).order("snapshot_date", { ascending: true });
         setRows((data ?? []) as MetricRow[]);
+        const { data: fb } = await supabase.from("pilot_feedback")
+          .select("nps_score, comment, role, created_at").eq("school_id", s.id)
+          .order("created_at", { ascending: false });
+        setFeedback((fb ?? []) as any[]);
       } finally { setLoading(false); }
     })();
   }, [authorized]);
@@ -210,6 +215,40 @@ const PilotMahindraReport: React.FC = () => {
                   </Badge>
                 </div>
               </div>
+            </section>
+
+            {/* Satisfaction (NPS) */}
+            <section className="avoid-break">
+              <h2 className="text-xs font-mono uppercase tracking-[0.3em] text-slate-500 mb-4">Satisfaction (NPS)</h2>
+              {(() => {
+                const total = feedback.length;
+                if (!total) return (
+                  <div className="rounded-lg border border-slate-200 p-6 text-sm text-slate-500">
+                    No feedback yet. In-app NPS prompts appear for students and teachers as they use Refyn.
+                  </div>
+                );
+                const promoters = feedback.filter(r => r.nps_score >= 9).length;
+                const detractors = feedback.filter(r => r.nps_score <= 6).length;
+                const nps = Math.round(((promoters - detractors) / total) * 100);
+                const quotes = feedback.filter(r => (r.comment ?? "").trim()).slice(0, 3);
+                return (
+                  <div className="rounded-lg border border-slate-200 p-6 grid md:grid-cols-3 gap-6">
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">NPS score</div>
+                      <div className="text-4xl font-semibold">{nps}</div>
+                      <div className="text-xs text-slate-500 mt-1">{total} response{total === 1 ? "" : "s"}</div>
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      {quotes.length ? quotes.map((q, i) => (
+                        <div key={i} className="text-sm border-l-2 border-slate-300 pl-3">
+                          "{q.comment}"
+                          <div className="text-[10px] uppercase text-slate-500 mt-0.5">{q.role || "user"} · {q.nps_score}/10</div>
+                        </div>
+                      )) : <div className="text-sm text-slate-500">Scores submitted; no written comments yet.</div>}
+                    </div>
+                  </div>
+                );
+              })()}
             </section>
 
             {/* Delta since day 0 */}

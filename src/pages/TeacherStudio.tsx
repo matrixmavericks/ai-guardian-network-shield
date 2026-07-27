@@ -3,6 +3,7 @@ import { Navigate, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import PilotFeedbackPrompt from "@/components/PilotFeedbackPrompt";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -288,6 +289,7 @@ const TeacherStudio: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+      <div className="max-w-3xl mx-auto px-6"><PilotFeedbackPrompt context="teacher" /></div>
     </div>
   );
 };

@@ -1639,6 +1639,44 @@ export type Database = {
           },
         ]
       }
+      pilot_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          nps_score: number | null
+          role: string | null
+          school_id: string | null
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          nps_score?: number | null
+          role?: string | null
+          school_id?: string | null
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          nps_score?: number | null
+          role?: string | null
+          school_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_feedback_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pilot_metrics: {
         Row: {
           bypass_7d: number

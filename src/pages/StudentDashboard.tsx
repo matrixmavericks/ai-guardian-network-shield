@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PilotFeedbackPrompt from '@/components/PilotFeedbackPrompt';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -808,6 +809,7 @@ const StudentDashboard = () => {
               </FeatureGate>
             </TabsContent>
           </Tabs>
+          <PilotFeedbackPrompt context="student" />
       </div>
     </div>
   );
