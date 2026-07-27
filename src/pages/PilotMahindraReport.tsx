@@ -63,6 +63,10 @@ const PilotMahindraReport: React.FC = () => {
         const { data } = await supabase.from("pilot_metrics")
           .select("*").eq("school_id", s.id).order("snapshot_date", { ascending: true });
         setRows((data ?? []) as MetricRow[]);
+        const { data: fb } = await supabase.from("pilot_feedback")
+          .select("nps_score, comment, role, created_at").eq("school_id", s.id)
+          .order("created_at", { ascending: false });
+        setFeedback((fb ?? []) as any[]);
       } finally { setLoading(false); }
     })();
   }, [authorized]);
