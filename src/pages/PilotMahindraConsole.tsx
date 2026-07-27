@@ -721,6 +721,9 @@ const PilotMahindraConsole: React.FC = () => {
                     <TrendCard title="Token cost (USD · 7d)" config={{ cost_7d_usd: chartConfig.cost_7d_usd }} data={data} keys={["cost_7d_usd"]} type="line" />
                     <TrendCard title="Learning path completion %" config={{ learning_path_completion_pct: chartConfig.learning_path_completion_pct }} data={data} keys={["learning_path_completion_pct"]} type="line" />
                   </div>
+
+                  <NpsCard rows={feedbackRows} />
+
                 </>
               );
             })()}
