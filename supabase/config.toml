@@ -44,3 +44,7 @@ verify_jwt = false
 
 [functions.create-portal-session]
 verify_jwt = false
+
+[functions.pilot-metrics-snapshot]
+verify_jwt = false
+

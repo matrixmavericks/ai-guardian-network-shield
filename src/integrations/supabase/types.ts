@@ -1639,6 +1639,83 @@ export type Database = {
           },
         ]
       }
+      pilot_metrics: {
+        Row: {
+          bypass_7d: number
+          capstones_avg_score: number
+          capstones_total: number
+          classes: number
+          cost_7d_usd: number
+          created_at: string
+          dau: number
+          flagged_7d: number
+          id: string
+          learning_path_completion_pct: number
+          learning_paths_total: number
+          prompts_7d: number
+          prompts_total: number
+          school_id: string
+          snapshot_date: string
+          students: number
+          teacher_hours_saved: number
+          teachers: number
+          tokens_7d: number
+          wau: number
+        }
+        Insert: {
+          bypass_7d?: number
+          capstones_avg_score?: number
+          capstones_total?: number
+          classes?: number
+          cost_7d_usd?: number
+          created_at?: string
+          dau?: number
+          flagged_7d?: number
+          id?: string
+          learning_path_completion_pct?: number
+          learning_paths_total?: number
+          prompts_7d?: number
+          prompts_total?: number
+          school_id: string
+          snapshot_date: string
+          students?: number
+          teacher_hours_saved?: number
+          teachers?: number
+          tokens_7d?: number
+          wau?: number
+        }
+        Update: {
+          bypass_7d?: number
+          capstones_avg_score?: number
+          capstones_total?: number
+          classes?: number
+          cost_7d_usd?: number
+          created_at?: string
+          dau?: number
+          flagged_7d?: number
+          id?: string
+          learning_path_completion_pct?: number
+          learning_paths_total?: number
+          prompts_7d?: number
+          prompts_total?: number
+          school_id?: string
+          snapshot_date?: string
+          students?: number
+          teacher_hours_saved?: number
+          teachers?: number
+          tokens_7d?: number
+          wau?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_metrics_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           key: string
