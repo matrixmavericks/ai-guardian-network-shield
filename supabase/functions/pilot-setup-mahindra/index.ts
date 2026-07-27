@@ -28,8 +28,21 @@ const TEACHERS = [
   { email: "primary.homeroom3@mahindra-pilot.refyntech.us", full_name: "Primary Homeroom Teacher 3", subject: "Primary Homeroom" },
 ];
 
-const TEACHER_PASSWORD = "MahindraPilot2026!";
 const TEACHER_TOKEN_LIMIT = 250_000; // super-loaded
+
+function genPassword(): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghijkmnpqrstuvwxyz";
+  const digits = "23456789";
+  const symbols = "!@#$%^&*";
+  const all = upper + lower + digits + symbols;
+  const pick = (s: string) => s[Math.floor(Math.random() * s.length)];
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let out = pick(upper) + pick(lower) + pick(digits) + pick(symbols);
+  for (let i = 0; i < 14; i++) out += all[bytes[i] % all.length];
+  return out;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -103,36 +116,65 @@ Deno.serve(async (req) => {
     const results: any[] = [];
 
     for (const t of TEACHERS) {
+      const email = t.email.toLowerCase();
+      const password = genPassword();
+
+      // Pre-approve registration so the signup trigger assigns 'teacher' (not default 'student').
+      // Try upsert-by-email; if a request already exists, update it to approved+teacher.
+      const { data: existingReq } = await admin
+        .from("registration_requests").select("id").ilike("email", email).limit(1);
+      if (existingReq && existingReq.length > 0) {
+        await admin.from("registration_requests").update({
+          full_name: t.full_name, requested_role: "teacher", status: "approved",
+          reviewed_by: createdBy, reviewed_at: new Date().toISOString(),
+        }).eq("id", existingReq[0].id);
+      } else {
+        await admin.from("registration_requests").insert({
+          email, full_name: t.full_name, requested_role: "teacher", status: "approved",
+          reviewed_by: createdBy, reviewed_at: new Date().toISOString(),
+        });
+      }
+
       // Create or fetch auth user
       let userId: string | undefined;
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
-        email: t.email,
-        password: TEACHER_PASSWORD,
+        email,
+        password,
         email_confirm: true,
         user_metadata: { full_name: t.full_name, requested_role: "teacher", school: SCHOOL.name, subject: t.subject },
       });
-      if (createErr && !String(createErr.message).toLowerCase().includes("already")) {
-        results.push({ teacher: t.email, error: createErr.message });
+      let alreadyExisted = false;
+      if (createErr && String(createErr.message).toLowerCase().includes("already")) {
+        alreadyExisted = true;
+      } else if (createErr) {
+        results.push({ teacher: email, error: createErr.message });
         continue;
       }
       userId = created?.user?.id;
       if (!userId) {
-        // lookup existing
         const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-        userId = list.users.find((u) => u.email?.toLowerCase() === t.email.toLowerCase())?.id;
+        userId = list.users.find((u) => u.email?.toLowerCase() === email)?.id;
       }
       if (!userId) {
-        results.push({ teacher: t.email, error: "could not resolve user id" });
+        results.push({ teacher: email, error: "could not resolve user id" });
         continue;
       }
 
+      // If user already existed, reset the password so we can hand back a fresh one.
+      if (alreadyExisted) {
+        await admin.auth.admin.updateUserById(userId, { password });
+      }
+
       await admin.from("profiles").upsert({
-        user_id: userId, email: t.email, full_name: t.full_name,
+        user_id: userId, email, full_name: t.full_name,
       }, { onConflict: "user_id" });
 
-      await admin.from("user_roles").upsert({
-        user_id: userId, role: "teacher",
-      }, { onConflict: "user_id,role" });
+      // Deterministic role: exactly one row = 'teacher'.
+      await admin.from("user_roles").delete().eq("user_id", userId).neq("role", "teacher");
+      await admin.from("user_roles").upsert(
+        { user_id: userId, role: "teacher" },
+        { onConflict: "user_id,role" },
+      );
 
       await admin.from("school_members").upsert({
         school_id: schoolId, user_id: userId, school_role: "teacher",
@@ -152,14 +194,13 @@ Deno.serve(async (req) => {
         assigned_by: createdBy,
       });
 
-      results.push({ teacher: t.email, userId, ok: true });
+      results.push({ email, password, userId, ok: true, already_existed: alreadyExisted });
     }
 
     return new Response(JSON.stringify({
       success: true,
       school: { id: schoolId, name: SCHOOL.name, subdomain: SCHOOL.subdomain,
                 portal: `https://refyntech.us/s/${SCHOOL.subdomain}` },
-      teacher_password: TEACHER_PASSWORD,
       teachers: results,
     }, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
