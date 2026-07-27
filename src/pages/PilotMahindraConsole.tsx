@@ -92,6 +92,7 @@ const PilotMahindraConsole: React.FC = () => {
   // Trends state
   const [trendRows, setTrendRows] = useState<any[]>([]);
   const [trendLoading, setTrendLoading] = useState(false);
+  const [feedbackRows, setFeedbackRows] = useState<any[]>([]);
 
   // Authorize
   useEffect(() => {
