@@ -576,6 +576,7 @@ const PrimaryPlayground: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+      <div className="max-w-3xl mx-auto px-6"><PilotFeedbackPrompt context="teacher" /></div>
     </div>
   );
 };
