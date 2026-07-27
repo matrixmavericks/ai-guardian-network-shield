@@ -31,8 +31,12 @@ const DEFAULT_ROLE = 'student';
 
 export const useAuth = () => useContext(AuthContext);
 
+// SECURITY: Privileged roles (admin, teacher) must NEVER originate from client-controlled
+// metadata. Only student/parent are allowed as fallback hints; anything else defaults to
+// student. The real role is assigned server-side by an auth.users trigger based on an
+// admin-approved registration_requests row.
 const getSafeRole = (requestedRole?: string | null) => {
-  return requestedRole === 'teacher' || requestedRole === 'parent' || requestedRole === 'admin' ? requestedRole : DEFAULT_ROLE;
+  return requestedRole === 'parent' ? 'parent' : DEFAULT_ROLE;
 };
 
 const getFallbackAuthUser = (supabaseUser: User, role = getSafeRole(supabaseUser.user_metadata?.requested_role)) => ({
@@ -113,7 +117,6 @@ async function resetAuthClientState() {
 
 async function ensureUserSetup(supabaseUser: User) {
   const fullName = supabaseUser.user_metadata?.full_name as string | undefined;
-  const safeRole = getSafeRole(supabaseUser.user_metadata?.requested_role as string | undefined);
 
   try {
     const { data: profile, error: profileFetchError } = await supabase
@@ -145,25 +148,8 @@ async function ensureUserSetup(supabaseUser: User) {
       }
     }
 
-    const { data: roles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', supabaseUser.id);
-
-    if (rolesError) {
-      throw rolesError;
-    }
-
-    if (!roles || roles.length === 0) {
-      const { error: roleInsertError } = await supabase.from('user_roles').insert({
-        user_id: supabaseUser.id,
-        role: safeRole as any,
-      });
-
-      if (roleInsertError) {
-        throw roleInsertError;
-      }
-    }
+    // SECURITY: role assignment is server-side only (auth.users trigger reads
+    // approved registration_requests). The client MUST NOT insert into user_roles.
 
     // Provision plan/school on first login if not yet done
     await provisionUserOnFirstLogin(supabaseUser);
