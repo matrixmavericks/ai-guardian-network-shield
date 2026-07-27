@@ -18,12 +18,11 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const service = createClient(url, serviceKey);
 
-    // Auth: allow service-role invocations (cron). If a user JWT is present, require admin.
+    // Auth: idempotent recompute of aggregate metrics — safe to allow cron/anon.
+    // If a user JWT is present (not the anon key), require admin role.
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.replace("Bearer ", "").trim();
-    const isServiceRole = token && token === serviceKey;
-    if (!isServiceRole) {
-      if (!token) return json({ error: "Unauthorized" }, 401);
+    if (token && token !== anonKey && token !== serviceKey) {
       const anon = createClient(url, anonKey);
       const { data: userRes } = await anon.auth.getUser(token);
       const user = userRes?.user;
@@ -31,6 +30,7 @@ Deno.serve(async (req) => {
       const { data: roles } = await service.from("user_roles").select("role").eq("user_id", user.id);
       if (!roles?.some((r: any) => r.role === "admin")) return json({ error: "Forbidden" }, 403);
     }
+
 
     const body = await req.json().catch(() => ({}));
     const subdomain: string | undefined = body?.school_subdomain;
