@@ -1,134 +1,88 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Navigate } from "react-router-dom";
-import JSZip from "jszip";
-import { saveAs } from "file-saver";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Download, Code, Terminal, Shield, AlertTriangle, Github } from "lucide-react";
+import { Download, Code, Shield, AlertTriangle, Github, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-const MASTER_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
-
-// Pull every source file in the repo as a raw string at build time.
-// Vite resolves these globs statically; the resulting bundle contains the file contents.
-const sourceFiles = import.meta.glob(
-  [
-    "/src/**/*",
-    "/supabase/**/*",
-    "/public/**/*",
-    "/index.html",
-    "/package.json",
-    "/tsconfig*.json",
-    "/vite.config.ts",
-    "/tailwind.config.ts",
-    "/postcss.config.js",
-    "/components.json",
-    "/eslint.config.js",
-    "/README.md",
-  ],
-  { query: "?raw", import: "default", eager: false }
-) as Record<string, () => Promise<string>>;
+// SECURITY: The full source is NOT bundled into the client anymore. The
+// download is produced server-side by the admin-source-export edge function,
+// which verifies an admin JWT before returning anything. Non-admin callers
+// get 403 from the server; the client gate below is UX only.
 
 const SourceCodeDownloadPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, session, isLoading: authLoading } = useAuth();
+  const { isAdmin, isLoading: roleLoading } = useUserRole();
   const [isBuilding, setIsBuilding] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const fileCount = useMemo(() => Object.keys(sourceFiles).length, []);
-
-  if (!user || user.role !== "admin" || user.email !== MASTER_ADMIN_EMAIL) {
+  if (!authLoading && !roleLoading && (!user || !isAdmin)) {
     return <Navigate to="/dashboard" replace />;
   }
 
   const handleDownload = async () => {
     setIsBuilding(true);
-    setProgress(0);
+    setNotice(null);
     try {
-      const zip = new JSZip();
-      const entries = Object.entries(sourceFiles);
-      let done = 0;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const url = `https://${projectId}.supabase.co/functions/v1/admin-source-export`;
 
-      for (const [path, loader] of entries) {
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (!resp.ok) {
+        let msg = `Server returned ${resp.status}`;
         try {
-          const content = await loader();
-          // Strip leading slash so files unzip into a folder relative path
-          zip.file(path.replace(/^\//, ""), content as string);
-        } catch (err) {
-          console.warn(`Skipped ${path}:`, err);
-        }
-        done += 1;
-        if (done % 10 === 0 || done === entries.length) {
-          setProgress(Math.round((done / entries.length) * 100));
-        }
+          const json = await resp.json();
+          if (resp.status === 403) {
+            msg = "Access denied — admin role required.";
+          } else if (json?.error === "source_export_not_configured") {
+            msg = json.message || "Source export is not configured on the server.";
+            setNotice(msg);
+            toast({ title: "Export not configured", description: msg });
+            return;
+          } else if (json?.error) {
+            msg = json.error;
+          }
+        } catch { /* body wasn't JSON */ }
+        toast({ title: "Download failed", description: msg, variant: "destructive" });
+        setNotice(msg);
+        return;
       }
 
-      // Add a README explaining how to run locally
-      zip.file(
-        "RUN_LOCALLY.md",
-        `# Running Refyn Technologies Locally
-
-This archive contains the full source code of the Refyn Technologies platform.
-
-## Prerequisites
-- Node.js 18+ and npm (or bun)
-- A Supabase project (or use Lovable Cloud)
-
-## Steps
-1. Unzip this archive and \`cd\` into the folder.
-2. Install dependencies:
-   \`\`\`
-   npm install
-   \`\`\`
-3. Create a \`.env\` file in the root with:
-   \`\`\`
-   VITE_SUPABASE_URL=your-supabase-url
-   VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
-   VITE_SUPABASE_PROJECT_ID=your-project-id
-   \`\`\`
-4. Start the dev server:
-   \`\`\`
-   npm run dev
-   \`\`\`
-5. Visit http://localhost:8080
-
-## Deploying Edge Functions
-Edge functions live under \`supabase/functions/\`. Deploy with the Supabase CLI:
-\`\`\`
-supabase functions deploy <function-name>
-\`\`\`
-
-## Database Schema
-SQL migrations are in \`supabase/migrations/\`. Apply them in order via the Supabase CLI or SQL editor.
-
-Generated: ${new Date().toISOString()}
-`
-      );
-
-      const blob = await zip.generateAsync(
-        { type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } },
-        (meta) => setProgress(Math.round(meta.percent))
-      );
-
+      const blob = await resp.blob();
+      const disposition = resp.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename="?([^";]+)"?/i);
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      saveAs(blob, `refyn-technologies-source-${stamp}.zip`);
+      const filename = match?.[1] ?? `refyn-source-${stamp}.zip`;
 
-      toast({
-        title: "Download ready",
-        description: `Bundled ${entries.length} files into a zip archive.`,
-      });
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+
+      toast({ title: "Download ready", description: filename });
     } catch (err) {
-      console.error(err);
-      toast({
-        title: "Download failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast({ title: "Download failed", description: msg, variant: "destructive" });
+      setNotice(msg);
     } finally {
       setIsBuilding(false);
-      setProgress(0);
     }
   };
 
@@ -142,17 +96,17 @@ Generated: ${new Date().toISOString()}
             Source Code Export
           </h1>
           <p className="text-slate-600 mt-2">
-            Download the entire Refyn Technologies codebase as a zip so you can run, audit, or self-host the model and platform.
+            Request a server-signed export of the Refyn Technologies codebase. Authorization is
+            enforced on the server — the source is never shipped to your browser bundle.
           </p>
         </div>
 
         <Alert className="mb-6 border-amber-300 bg-amber-50">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertTitle>Master admin only</AlertTitle>
+          <AlertTitle>Admin only, server-enforced</AlertTitle>
           <AlertDescription>
-            This export contains the complete frontend, edge functions, and SQL migrations. It does NOT include any
-            secrets (API keys, service role tokens) or production data. Treat the archive as confidential intellectual
-            property.
+            The download is produced by an edge function that verifies your admin role from the
+            database before returning anything. Non-admin sessions receive an access-denied response.
           </AlertDescription>
         </Alert>
 
@@ -160,60 +114,27 @@ Generated: ${new Date().toISOString()}
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />
-              Download full source archive
+              Request source archive
             </CardTitle>
             <CardDescription>
-              Bundles {fileCount} source files (frontend, backend functions, SQL migrations, configs) into a single
-              zip generated locally in your browser.
+              The server streams the archive from the connected repository. If no repository is
+              configured yet, you'll receive a clear message from the server explaining what to set.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button onClick={handleDownload} disabled={isBuilding} size="lg" className="w-full md:w-auto">
-              <Download className="h-4 w-4 mr-2" />
-              {isBuilding ? `Building archive… ${progress}%` : "Download source code (.zip)"}
+              {isBuilding ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Requesting…</>
+              ) : (
+                <><Download className="h-4 w-4 mr-2" /> Download source code (.zip)</>
+              )}
             </Button>
-            {isBuilding && (
-              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                <div className="bg-blue-600 h-2 transition-all" style={{ width: `${progress}%` }} />
-              </div>
+            {notice && (
+              <Alert className="border-slate-300 bg-slate-50">
+                <AlertTitle>Server response</AlertTitle>
+                <AlertDescription className="text-sm text-slate-700 break-words">{notice}</AlertDescription>
+              </Alert>
             )}
-          </CardContent>
-        </Card>
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Terminal className="h-5 w-5" />
-              Run the model & website locally
-            </CardTitle>
-            <CardDescription>Quick start after unzipping the archive.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-700">
-              <li>Unzip and open the folder in your editor.</li>
-              <li>
-                Install dependencies:
-                <pre className="mt-1 bg-slate-900 text-slate-100 p-2 rounded text-xs">npm install</pre>
-              </li>
-              <li>
-                Create a <code className="bg-slate-100 px-1 rounded">.env</code> file with your backend URL and anon
-                key (or connect a fresh Lovable Cloud / Supabase project):
-                <pre className="mt-1 bg-slate-900 text-slate-100 p-2 rounded text-xs whitespace-pre-wrap">
-{`VITE_SUPABASE_URL=...
-VITE_SUPABASE_PUBLISHABLE_KEY=...
-VITE_SUPABASE_PROJECT_ID=...`}
-                </pre>
-              </li>
-              <li>
-                Start the dev server:
-                <pre className="mt-1 bg-slate-900 text-slate-100 p-2 rounded text-xs">npm run dev</pre>
-              </li>
-              <li>
-                Apply the SQL files in <code className="bg-slate-100 px-1 rounded">supabase/migrations/</code> and
-                deploy the edge functions in <code className="bg-slate-100 px-1 rounded">supabase/functions/</code>.
-              </li>
-              <li>Visit http://localhost:8080</li>
-            </ol>
           </CardContent>
         </Card>
 
@@ -221,15 +142,25 @@ VITE_SUPABASE_PROJECT_ID=...`}
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              What's included / excluded
+              How this is protected
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-slate-700 space-y-2">
-            <p><strong>Included:</strong> all React/TypeScript source, Tailwind config, Supabase edge functions, SQL migrations, public assets, package manifests.</p>
-            <p><strong>Excluded:</strong> <code>node_modules/</code>, build output, the live <code>.env</code> file, secrets, user data, and the production Supabase service role key.</p>
+            <p>
+              The previous version of this page used a build-time source glob that shipped every
+              source file into the browser bundle. That has been removed entirely — the client
+              contains no raw source and no glob loader.
+            </p>
+            <p>
+              The <code>admin-source-export</code> edge function verifies a valid JWT, checks the
+              caller's admin role via <code>has_role()</code> against <code>user_roles</code>, and
+              only then streams the repository zipball from the configured Git remote to the caller.
+            </p>
             <p className="flex items-center gap-2 text-slate-500 pt-2">
               <Github className="h-4 w-4" />
-              For version-controlled access, connect this Lovable project to GitHub via the share menu.
+              To enable the actual archive download, connect a GitHub token and set{" "}
+              <code>GITHUB_API_KEY</code>, <code>GITHUB_OWNER</code>, <code>GITHUB_REPO</code>{" "}
+              (optionally <code>GITHUB_REF</code>) in project secrets.
             </p>
           </CardContent>
         </Card>
