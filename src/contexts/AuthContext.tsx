@@ -117,7 +117,6 @@ async function resetAuthClientState() {
 
 async function ensureUserSetup(supabaseUser: User) {
   const fullName = supabaseUser.user_metadata?.full_name as string | undefined;
-  const safeRole = getSafeRole(supabaseUser.user_metadata?.requested_role as string | undefined);
 
   try {
     const { data: profile, error: profileFetchError } = await supabase
