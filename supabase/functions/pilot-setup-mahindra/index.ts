@@ -20,9 +20,9 @@ const SCHOOL = {
 };
 
 const TEACHERS = [
-  { email: "vinod.chacko@mahindra-pilot.refyntech.us",  full_name: "Vinod Chacko",  subject: "Physics — IB MYP + IB DP" },
-  { email: "vineet.sharma@mahindra-pilot.refyntech.us", full_name: "Vineet Sharma", subject: "Mathematics — IB MYP + IB DP" },
-  { email: "rohit.phalke@mahindra-pilot.refyntech.us",  full_name: "Rohit Phalke",  subject: "Integrated Humanities (I&S) — IB MYP + IB DP" },
+  { email: "vinod.chacko@misp.org",  full_name: "Vinod Chacko",  subject: "Physics — IB MYP + IB DP" },
+  { email: "vineet.sharma@misp.org", full_name: "Vineet Sharma", subject: "Mathematics — IB MYP + IB DP" },
+  { email: "rohit.phalke@misp.org",  full_name: "Rohit Phalke",  subject: "Integrated Humanities (I&S) — IB MYP + IB DP" },
   { email: "primary5.homeroom@mahindra-pilot.refyntech.us", full_name: "Primary 5 Homeroom Teacher", subject: "Primary 5 Homeroom" },
   { email: "primary2.homeroom@mahindra-pilot.refyntech.us", full_name: "Primary 2 Homeroom Teacher", subject: "Primary 2 Homeroom" },
   { email: "primary.homeroom3@mahindra-pilot.refyntech.us", full_name: "Primary Homeroom Teacher 3", subject: "Primary Homeroom" },
