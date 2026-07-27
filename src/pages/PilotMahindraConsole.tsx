@@ -370,6 +370,11 @@ const PilotMahindraConsole: React.FC = () => {
             <Button variant="outline" size="sm" onClick={() => setRefreshKey(k => k + 1)} className="border-slate-700">
               <RefreshCcw className="h-3.5 w-3.5 mr-1.5" /> Refresh
             </Button>
+            <Link to="/pilot/mahindra/report">
+              <Button variant="outline" size="sm" className="border-slate-700">
+                <Printer className="h-3.5 w-3.5 mr-1.5" /> Export results report
+              </Button>
+            </Link>
             <Link to={`/s/${SUBDOMAIN}`}>
               <Button size="sm" className="bg-amber-500 hover:bg-amber-400 text-slate-950">
                 <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> School portal
