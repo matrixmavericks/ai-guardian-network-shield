@@ -149,25 +149,8 @@ async function ensureUserSetup(supabaseUser: User) {
       }
     }
 
-    const { data: roles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', supabaseUser.id);
-
-    if (rolesError) {
-      throw rolesError;
-    }
-
-    if (!roles || roles.length === 0) {
-      const { error: roleInsertError } = await supabase.from('user_roles').insert({
-        user_id: supabaseUser.id,
-        role: safeRole as any,
-      });
-
-      if (roleInsertError) {
-        throw roleInsertError;
-      }
-    }
+    // SECURITY: role assignment is server-side only (auth.users trigger reads
+    // approved registration_requests). The client MUST NOT insert into user_roles.
 
     // Provision plan/school on first login if not yet done
     await provisionUserOnFirstLogin(supabaseUser);
