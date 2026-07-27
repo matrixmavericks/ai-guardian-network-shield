@@ -808,6 +808,7 @@ const StudentDashboard = () => {
               </FeatureGate>
             </TabsContent>
           </Tabs>
+          <PilotFeedbackPrompt context="student" />
       </div>
     </div>
   );
