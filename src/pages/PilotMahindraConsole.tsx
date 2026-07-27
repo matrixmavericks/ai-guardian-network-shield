@@ -390,6 +390,7 @@ const PilotMahindraConsole: React.FC = () => {
             <TabsTrigger value="briefing"><FileText className="h-3.5 w-3.5 mr-1.5" /> Exec Briefing</TabsTrigger>
             <TabsTrigger value="spotlights"><Award className="h-3.5 w-3.5 mr-1.5" /> Teacher Spotlights</TabsTrigger>
             <TabsTrigger value="health"><Gauge className="h-3.5 w-3.5 mr-1.5" /> Health Score</TabsTrigger>
+            <TabsTrigger value="trends"><LineChartIcon className="h-3.5 w-3.5 mr-1.5" /> Trends</TabsTrigger>
           </TabsList>
 
           {/* OVERVIEW */}
