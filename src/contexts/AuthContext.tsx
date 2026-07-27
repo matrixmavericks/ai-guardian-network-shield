@@ -31,8 +31,12 @@ const DEFAULT_ROLE = 'student';
 
 export const useAuth = () => useContext(AuthContext);
 
+// SECURITY: Privileged roles (admin, teacher) must NEVER originate from client-controlled
+// metadata. Only student/parent are allowed as fallback hints; anything else defaults to
+// student. The real role is assigned server-side by an auth.users trigger based on an
+// admin-approved registration_requests row.
 const getSafeRole = (requestedRole?: string | null) => {
-  return requestedRole === 'teacher' || requestedRole === 'parent' || requestedRole === 'admin' ? requestedRole : DEFAULT_ROLE;
+  return requestedRole === 'parent' ? 'parent' : DEFAULT_ROLE;
 };
 
 const getFallbackAuthUser = (supabaseUser: User, role = getSafeRole(supabaseUser.user_metadata?.requested_role)) => ({
