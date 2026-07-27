@@ -12,8 +12,12 @@ import { toast } from "sonner";
 import {
   Activity, AlertTriangle, BookOpen, GraduationCap, Layers, MessageSquare,
   ShieldCheck, Sparkles, Users, Zap, RefreshCcw, ExternalLink, Radio,
-  FileText, Award, Gauge, Loader2, Download, Copy, TrendingUp,
+  FileText, Award, Gauge, Loader2, Download, Copy, TrendingUp, LineChart as LineChartIcon, Printer, Clock,
 } from "lucide-react";
+import {
+  ChartContainer, ChartTooltip, ChartTooltipContent,
+} from "@/components/ui/chart";
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 
 const SUBDOMAIN = "mahindra-pune";
 const MASTER_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
@@ -84,6 +88,10 @@ const PilotMahindraConsole: React.FC = () => {
   const [spotLoading, setSpotLoading] = useState(false);
   const [health, setHealth] = useState<Health | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
+
+  // Trends state
+  const [trendRows, setTrendRows] = useState<any[]>([]);
+  const [trendLoading, setTrendLoading] = useState(false);
 
   // Authorize
   useEffect(() => {
@@ -261,6 +269,20 @@ const PilotMahindraConsole: React.FC = () => {
     [totals],
   );
 
+  // Load pilot_metrics trend history
+  useEffect(() => {
+    if (!school?.id) return;
+    (async () => {
+      setTrendLoading(true);
+      try {
+        const { data } = await supabase.from("pilot_metrics")
+          .select("*").eq("school_id", school.id).order("snapshot_date", { ascending: true });
+        setTrendRows((data ?? []) as any[]);
+      } finally { setTrendLoading(false); }
+    })();
+  }, [school?.id, refreshKey]);
+
+
   const callIntel = async (action: "briefing" | "spotlights" | "health") => {
     const { data, error } = await supabase.functions.invoke("pilot-mahindra-intelligence", { body: { action } });
     if (error) throw error;
@@ -348,6 +370,11 @@ const PilotMahindraConsole: React.FC = () => {
             <Button variant="outline" size="sm" onClick={() => setRefreshKey(k => k + 1)} className="border-slate-700">
               <RefreshCcw className="h-3.5 w-3.5 mr-1.5" /> Refresh
             </Button>
+            <Link to="/pilot/mahindra/report">
+              <Button variant="outline" size="sm" className="border-slate-700">
+                <Printer className="h-3.5 w-3.5 mr-1.5" /> Export results report
+              </Button>
+            </Link>
             <Link to={`/s/${SUBDOMAIN}`}>
               <Button size="sm" className="bg-amber-500 hover:bg-amber-400 text-slate-950">
                 <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> School portal
@@ -363,6 +390,7 @@ const PilotMahindraConsole: React.FC = () => {
             <TabsTrigger value="briefing"><FileText className="h-3.5 w-3.5 mr-1.5" /> Exec Briefing</TabsTrigger>
             <TabsTrigger value="spotlights"><Award className="h-3.5 w-3.5 mr-1.5" /> Teacher Spotlights</TabsTrigger>
             <TabsTrigger value="health"><Gauge className="h-3.5 w-3.5 mr-1.5" /> Health Score</TabsTrigger>
+            <TabsTrigger value="trends"><LineChartIcon className="h-3.5 w-3.5 mr-1.5" /> Trends</TabsTrigger>
           </TabsList>
 
           {/* OVERVIEW */}
@@ -628,6 +656,61 @@ const PilotMahindraConsole: React.FC = () => {
               </div>
             )}
           </TabsContent>
+          {/* TRENDS */}
+          <TabsContent value="trends" className="space-y-6">
+            {(() => {
+              const rows = trendRows;
+              const latest = rows[rows.length - 1];
+              const singlePoint = rows.length < 2;
+              const chartConfig = {
+                wau: { label: "WAU", color: "hsl(43 96% 56%)" },
+                prompts_7d: { label: "Prompts (7d)", color: "hsl(199 89% 60%)" },
+                teacher_hours_saved: { label: "Hours saved", color: "hsl(160 84% 55%)" },
+                cost_7d_usd: { label: "Cost (7d)", color: "hsl(280 80% 65%)" },
+                learning_path_completion_pct: { label: "Path completion %", color: "hsl(20 90% 60%)" },
+              } as const;
+              const data = rows.map((r: any) => ({
+                date: new Date(r.snapshot_date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+                wau: r.wau, prompts_7d: r.prompts_7d,
+                teacher_hours_saved: Number(r.teacher_hours_saved) || 0,
+                cost_7d_usd: Number(r.cost_7d_usd) || 0,
+                learning_path_completion_pct: Number(r.learning_path_completion_pct) || 0,
+              }));
+
+              if (trendLoading) return <div className="text-slate-400 py-16 text-center"><Loader2 className="h-5 w-5 animate-spin inline mr-2" /> Loading trends…</div>;
+              if (!latest) {
+                return <div className="text-sm text-slate-500 py-10 text-center border border-dashed border-slate-800 rounded-lg">
+                  No metric snapshots yet. The daily job will populate this as the pilot runs.
+                </div>;
+              }
+
+              return (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <Stat icon={Clock}         label="Hours saved"       value={formatNum(latest.teacher_hours_saved)} sub="Cumulative" tone="success" />
+                    <Stat icon={Users}         label="WAU"               value={formatNum(latest.wau)} sub={`${latest.dau} DAU`} />
+                    <Stat icon={BookOpen}      label="Path completion"   value={`${latest.learning_path_completion_pct}%`} sub={`${latest.learning_paths_total} paths`} />
+                    <Stat icon={Sparkles}      label="Capstone avg"      value={latest.capstones_avg_score || "—"} sub={`${latest.capstones_total} subs`} />
+                    <Stat icon={AlertTriangle} label="Governance · 7d"   value={`${latest.flagged_7d} / ${latest.bypass_7d}`} sub="flag / bypass" tone={latest.bypass_7d ? "danger" : latest.flagged_7d ? "warn" : "default"} />
+                    <Stat icon={Zap}           label="Cost · 7d"         value={`$${Number(latest.cost_7d_usd).toFixed(2)}`} sub={`${formatNum(latest.tokens_7d)} tok`} />
+                  </div>
+
+                  {singlePoint && (
+                    <div className="text-xs text-slate-500 font-mono uppercase tracking-[0.18em]">
+                      Trends build daily — check back as the pilot runs. ({rows.length} snapshot)
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <TrendCard title="Engagement" config={{ wau: chartConfig.wau, prompts_7d: chartConfig.prompts_7d }} data={data} keys={["wau","prompts_7d"]} type="area" />
+                    <TrendCard title="Teacher hours saved" config={{ teacher_hours_saved: chartConfig.teacher_hours_saved }} data={data} keys={["teacher_hours_saved"]} type="area" />
+                    <TrendCard title="Token cost (USD · 7d)" config={{ cost_7d_usd: chartConfig.cost_7d_usd }} data={data} keys={["cost_7d_usd"]} type="line" />
+                    <TrendCard title="Learning path completion %" config={{ learning_path_completion_pct: chartConfig.learning_path_completion_pct }} data={data} keys={["learning_path_completion_pct"]} type="line" />
+                  </div>
+                </>
+              );
+            })()}
+          </TabsContent>
         </Tabs>
 
         <div className="mt-10 text-center text-xs text-slate-500 font-mono tracking-[0.18em] uppercase">
@@ -637,5 +720,42 @@ const PilotMahindraConsole: React.FC = () => {
     </div>
   );
 };
+
+const TrendCard = ({ title, config, data, keys, type }: {
+  title: string; config: any; data: any[]; keys: string[]; type: "area" | "line";
+}) => (
+  <Card className="border-slate-800 bg-slate-900/50">
+    <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-200">{title}</CardTitle></CardHeader>
+    <CardContent>
+      <div className="h-56">
+        <ChartContainer config={config} className="h-full w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            {type === "area" ? (
+              <AreaChart data={data} margin={{ left: 4, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
+                <YAxis stroke="#64748b" fontSize={11} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                {keys.map(k => (
+                  <Area key={k} type="monotone" dataKey={k} stroke={`var(--color-${k})`} fill={`var(--color-${k})`} fillOpacity={0.25} strokeWidth={2} />
+                ))}
+              </AreaChart>
+            ) : (
+              <LineChart data={data} margin={{ left: 4, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
+                <YAxis stroke="#64748b" fontSize={11} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                {keys.map(k => (
+                  <Line key={k} type="monotone" dataKey={k} stroke={`var(--color-${k})`} strokeWidth={2} dot={{ r: 3 }} />
+                ))}
+              </LineChart>
+            )}
+          </ResponsiveContainer>
+        </ChartContainer>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 export default PilotMahindraConsole;
