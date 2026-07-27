@@ -260,10 +260,9 @@ export const PRIMARY_GAMES: PrimaryGame[] = [
   },
 ];
 
-// Placeholder primary teacher emails. Replace with the real ones the school provides.
 export const PRIMARY_TEACHERS: PrimaryConfig[] = [
   {
-    email: "primary2.teacher@misp.org",
+    email: "primary2.homeroom@mahindra-pilot.refyntech.us",
     displayName: "Primary 2 Homeroom",
     homeroomGrade: "Primary 2",
     accent: "from-yellow-300 via-orange-300 to-pink-300",
@@ -277,7 +276,7 @@ export const PRIMARY_TEACHERS: PrimaryConfig[] = [
     bgGradient: "from-sky-50 via-indigo-50 to-violet-50 dark:from-sky-950/40 dark:via-indigo-950/30 dark:to-violet-950/40",
   },
   {
-    email: "primary3.teacher@misp.org",
+    email: "primary.homeroom3@mahindra-pilot.refyntech.us",
     displayName: "Primary Homeroom",
     homeroomGrade: "Primary 3",
     accent: "from-emerald-300 via-teal-300 to-cyan-300",
