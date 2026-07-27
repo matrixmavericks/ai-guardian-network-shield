@@ -283,6 +283,19 @@ const PilotMahindraConsole: React.FC = () => {
     })();
   }, [school?.id, refreshKey]);
 
+  // Load NPS feedback
+  useEffect(() => {
+    if (!school?.id) return;
+    (async () => {
+      const { data } = await supabase.from("pilot_feedback")
+        .select("nps_score, comment, role, created_at")
+        .eq("school_id", school.id)
+        .order("created_at", { ascending: false });
+      setFeedbackRows((data ?? []) as any[]);
+    })();
+  }, [school?.id, refreshKey]);
+
+
 
   const callIntel = async (action: "briefing" | "spotlights" | "health") => {
     const { data, error } = await supabase.functions.invoke("pilot-mahindra-intelligence", { body: { action } });
