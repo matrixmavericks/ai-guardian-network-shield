@@ -35,6 +35,7 @@ const PilotMahindraReport: React.FC = () => {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [school, setSchool] = useState<School | null>(null);
   const [rows, setRows] = useState<MetricRow[]>([]);
+  const [feedback, setFeedback] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
