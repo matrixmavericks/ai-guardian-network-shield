@@ -89,6 +89,10 @@ const PilotMahindraConsole: React.FC = () => {
   const [health, setHealth] = useState<Health | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
 
+  // Trends state
+  const [trendRows, setTrendRows] = useState<any[]>([]);
+  const [trendLoading, setTrendLoading] = useState(false);
+
   // Authorize
   useEffect(() => {
     if (isLoading) return;
