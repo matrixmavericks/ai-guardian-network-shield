@@ -142,6 +142,7 @@ function App() {
           <Route path="/platform-docs" element={<ProtectedRoute allowedRoles={['admin']}><PlatformDocsPage /></ProtectedRoute>} />
           <Route path="/pilot-analysis" element={<ProtectedRoute allowedRoles={['admin']}><PilotAnalysisPage /></ProtectedRoute>} />
           <Route path="/pilot/mahindra" element={<ProtectedRoute allowedRoles={['admin']}><PilotMahindraConsole /></ProtectedRoute>} />
+          <Route path="/pilot/mahindra/report" element={<ProtectedRoute allowedRoles={['admin']}><PilotMahindraReport /></ProtectedRoute>} />
           <Route path="/create-account" element={<ProtectedRoute allowedRoles={['admin']}><CreateUserAccountPage /></ProtectedRoute>} />
           <Route path="/security-overview" element={<ProtectedRoute allowedRoles={['admin']}><SecurityOverviewPage /></ProtectedRoute>} />
           <Route path="/source-code" element={<ProtectedRoute allowedRoles={['admin']}><SourceCodeDownloadPage /></ProtectedRoute>} />
