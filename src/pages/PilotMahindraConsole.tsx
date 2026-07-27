@@ -12,8 +12,12 @@ import { toast } from "sonner";
 import {
   Activity, AlertTriangle, BookOpen, GraduationCap, Layers, MessageSquare,
   ShieldCheck, Sparkles, Users, Zap, RefreshCcw, ExternalLink, Radio,
-  FileText, Award, Gauge, Loader2, Download, Copy, TrendingUp,
+  FileText, Award, Gauge, Loader2, Download, Copy, TrendingUp, LineChart as LineChartIcon, Printer, Clock,
 } from "lucide-react";
+import {
+  ChartContainer, ChartTooltip, ChartTooltipContent,
+} from "@/components/ui/chart";
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 
 const SUBDOMAIN = "mahindra-pune";
 const MASTER_ADMIN_EMAIL = "info.aiconditioner@gmail.com";
