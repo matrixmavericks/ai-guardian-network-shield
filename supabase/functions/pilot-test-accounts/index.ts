@@ -1,4 +1,4 @@
-// One-off pilot test-account provisioning for Mahindra International School Pune.
+// Pilot test-account provisioning for Mahindra International School Pune.
 // Creates a Test Student + Test Parent, links them, enrolls student in a demo class.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
