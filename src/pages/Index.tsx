@@ -30,6 +30,9 @@ const Index = () => {
         </div>
       </nav>
 
+      {/* Cinematic Intro */}
+      <CinematicIntro />
+
       {/* Hero Section */}
       <HeroSection />
 
