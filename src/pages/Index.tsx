@@ -5,6 +5,7 @@ import { Shield, Server, Brain, Palette, FolderOpen, GraduationCap } from "lucid
 import HeroSection from "@/components/HeroSection";
 import FeatureCards from "@/components/FeatureCards";
 import Testimonials from "@/components/Testimonials";
+import CinematicIntro from "@/components/CinematicIntro";
 
 const Index = () => {
   return (
@@ -28,6 +29,9 @@ const Index = () => {
           </Link>
         </div>
       </nav>
+
+      {/* Cinematic Intro */}
+      <CinematicIntro />
 
       {/* Hero Section */}
       <HeroSection />
