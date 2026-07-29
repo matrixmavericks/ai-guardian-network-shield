@@ -8,19 +8,23 @@ import Testimonials from "@/components/Testimonials";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 py-4 px-6 md:px-10 flex justify-between items-center sticky top-0 z-50">
+      <nav className="bg-background/70 backdrop-blur-xl border-b border-border py-3.5 px-6 md:px-10 flex justify-between items-center sticky top-0 z-50">
         <div className="flex items-center">
-          <Shield className="h-7 w-7 text-blue-400 mr-2" />
-          <span className="text-xl font-bold text-white">Refyn Technologies</span>
+          <Shield className="h-6 w-6 text-primary mr-2" />
+          <span className="text-lg font-bold text-foreground tracking-tight">Refyn</span>
+          <span className="ml-1.5 text-xs text-muted-foreground font-mono">/os</span>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 items-center">
+          <Link to="/tour" className="hidden sm:block">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">Tour</Button>
+          </Link>
           <Link to="/login">
-            <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800">Login</Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">Login</Button>
           </Link>
           <Link to="/signup">
-            <Button className="bg-blue-500 hover:bg-blue-600 text-white">Sign Up</Button>
+            <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">Get started</Button>
           </Link>
         </div>
       </nav>
