@@ -1945,6 +1945,75 @@ export type Database = {
           },
         ]
       }
+      primary_observations: {
+        Row: {
+          created_at: string
+          grade_band: string | null
+          id: string
+          learner_profile: string[] | null
+          next_step: string | null
+          raw_note: string
+          refined_evidence: string | null
+          student_name: string
+          teacher_id: string
+        }
+        Insert: {
+          created_at?: string
+          grade_band?: string | null
+          id?: string
+          learner_profile?: string[] | null
+          next_step?: string | null
+          raw_note: string
+          refined_evidence?: string | null
+          student_name: string
+          teacher_id: string
+        }
+        Update: {
+          created_at?: string
+          grade_band?: string | null
+          id?: string
+          learner_profile?: string[] | null
+          next_step?: string | null
+          raw_note?: string
+          refined_evidence?: string | null
+          student_name?: string
+          teacher_id?: string
+        }
+        Relationships: []
+      }
+      primary_week_plans: {
+        Row: {
+          created_at: string
+          grade_band: string | null
+          id: string
+          plan: Json
+          teacher_id: string
+          title: string
+          unit_theme: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grade_band?: string | null
+          id?: string
+          plan?: Json
+          teacher_id: string
+          title: string
+          unit_theme?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grade_band?: string | null
+          id?: string
+          plan?: Json
+          teacher_id?: string
+          title?: string
+          unit_theme?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
