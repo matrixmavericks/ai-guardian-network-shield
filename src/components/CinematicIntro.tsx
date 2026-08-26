@@ -45,7 +45,7 @@ const CinematicIntro: React.FC = () => {
       gsap.set(".ci-hero-line", { autoAlpha: 0, y: 60, scale: 0.9, filter: "blur(20px)" });
       gsap.set(".ci-hero-accent", { autoAlpha: 0, clipPath: "inset(0 100% 0 0)" });
       gsap.set(".ci-card", { y: window.innerHeight + 200, autoAlpha: 1 });
-      gsap.set([".ci-left", ".ci-right", ".ci-mockup-wrap", ".ci-badge", ".ci-widget"], { autoAlpha: 0 });
+      gsap.set([".ci-left", ".ci-right", ".ci-mockup-wrap", ".ci-badge", ".ci-widget", ".ci-caption-1", ".ci-caption-2", ".ci-caption-3"], { autoAlpha: 0 });
       gsap.set(".ci-cta", { autoAlpha: 0, scale: 0.8, filter: "blur(30px)" });
 
       const intro = gsap.timeline({ delay: 0.2 });
@@ -76,7 +76,16 @@ const CinematicIntro: React.FC = () => {
         .fromTo(".ci-badge", { y: 80, autoAlpha: 0, scale: 0.7 }, { y: 0, autoAlpha: 1, scale: 1, stagger: 0.15, duration: 1.3, ease: "back.out(1.5)" }, "-=2")
         .fromTo(".ci-left", { x: -50, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 1.4, ease: "power4.out" }, "-=1.4")
         .fromTo(".ci-right", { x: 50, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 1.4, ease: "expo.out" }, "<")
-        .to({}, { duration: 2 })
+        .fromTo(".ci-sweep", { xPercent: -140 }, { xPercent: 140, duration: 2.4, ease: "power2.inOut" }, "-=1.6")
+        .fromTo(".ci-caption-1", { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.8 }, "-=1.2")
+        .to({}, { duration: 1 })
+        .to(".ci-caption-1", { autoAlpha: 0, y: -20, duration: 0.6 })
+        .fromTo(".ci-caption-2", { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.8 }, "<0.2")
+        .to({}, { duration: 1 })
+        .to(".ci-caption-2", { autoAlpha: 0, y: -20, duration: 0.6 })
+        .fromTo(".ci-caption-3", { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.8 }, "<0.2")
+        .to({}, { duration: 1.4 })
+        .to(".ci-caption-3", { autoAlpha: 0, duration: 0.5 })
         .set(".ci-hero-wrap", { autoAlpha: 0 })
         .set(".ci-cta", { autoAlpha: 1 })
         .to({}, { duration: 1.2 })
@@ -156,6 +165,28 @@ const CinematicIntro: React.FC = () => {
           }}
         />
 
+        {/* Cinematic light sweep */}
+        <div className="ci-sweep absolute inset-y-0 -left-1/3 w-1/3 pointer-events-none z-10"
+          style={{
+            background: "linear-gradient(105deg, transparent, rgba(255,255,255,0.12), transparent)",
+            filter: "blur(12px)",
+          }}
+        />
+
+        {/* Scanlines */}
+        <div className="absolute inset-0 pointer-events-none z-[5] opacity-[0.12]"
+          style={{ backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.4) 0px, rgba(255,255,255,0.4) 1px, transparent 1px, transparent 4px)" }}
+        />
+
+        {/* Chapter captions */}
+        <div className="absolute bottom-8 left-0 right-0 flex justify-center px-6 z-20 pointer-events-none">
+          <div className="relative h-8 w-full max-w-xl text-center">
+            <div className="ci-caption-1 absolute inset-0 text-sm md:text-base font-mono uppercase tracking-[0.2em] text-white/70">01 · Intercept the shortcut</div>
+            <div className="ci-caption-2 absolute inset-0 text-sm md:text-base font-mono uppercase tracking-[0.2em] text-white/70">02 · Rewrite into guidance</div>
+            <div className="ci-caption-3 absolute inset-0 text-sm md:text-base font-mono uppercase tracking-[0.2em] text-white/70">03 · Measure real learning</div>
+          </div>
+        </div>
+
         {/* Left text */}
         <div className="ci-left absolute left-6 md:left-12 top-1/2 -translate-y-1/2 max-w-xs z-20">
           <div className="text-xs font-mono uppercase tracking-widest text-primary/80 mb-3">Live Governance</div>
@@ -193,7 +224,7 @@ const CinematicIntro: React.FC = () => {
                 <div className="ci-widget flex items-center justify-between">
                   <div>
                     <div className="text-[10px] font-mono text-white/40 uppercase">Class 9B · Physics</div>
-                    <div className="text-white font-semibold text-sm">Good morning, Vinod</div>
+                    <div className="text-white font-semibold text-sm">Today's session</div>
                   </div>
                   <Shield className="h-5 w-5 text-primary" />
                 </div>
