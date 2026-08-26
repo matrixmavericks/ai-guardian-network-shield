@@ -11,7 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Loader2, Send, Copy, Check, Users, BookOpen, Zap, ArrowRight, Wand2, Trophy, Star, Heart, Smile, Play } from "lucide-react";
+import { Sparkles, Loader2, Send, Copy, Check, Users, BookOpen, Zap, ArrowRight, Wand2, Trophy, Star, Heart, Smile, Play, MonitorPlay } from "lucide-react";
+import LiveClassMode, { buildBoardSlides } from "@/components/primary/LiveClassMode";
+import HomeroomPulse from "@/components/primary/HomeroomPulse";
+import WeekPlanner from "@/components/primary/WeekPlanner";
 import {
   getPrimaryConfig, PRIMARY_GRADE_BANDS, PRIMARY_TOOLS, PRIMARY_GAMES, PYP_THEMES,
   type PrimaryTool, type PrimaryGame, type PrimaryConfig
@@ -42,6 +45,7 @@ const PrimaryPlayground: React.FC = () => {
   const [feedback, setFeedback] = useState<string>("");
 
   const [stats, setStats] = useState({ classes: 0, students: 0, prompts7d: 0 });
+  const [boardMode, setBoardMode] = useState(false);
 
   useEffect(() => {
     if (config?.homeroomGrade) setActiveBand(config.homeroomGrade);
