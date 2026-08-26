@@ -572,9 +572,22 @@ const PrimaryPlayground: React.FC = () => {
                     </div>
                   )}
 
-                  <Button variant="outline" className="w-full" onClick={() => startGame(activeGame)}>
-                    🎲 New round
-                  </Button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Button variant="outline" onClick={() => startGame(activeGame)}>
+                      🎲 New round
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (!buildBoardSlides(activeGame.id, gameData).length) {
+                          toast({ title: "This round isn't board-ready — try a new round." , variant: "destructive" });
+                          return;
+                        }
+                        setBoardMode(true);
+                      }}
+                    >
+                      <MonitorPlay className="h-4 w-4 mr-2" /> Cast to board
+                    </Button>
+                  </div>
                 </div>
               )}
             </>
