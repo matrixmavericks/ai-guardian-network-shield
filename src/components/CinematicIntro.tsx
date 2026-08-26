@@ -108,29 +108,41 @@ const CinematicIntro: React.FC = () => {
         {/* Cycling feature words */}
         <div
           ref={cycleRef}
-          className="ci-hero-line relative mt-10 h-12 md:h-14 w-64 md:w-80 flex items-center justify-center overflow-hidden"
+          className="ci-hero-line relative mt-10 h-12 md:h-14 w-64 md:w-80 overflow-hidden"
         >
           <style>{`
-            @keyframes ci-cycle {
-              0%, 16.66% { opacity: 0; transform: translateY(18px); filter: blur(8px); }
-              20%, 30% { opacity: 1; transform: translateY(0); filter: blur(0px); }
-              33.33%, 100% { opacity: 0; transform: translateY(-18px); filter: blur(8px); }
+            @keyframes ci-cycle-slide {
+              0% { transform: translateY(0); }
+              16.66% { transform: translateY(0); }
+              16.67% { transform: translateY(-16.66%); }
+              33.33% { transform: translateY(-16.66%); }
+              33.34% { transform: translateY(-33.33%); }
+              50% { transform: translateY(-33.33%); }
+              50.01% { transform: translateY(-50%); }
+              66.66% { transform: translateY(-50%); }
+              66.67% { transform: translateY(-66.66%); }
+              83.33% { transform: translateY(-66.66%); }
+              83.34% { transform: translateY(-83.33%); }
+              99.99% { transform: translateY(-83.33%); }
+              100% { transform: translateY(0); }
             }
           `}</style>
-          {CYCLE_WORDS.map((word, i) => (
-            <div
-              key={word}
-              className="absolute inset-0 flex items-center justify-center text-2xl md:text-4xl font-semibold tracking-tight"
-              style={{
-                color: "hsl(var(--primary))",
-                opacity: 0,
-                animation: `ci-cycle ${CYCLE_DURATION}s ease-in-out infinite`,
-                animationDelay: `${i * (CYCLE_DURATION / CYCLE_WORDS.length)}s`,
-              }}
-            >
-              {word}
-            </div>
-          ))}
+          <div
+            className="flex flex-col"
+            style={{
+              animation: `ci-cycle-slide ${CYCLE_DURATION}s cubic-bezier(0.4, 0, 0.2, 1) infinite`,
+            }}
+          >
+            {CYCLE_WORDS.map((word) => (
+              <div
+                key={word}
+                className="h-12 md:h-14 flex items-center justify-center text-2xl md:text-4xl font-semibold tracking-tight"
+                style={{ color: "hsl(var(--primary))" }}
+              >
+                {word}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
