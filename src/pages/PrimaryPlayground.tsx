@@ -600,6 +600,17 @@ const PrimaryPlayground: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+      {boardMode && activeGame && gameData && (
+        <LiveClassMode
+          game={activeGame}
+          gameData={gameData}
+          gradeBand={activeBand}
+          themeLabel={themeLabel}
+          onNewRound={() => startGame(activeGame)}
+          onClose={() => setBoardMode(false)}
+        />
+      )}
+
       <div className="max-w-3xl mx-auto px-6"><PilotFeedbackPrompt context="teacher" /></div>
     </div>
   );
