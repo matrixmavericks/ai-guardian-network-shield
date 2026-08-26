@@ -11,7 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Loader2, Send, Copy, Check, Users, BookOpen, Zap, ArrowRight, Wand2, Trophy, Star, Heart, Smile, Play } from "lucide-react";
+import { Sparkles, Loader2, Send, Copy, Check, Users, BookOpen, Zap, ArrowRight, Wand2, Trophy, Star, Heart, Smile, Play, MonitorPlay } from "lucide-react";
+import LiveClassMode, { buildBoardSlides } from "@/components/primary/LiveClassMode";
+import HomeroomPulse from "@/components/primary/HomeroomPulse";
+import WeekPlanner from "@/components/primary/WeekPlanner";
 import {
   getPrimaryConfig, PRIMARY_GRADE_BANDS, PRIMARY_TOOLS, PRIMARY_GAMES, PYP_THEMES,
   type PrimaryTool, type PrimaryGame, type PrimaryConfig
@@ -42,6 +45,7 @@ const PrimaryPlayground: React.FC = () => {
   const [feedback, setFeedback] = useState<string>("");
 
   const [stats, setStats] = useState({ classes: 0, students: 0, prompts7d: 0 });
+  const [boardMode, setBoardMode] = useState(false);
 
   useEffect(() => {
     if (config?.homeroomGrade) setActiveBand(config.homeroomGrade);
@@ -234,10 +238,16 @@ const PrimaryPlayground: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Week planner + Homeroom Pulse */}
+          <div className="grid gap-4 xl:grid-cols-2 mb-10">
+            <WeekPlanner userId={user.id} gradeBand={activeBand} themeLabel={themeLabel} />
+            <HomeroomPulse userId={user.id} gradeBand={activeBand} themeLabel={themeLabel} />
+          </div>
+
           {/* Games */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold flex items-center gap-2"><Trophy className="h-6 w-6 text-amber-500" /> Classroom Games</h2>
-            <Badge variant="outline" className="text-xs">Tap a card to play live with the class</Badge>
+            <Badge variant="outline" className="text-xs">Open a game, then “Cast to board” for the class</Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
             {PRIMARY_GAMES.map((g) => (
@@ -568,15 +578,39 @@ const PrimaryPlayground: React.FC = () => {
                     </div>
                   )}
 
-                  <Button variant="outline" className="w-full" onClick={() => startGame(activeGame)}>
-                    🎲 New round
-                  </Button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Button variant="outline" onClick={() => startGame(activeGame)}>
+                      🎲 New round
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (!buildBoardSlides(activeGame.id, gameData).length) {
+                          toast({ title: "This round isn't board-ready — try a new round." , variant: "destructive" });
+                          return;
+                        }
+                        setBoardMode(true);
+                      }}
+                    >
+                      <MonitorPlay className="h-4 w-4 mr-2" /> Cast to board
+                    </Button>
+                  </div>
                 </div>
               )}
             </>
           )}
         </DialogContent>
       </Dialog>
+      {boardMode && activeGame && gameData && (
+        <LiveClassMode
+          game={activeGame}
+          gameData={gameData}
+          gradeBand={activeBand}
+          themeLabel={themeLabel}
+          onNewRound={() => startGame(activeGame)}
+          onClose={() => setBoardMode(false)}
+        />
+      )}
+
       <div className="max-w-3xl mx-auto px-6"><PilotFeedbackPrompt context="teacher" /></div>
     </div>
   );
