@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Shield, Sparkles, Brain, TrendingUp, Users, BookOpen, LineChart, Gamepad2 } from "lucide-react";
+import { Shield, Sparkles, Brain, Users, BookOpen, LineChart, Gamepad2 } from "lucide-react";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -269,9 +269,6 @@ const CinematicIntro: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* unused ref guard */}
-      <TrendingUp className="hidden" />
     </div>
   );
 };
