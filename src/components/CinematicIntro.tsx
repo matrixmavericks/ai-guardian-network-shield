@@ -7,7 +7,7 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const CYCLE_DURATION = 10.8;
+const CYCLE_DURATION = 12;
 const CYCLE_WORDS = [
   "Governance",
   "Learning",
