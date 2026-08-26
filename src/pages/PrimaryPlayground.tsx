@@ -238,10 +238,16 @@ const PrimaryPlayground: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Week planner + Homeroom Pulse */}
+          <div className="grid gap-4 xl:grid-cols-2 mb-10">
+            <WeekPlanner userId={user.id} gradeBand={activeBand} themeLabel={themeLabel} />
+            <HomeroomPulse userId={user.id} gradeBand={activeBand} themeLabel={themeLabel} />
+          </div>
+
           {/* Games */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold flex items-center gap-2"><Trophy className="h-6 w-6 text-amber-500" /> Classroom Games</h2>
-            <Badge variant="outline" className="text-xs">Tap a card to play live with the class</Badge>
+            <Badge variant="outline" className="text-xs">Open a game, then “Cast to board” for the class</Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
             {PRIMARY_GAMES.map((g) => (
