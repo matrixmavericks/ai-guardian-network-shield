@@ -193,7 +193,7 @@ const CinematicIntro: React.FC = () => {
                 <div className="ci-widget flex items-center justify-between">
                   <div>
                     <div className="text-[10px] font-mono text-white/40 uppercase">Class 9B · Physics</div>
-                    <div className="text-white font-semibold text-sm">Good morning, Vinod</div>
+                    <div className="text-white font-semibold text-sm">Today's session</div>
                   </div>
                   <Shield className="h-5 w-5 text-primary" />
                 </div>
