@@ -165,6 +165,28 @@ const CinematicIntro: React.FC = () => {
           }}
         />
 
+        {/* Cinematic light sweep */}
+        <div className="ci-sweep absolute inset-y-0 -left-1/3 w-1/3 pointer-events-none z-10"
+          style={{
+            background: "linear-gradient(105deg, transparent, rgba(255,255,255,0.12), transparent)",
+            filter: "blur(12px)",
+          }}
+        />
+
+        {/* Scanlines */}
+        <div className="absolute inset-0 pointer-events-none z-[5] opacity-[0.12]"
+          style={{ backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.4) 0px, rgba(255,255,255,0.4) 1px, transparent 1px, transparent 4px)" }}
+        />
+
+        {/* Chapter captions */}
+        <div className="absolute bottom-8 left-0 right-0 flex justify-center px-6 z-20 pointer-events-none">
+          <div className="relative h-8 w-full max-w-xl text-center">
+            <div className="ci-caption-1 absolute inset-0 text-sm md:text-base font-mono uppercase tracking-[0.2em] text-white/70">01 · Intercept the shortcut</div>
+            <div className="ci-caption-2 absolute inset-0 text-sm md:text-base font-mono uppercase tracking-[0.2em] text-white/70">02 · Rewrite into guidance</div>
+            <div className="ci-caption-3 absolute inset-0 text-sm md:text-base font-mono uppercase tracking-[0.2em] text-white/70">03 · Measure real learning</div>
+          </div>
+        </div>
+
         {/* Left text */}
         <div className="ci-left absolute left-6 md:left-12 top-1/2 -translate-y-1/2 max-w-xs z-20">
           <div className="text-xs font-mono uppercase tracking-widest text-primary/80 mb-3">Live Governance</div>
