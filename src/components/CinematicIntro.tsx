@@ -45,7 +45,7 @@ const CinematicIntro: React.FC = () => {
       gsap.set(".ci-hero-line", { autoAlpha: 0, y: 60, scale: 0.9, filter: "blur(20px)" });
       gsap.set(".ci-hero-accent", { autoAlpha: 0, clipPath: "inset(0 100% 0 0)" });
       gsap.set(".ci-card", { y: window.innerHeight + 200, autoAlpha: 1 });
-      gsap.set([".ci-left", ".ci-right", ".ci-mockup-wrap", ".ci-badge", ".ci-widget"], { autoAlpha: 0 });
+      gsap.set([".ci-left", ".ci-right", ".ci-mockup-wrap", ".ci-badge", ".ci-widget", ".ci-caption-1", ".ci-caption-2", ".ci-caption-3"], { autoAlpha: 0 });
       gsap.set(".ci-cta", { autoAlpha: 0, scale: 0.8, filter: "blur(30px)" });
 
       const intro = gsap.timeline({ delay: 0.2 });
