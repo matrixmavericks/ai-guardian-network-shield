@@ -255,7 +255,7 @@ const PrimaryPlayground: React.FC = () => {
           </Card>
 
           {/* Week planner + Homeroom Pulse */}
-          <div className="grid gap-4 xl:grid-cols-2 mb-10">
+          <div className="grid gap-4 2xl:grid-cols-2 mb-10">
             <WeekPlanner userId={user.id} gradeBand={activeBand} themeLabel={themeLabel} />
             <HomeroomPulse userId={user.id} gradeBand={activeBand} themeLabel={themeLabel} />
           </div>

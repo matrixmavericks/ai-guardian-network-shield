@@ -102,15 +102,28 @@ export function normalizeGameData(gameId: string, input: any): any {
     case "word-wizard": {
       const d = unwrap(input, ["letters", "targetWords"]);
       const letters = strArray(d?.letters).map((l) => l.toUpperCase().slice(0, 2));
-      const targetWords = strArray(d?.targetWords ?? d?.words);
+      const buildable = (word: string) => {
+        const pool: Record<string, number> = {};
+        letters.forEach((l) => (pool[l] = (pool[l] || 0) + 1));
+        for (const ch of word.toUpperCase()) {
+          if (!pool[ch]) return false;
+          pool[ch]--;
+        }
+        return true;
+      };
+      const all = strArray(d?.targetWords ?? d?.words).map((w) => w.toUpperCase());
+      // Drop words the letter pool can't actually spell — kids notice.
+      const valid = all.filter(buildable);
+      const targetWords = valid.length >= 3 ? valid : all;
       if (letters.length < 4 || targetWords.length < 3) fail("not enough letters or words");
       return {
         letters,
         targetWords,
-        bonusWord: str(d?.bonusWord) || undefined,
+        bonusWord: str(d?.bonusWord).toUpperCase() || undefined,
         theme: str(d?.theme) || undefined,
       };
     }
+
     case "number-ninja": {
       const d = unwrap(input, ["missions"]);
       const missions = (Array.isArray(d?.missions) ? d.missions : [])
