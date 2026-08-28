@@ -386,17 +386,22 @@ const PrimaryPlayground: React.FC = () => {
               {toolReply && !toolLoading && (
                 <div className="flex flex-col flex-1 min-h-0 mt-2">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Result</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Result <span className="text-xs">· {toolReply.length.toLocaleString()} characters</span>
+                    </span>
                     <Button size="sm" variant="ghost" onClick={copyReply}>
                       {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
                       {copied ? "Copied" : "Copy"}
                     </Button>
                   </div>
-                  <ScrollArea className="flex-1 max-h-[50vh] border rounded-lg p-4 bg-muted/30">
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">{toolReply}</div>
-                  </ScrollArea>
+                  {/* Plain scroll container: ScrollArea's viewport collapsed inside the
+                      flex dialog and visually truncated long tool output. */}
+                  <div className="flex-1 min-h-[8rem] max-h-[55vh] overflow-y-auto overscroll-contain border rounded-lg p-4 bg-muted/30">
+                    <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">{toolReply}</div>
+                  </div>
                 </div>
               )}
+
             </>
           )}
         </DialogContent>
