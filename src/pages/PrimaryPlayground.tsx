@@ -45,6 +45,8 @@ const PrimaryPlayground: React.FC = () => {
   const [revealedClues, setRevealedClues] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [feedback, setFeedback] = useState<string>("");
+  const [answerLocked, setAnswerLocked] = useState(false);
+
 
   const [stats, setStats] = useState({ classes: 0, students: 0, prompts7d: 0 });
   const [boardMode, setBoardMode] = useState(false);
