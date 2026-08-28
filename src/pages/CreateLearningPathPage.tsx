@@ -489,7 +489,27 @@ const CreateLearningPathPage = () => {
                     </Select>
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label>Visibility</Label>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {[
+                      { value: true, title: 'Public', desc: 'Added to the shared library — any teacher or student can find it.' },
+                      { value: false, title: 'Private', desc: 'Only you can see it. You can assign it to students later.' },
+                    ].map((opt) => (
+                      <button
+                        key={String(opt.value)}
+                        type="button"
+                        onClick={() => setIsPublic(opt.value)}
+                        className={`rounded-lg border p-3 text-left transition-colors ${isPublic === opt.value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}
+                      >
+                        <div className="text-sm font-medium">{opt.title}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{opt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
                   <div className="space-y-2">
                     <Label htmlFor="estimatedHours">Estimated Study Hours</Label>
                     <Input id="estimatedHours" type="number" min="1" max="200" value={estimatedHours} onChange={(e) => setEstimatedHours(parseInt(e.target.value, 10) || 10)} />
