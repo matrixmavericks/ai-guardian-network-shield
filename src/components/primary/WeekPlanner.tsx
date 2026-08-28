@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CalendarDays, Loader2, Sparkles, Save, Trash2, Copy, Check, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { runPrimaryJson, normalizeWeekPlan } from "@/lib/primaryAi";
+
 
 type Day = {
   day: string;
