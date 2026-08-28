@@ -396,8 +396,9 @@ const PrimaryPlayground: React.FC = () => {
                   {/* Plain scroll container: ScrollArea's viewport collapsed inside the
                       flex dialog and visually truncated long tool output. */}
                   <div className="flex-1 min-h-[8rem] max-h-[55vh] overflow-y-auto overscroll-contain border rounded-lg p-4 bg-muted/30">
-                    <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">{toolReply}</div>
+                    <ToolOutput text={toolReply} />
                   </div>
+
                 </div>
               )}
 
