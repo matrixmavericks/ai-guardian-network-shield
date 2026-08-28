@@ -224,10 +224,20 @@ const CreateCoursePage = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                  <Label>Grade level</Label>
+                  <Select value={form.grade_level} onValueChange={v => setForm(p => ({ ...p, grade_level: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select grade level" /></SelectTrigger>
+                    <SelectContent>
+                      {GRADE_LEVELS.map(g => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label>Estimated hours</Label>
                   <Input type="number" value={form.estimated_hours} onChange={e => setForm(p => ({ ...p, estimated_hours: parseInt(e.target.value) || 0 }))} />
                 </div>
               </div>
+
               <div>
                 <Label>Syllabus content (optional)</Label>
                 <Textarea rows={4} value={form.syllabus_content} onChange={e => setForm(p => ({ ...p, syllabus_content: e.target.value }))} placeholder="Paste syllabus text, learning objectives, command terms… AI tools will use this for cheatsheets, FRQs, and quizzes." />
