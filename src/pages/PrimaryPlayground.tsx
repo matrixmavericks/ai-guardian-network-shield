@@ -89,18 +89,12 @@ const PrimaryPlayground: React.FC = () => {
     setToolLoading(true);
     setToolReply("");
     try {
-      const prompt = tool.buildPrompt(toolInput.trim(), activeBand, themeLabel);
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          prompt: `You are a warm, expert IB PYP primary educator at Mahindra International School Pune. Be playful but precise. Use age-appropriate language. Plain-text math only — never LaTeX. Task: ${prompt}`,
-          subject: "IB PYP Primary",
-          gradeLevel: activeBand,
-          processTeaching: false,
-        },
+      const reply = await runPrimaryText({
+        prompt: tool.buildPrompt(toolInput.trim(), activeBand, themeLabel),
+        gradeBand: activeBand,
+        theme: themeLabel,
       });
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || "AI unavailable");
-      setToolReply(data.reply || "No response.");
+      setToolReply(reply);
     } catch (err: any) {
       toast({ title: "Oops!", description: err.message || "Try again.", variant: "destructive" });
     } finally {
@@ -129,22 +123,15 @@ const PrimaryPlayground: React.FC = () => {
     setRevealedClues(1);
     setUserAnswer("");
     setFeedback("");
+    setAnswerLocked(false);
     setGameLoading(true);
     try {
-      const prompt = game.generatePrompt(activeBand, themeLabel);
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          prompt: `Return ONLY valid JSON, no prose, no markdown fences. ${prompt}`,
-          subject: "IB PYP Primary Game",
-          gradeLevel: activeBand,
-          processTeaching: false,
-        },
+      const parsed = await runPrimaryJson({
+        prompt: game.generatePrompt(activeBand, themeLabel),
+        gradeBand: activeBand,
+        theme: themeLabel,
+        validate: (value) => normalizeGameData(game.id, value),
       });
-      if (error) throw error;
-      const raw = data?.reply || "{}";
-      const cleaned = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-      const match = cleaned.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(match ? match[0] : cleaned);
       setGameData(parsed);
     } catch (err: any) {
       toast({ title: "Couldn't load the game", description: err.message, variant: "destructive" });
@@ -153,6 +140,7 @@ const PrimaryPlayground: React.FC = () => {
       setGameLoading(false);
     }
   };
+
 
   return (
     <div className={`min-h-screen flex w-full bg-gradient-to-br ${config.bgGradient}`}>
