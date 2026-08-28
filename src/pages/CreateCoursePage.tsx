@@ -35,6 +35,15 @@ const SUBJECTS = [
   'Business', 'Art', 'Music', 'Other',
 ];
 
+const GRADE_LEVELS = [
+  { value: 'elementary', label: 'Elementary (K-5)' },
+  { value: 'middle-school', label: 'Middle School (6-8)' },
+  { value: 'high-school', label: 'High School (9-12)' },
+  { value: 'undergraduate', label: 'Undergraduate' },
+  { value: 'graduate', label: 'Graduate / Professional' },
+  { value: 'self-learner', label: 'Any Age' },
+];
+
 const LEVELS = ['standard', 'higher', 'foundation', 'advanced'];
 
 const CreateCoursePage = () => {
@@ -47,6 +56,7 @@ const CreateCoursePage = () => {
     subject: 'Mathematics',
     curriculum_type: 'custom',
     level: 'standard',
+    grade_level: 'high-school',
     description: '',
     icon_emoji: '📚',
     estimated_hours: 60,
@@ -106,6 +116,7 @@ const CreateCoursePage = () => {
         subject: form.subject,
         curriculum_type: form.curriculum_type,
         level: form.level,
+        grade_level: form.grade_level || null,
         description: form.description.trim(),
         icon_emoji: form.icon_emoji || '📚',
         estimated_hours: Number(form.estimated_hours) || 60,
