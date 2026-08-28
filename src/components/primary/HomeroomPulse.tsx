@@ -79,27 +79,20 @@ const HomeroomPulse: React.FC<Props> = ({ userId, gradeBand, themeLabel }) => {
     }
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          prompt: `Return ONLY valid JSON, no prose, no markdown fences. You are an IB PYP primary teacher turning a scrappy classroom observation into professional, evidence-based documentation for a ${gradeBand} child${themeLabel ? ` during the unit "${themeLabel}"` : ""}. Observation: "${note.trim()}". Return: { "evidence": "2-3 sentence objective, strengths-based observation in professional report language, no jargon, no invented facts", "learnerProfile": ["1-3 IB Learner Profile attributes evidenced"], "nextStep": "one concrete, small next teaching step for this child" }`,
-          subject: "IB PYP Primary",
-          gradeLevel: gradeBand,
-          processTeaching: false,
-        },
+      const parsed = await runPrimaryJson({
+        prompt: `You are turning a scrappy classroom observation into professional, evidence-based IB PYP documentation for a ${gradeBand} child${themeLabel ? ` during the unit "${themeLabel}"` : ""}. Observation: "${note.trim()}". Return JSON: { "evidence": "2-3 sentence objective, strengths-based observation in professional report language, no jargon, no invented facts", "learnerProfile": ["1-3 IB Learner Profile attributes evidenced"], "nextStep": "one concrete, small next teaching step for this child" }`,
+        gradeBand,
+        theme: themeLabel,
+        validate: normalizeObservation,
       });
-      if (error) throw error;
-      const raw = data?.reply || "{}";
-      const cleaned = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-      const match = cleaned.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(match ? match[0] : cleaned);
 
       const { error: insErr } = await supabase.from("primary_observations").insert({
         teacher_id: userId,
         student_name: student.trim(),
         grade_band: gradeBand,
         raw_note: note.trim(),
-        refined_evidence: parsed.evidence || null,
-        learner_profile: Array.isArray(parsed.learnerProfile) ? parsed.learnerProfile : [],
+        refined_evidence: parsed.evidence,
+        learner_profile: parsed.learnerProfile,
         next_step: parsed.nextStep || null,
       });
       if (insErr) throw insErr;
@@ -113,6 +106,7 @@ const HomeroomPulse: React.FC<Props> = ({ userId, gradeBand, themeLabel }) => {
       setSaving(false);
     }
   };
+
 
   const remove = async (id: string) => {
     await supabase.from("primary_observations").delete().eq("id", id);
