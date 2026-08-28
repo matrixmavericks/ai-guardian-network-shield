@@ -20,6 +20,8 @@ import {
   type PrimaryTool, type PrimaryGame, type PrimaryConfig
 } from "@/lib/mispPrimaryConfig";
 import { useToast } from "@/hooks/use-toast";
+import { runPrimaryText, runPrimaryJson, normalizeGameData } from "@/lib/primaryAi";
+
 
 const PrimaryPlayground: React.FC = () => {
   const { user, isLoading } = useAuth();
