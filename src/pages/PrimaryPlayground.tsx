@@ -145,6 +145,30 @@ const PrimaryPlayground: React.FC = () => {
     }
   };
 
+  const checkAnswer = () => {
+    const mission = gameData?.missions?.[gameStep];
+    if (!mission || answerLocked) return;
+    const tidy = (v: string) =>
+      String(v).toLowerCase().replace(/[,\s]/g, "").replace(/[.!?]+$/, "");
+    const given = tidy(userAnswer);
+    const expected = tidy(mission.answer);
+    const asNum = (v: string) => {
+      const m = v.match(/-?\d+(\.\d+)?/);
+      return m ? Number(m[0]) : NaN;
+    };
+    const numMatch =
+      !Number.isNaN(asNum(given)) && !Number.isNaN(asNum(expected)) && asNum(given) === asNum(expected);
+    const correct = given === expected || expected.includes(given) && given.length > 2 || numMatch;
+    setAnswerLocked(true);
+    if (correct) {
+      setGameScore((s) => s + 1);
+      setFeedback("✅ Correct! Nice ninja moves.");
+    } else {
+      setFeedback(`❌ Almost — the answer is ${mission.answer}. ${mission.hint}`);
+    }
+
+  };
+
 
   return (
     <div className={`min-h-screen flex w-full bg-gradient-to-br ${config.bgGradient}`}>
