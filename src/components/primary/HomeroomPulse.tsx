@@ -9,6 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Activity, Loader2, Sparkles, Trash2, FileText, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { runPrimaryJson, runPrimaryText, normalizeObservation } from "@/lib/primaryAi";
+
 
 type Observation = {
   id: string;
