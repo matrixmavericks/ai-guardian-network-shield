@@ -113,6 +113,7 @@ const CreateLearningPathPage = () => {
   const [difficulty, setDifficulty] = useState<LearningDifficulty>('beginner');
   const [gradeLevel, setGradeLevel] = useState('');
   const [curriculumType, setCurriculumType] = useState('general');
+  const [isPublic, setIsPublic] = useState(true);
   const [estimatedHours, setEstimatedHours] = useState(10);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -342,7 +343,8 @@ const CreateLearningPathPage = () => {
         modules,
         createdBy: user.id,
         featured: false,
-        isPublic: user.role === 'teacher' || user.role === 'admin',
+        isPublic: isPublic,
+        gradeLevel: gradeLevel || null,
       });
 
       toast({ title: 'Learning path created!', description: 'Start learning now.' });

@@ -117,6 +117,7 @@ const DashboardSidebar = () => {
         {
           label: 'Teaching',
           items: [
+            { title: 'Content Library', href: '/library', icon: <Book className="h-4 w-4" /> },
             { title: 'Learning Paths', href: '/learning-paths', icon: <Book className="h-4 w-4" /> },
             { title: 'Teaching Plans', href: '/teacher-plan-generator', icon: <Layers className="h-4 w-4" /> },
             { title: 'Student Portfolios', href: '/student-portfolios', icon: <Briefcase className="h-4 w-4" /> },
