@@ -26,6 +26,7 @@ export interface LearningPath {
   createdAt: string;
   featured?: boolean;
   isPublic?: boolean;
+  gradeLevel?: string | null;
 }
 
 export interface PathProgress {
@@ -69,6 +70,7 @@ const mapLearningPath = (row: any): LearningPath => ({
   createdAt: row.created_at,
   featured: row.featured,
   isPublic: row.is_public,
+  gradeLevel: row.grade_level ?? null,
 });
 
 const mapProgress = (row: any): PathProgress => ({
@@ -117,6 +119,7 @@ export const saveLearningPath = async (path: Omit<LearningPath, "id" | "createdA
     modules: path.modules,
     created_by: path.createdBy,
     is_public: path.isPublic ?? true,
+    grade_level: path.gradeLevel ?? null,
     featured: path.featured ?? false,
   };
 
