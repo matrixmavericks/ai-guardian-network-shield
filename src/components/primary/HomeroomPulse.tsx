@@ -123,16 +123,13 @@ const HomeroomPulse: React.FC<Props> = ({ userId, gradeBand, themeLabel }) => {
       const digest = notes
         .map((n) => `- ${new Date(n.created_at).toLocaleDateString()}: ${n.refined_evidence || n.raw_note} [${(n.learner_profile || []).join(", ")}]`)
         .join("\n");
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          prompt: `You are writing an IB PYP report-card narrative for ${name}, a ${gradeBand} student, using ONLY the observation evidence below. Do not invent achievements. Write: (1) a warm 120-160 word narrative in professional report language weaving in Learner Profile attributes, (2) a short "Growing edge" line with one next step, (3) a one-sentence, jargon-free version a parent can read at home. Plain text only, no markdown headers.\n\nEvidence:\n${digest}`,
-          subject: "IB PYP Primary",
-          gradeLevel: gradeBand,
-          processTeaching: false,
-        },
+      const reply = await runPrimaryText({
+        prompt: `You are writing an IB PYP report-card narrative for ${name}, a ${gradeBand} student, using ONLY the observation evidence below. Do not invent achievements. Write: (1) a warm 120-160 word narrative in professional report language weaving in Learner Profile attributes, (2) a short "Growing edge" line with one next step, (3) a one-sentence, jargon-free version a parent can read at home. Plain text only, no markdown headers.\n\nEvidence:\n${digest}`,
+        gradeBand,
+        theme: themeLabel,
       });
-      if (error) throw error;
-      setReportText(data?.reply || "No response.");
+      setReportText(reply);
+
     } catch (err: any) {
       toast({ title: "Report failed", description: err.message, variant: "destructive" });
     } finally {
