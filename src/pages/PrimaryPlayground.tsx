@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sparkles, Loader2, Send, Copy, Check, Users, BookOpen, Zap, ArrowRight, Wand2, Trophy, Star, Heart, Smile, Play, MonitorPlay } from "lucide-react";
 import LiveClassMode, { buildBoardSlides } from "@/components/primary/LiveClassMode";
@@ -408,7 +407,9 @@ const PrimaryPlayground: React.FC = () => {
       </Dialog>
 
       {/* Game dialog */}
-      <Dialog open={!!activeGame} onOpenChange={(open) => !open && setActiveGame(null)}>
+      {/* Hidden (not unmounted) while casting: the modal dialog swallowed every
+          click on the board and dismissed itself, taking Live Class Mode with it. */}
+      <Dialog open={!!activeGame && !boardMode} onOpenChange={(open) => { if (!open && !boardMode) setActiveGame(null); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {activeGame && (
             <>
