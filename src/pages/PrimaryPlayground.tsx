@@ -436,26 +436,29 @@ const PrimaryPlayground: React.FC = () => {
                               <p className="text-lg font-semibold mb-4">{gameData.missions[gameStep].question}</p>
                               <div className="flex gap-2">
                                 <input
-                                  className="flex-1 px-3 py-2 rounded-lg border-2 focus:border-primary outline-none"
+                                  className="flex-1 px-3 py-2 rounded-lg border-2 focus:border-primary outline-none disabled:opacity-60"
                                   value={userAnswer}
+                                  disabled={answerLocked}
                                   onChange={(e) => setUserAnswer(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !answerLocked && userAnswer.trim()) checkAnswer();
+                                  }}
                                   placeholder="Your answer…"
                                 />
-                                <Button onClick={() => {
-                                  const correct = userAnswer.trim().toLowerCase() === String(gameData.missions[gameStep].answer).trim().toLowerCase();
-                                  if (correct) { setGameScore((s) => s + 1); setFeedback("✅ Correct!"); }
-                                  else setFeedback(`❌ Almost — answer: ${gameData.missions[gameStep].answer}`);
-                                }}>Check</Button>
+                                <Button onClick={checkAnswer} disabled={answerLocked || !userAnswer.trim()}>Check</Button>
                               </div>
-                              {feedback && <p className="mt-3 text-sm">{feedback}</p>}
-                              <p className="text-xs text-muted-foreground mt-3">💡 Hint: {gameData.missions[gameStep].hint}</p>
+                              {feedback && <p className="mt-3 text-sm font-medium">{feedback}</p>}
+                              {!answerLocked && (
+                                <p className="text-xs text-muted-foreground mt-3">💡 Hint: {gameData.missions[gameStep].hint}</p>
+                              )}
                               <Button
                                 className="mt-4 w-full"
                                 variant="outline"
-                                onClick={() => { setGameStep((s) => s + 1); setUserAnswer(""); setFeedback(""); }}
+                                onClick={() => { setGameStep((s) => s + 1); setUserAnswer(""); setFeedback(""); setAnswerLocked(false); }}
                               >
-                                Next mission <ArrowRight className="h-4 w-4 ml-1" />
+                                {gameStep === gameData.missions.length - 1 ? "Finish" : "Next mission"} <ArrowRight className="h-4 w-4 ml-1" />
                               </Button>
+
                             </CardContent>
                           </Card>
                         </>
