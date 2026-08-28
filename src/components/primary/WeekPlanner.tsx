@@ -75,21 +75,13 @@ const WeekPlanner: React.FC<Props> = ({ userId, gradeBand, themeLabel }) => {
     setLoading(true);
     setPlan(null);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          prompt: `Return ONLY valid JSON, no prose, no markdown fences. Build a complete 5-day IB PYP week plan for ${gradeBand}${themeLabel ? ` under the transdisciplinary theme "${themeLabel}"` : ""} on "${topic.trim()}". Plain-text only, never LaTeX. Return: { "title": "short week title", "centralIdea": "one crisp central idea statement", "days": [5 objects, one per day: { "day": "Monday".."Friday", "provocation": "a hook that opens the day", "focus": "the learning focus in one line", "game": "a quick classroom game or activity", "gentle": "scaffolded version of the main task", "onLevel": "the main task", "stretch": "extension with student agency", "materials": "everyday materials needed" }], "assessment": "one formative check across the week", "parentNote": "a warm 3-sentence jargon-free note to families about the week" }`,
-          subject: "IB PYP Primary",
-          gradeLevel: gradeBand,
-          processTeaching: false,
-        },
+      const parsed = await runPrimaryJson({
+        prompt: `Build a complete 5-day IB PYP week plan for ${gradeBand}${themeLabel ? ` under the transdisciplinary theme "${themeLabel}"` : ""} on "${topic.trim()}". Return JSON: { "title": "short week title", "centralIdea": "one crisp central idea statement", "days": [exactly 5 objects, Monday to Friday: { "day": "Monday", "provocation": "a hook that opens the day", "focus": "the learning focus in one line", "game": "a quick classroom game or activity", "gentle": "scaffolded version of the main task", "onLevel": "the main task", "stretch": "extension with student agency", "materials": "everyday materials needed" }], "assessment": "one formative check across the week", "parentNote": "a warm 3-sentence jargon-free note to families about the week" }`,
+        gradeBand,
+        theme: themeLabel,
+        validate: normalizeWeekPlan,
       });
-      if (error) throw error;
-      const raw = data?.reply || "{}";
-      const cleaned = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-      const match = cleaned.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(match ? match[0] : cleaned);
-      if (!Array.isArray(parsed.days)) throw new Error("Plan came back incomplete — try again.");
-      setPlan(parsed);
+      setPlan(parsed as WeekPlan);
       setOpen(true);
     } catch (err: any) {
       toast({ title: "Couldn't build the week", description: err.message, variant: "destructive" });
@@ -97,6 +89,7 @@ const WeekPlanner: React.FC<Props> = ({ userId, gradeBand, themeLabel }) => {
       setLoading(false);
     }
   };
+
 
   const savePlan = async () => {
     if (!plan) return;
