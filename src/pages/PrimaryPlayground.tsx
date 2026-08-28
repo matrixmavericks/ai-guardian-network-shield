@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sparkles, Loader2, Send, Copy, Check, Users, BookOpen, Zap, ArrowRight, Wand2, Trophy, Star, Heart, Smile, Play, MonitorPlay } from "lucide-react";
 import LiveClassMode, { buildBoardSlides } from "@/components/primary/LiveClassMode";
@@ -386,24 +385,32 @@ const PrimaryPlayground: React.FC = () => {
               {toolReply && !toolLoading && (
                 <div className="flex flex-col flex-1 min-h-0 mt-2">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Result</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Result <span className="text-xs">· {toolReply.length.toLocaleString()} characters</span>
+                    </span>
                     <Button size="sm" variant="ghost" onClick={copyReply}>
                       {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
                       {copied ? "Copied" : "Copy"}
                     </Button>
                   </div>
-                  <ScrollArea className="flex-1 max-h-[50vh] border rounded-lg p-4 bg-muted/30">
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">{toolReply}</div>
-                  </ScrollArea>
+                  {/* Plain scroll container: ScrollArea's viewport collapsed inside the
+                      flex dialog and visually truncated long tool output. */}
+                  <div className="flex-1 min-h-[8rem] max-h-[55vh] overflow-y-auto overscroll-contain border rounded-lg p-4 bg-muted/30">
+                    <ToolOutput text={toolReply} />
+                  </div>
+
                 </div>
               )}
+
             </>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Game dialog */}
-      <Dialog open={!!activeGame} onOpenChange={(open) => !open && setActiveGame(null)}>
+      {/* Hidden (not unmounted) while casting: the modal dialog swallowed every
+          click on the board and dismissed itself, taking Live Class Mode with it. */}
+      <Dialog open={!!activeGame && !boardMode} onOpenChange={(open) => { if (!open && !boardMode) setActiveGame(null); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {activeGame && (
             <>
@@ -635,7 +642,57 @@ const PrimaryPlayground: React.FC = () => {
   );
 };
 
+/** Lightweight markdown-ish renderer so tool output reads like a document,
+ *  not raw `**` and `###` noise. */
+const ToolOutput: React.FC<{ text: string }> = ({ text }) => {
+  const inline = (s: string) =>
+    s.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+      part.startsWith("**") && part.endsWith("**") ? (
+        <strong key={i} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>
+      ) : (
+        <React.Fragment key={i}>{part}</React.Fragment>
+      ),
+    );
+
+  return (
+    <div className="text-sm leading-relaxed space-y-2">
+      {text.split("\n").map((raw, i) => {
+        const line = raw.trimEnd();
+        if (!line.trim()) return <div key={i} className="h-1" />;
+        if (/^-{3,}$/.test(line.trim())) return <hr key={i} className="border-border/60 my-2" />;
+        const h = line.match(/^(#{1,6})\s+(.*)$/);
+        if (h) {
+          const size = h[1].length <= 2 ? "text-base" : "text-sm";
+          return (
+            <p key={i} className={`${size} font-bold text-foreground mt-3`}>{inline(h[2])}</p>
+          );
+        }
+        const bullet = line.match(/^\s*[-*•]\s+(.*)$/);
+        if (bullet) {
+          return (
+            <div key={i} className="flex gap-2 pl-1">
+              <span className="text-primary">•</span>
+              <span className="break-words">{inline(bullet[1])}</span>
+            </div>
+          );
+        }
+        const num = line.match(/^\s*(\d+)\.\s+(.*)$/);
+        if (num) {
+          return (
+            <div key={i} className="flex gap-2 pl-1">
+              <span className="text-primary font-semibold tabular-nums">{num[1]}.</span>
+              <span className="break-words">{inline(num[2])}</span>
+            </div>
+          );
+        }
+        return <p key={i} className="break-words whitespace-pre-wrap">{inline(line)}</p>;
+      })}
+    </div>
+  );
+};
+
 const FunStat: React.FC<{ icon: any; label: string; value: number; emoji: string }> = ({ icon: Icon, label, value, emoji }) => (
+
   <Card className="bg-white/70 dark:bg-card/80 backdrop-blur border-2">
     <CardContent className="p-5 flex items-center justify-between">
       <div>
