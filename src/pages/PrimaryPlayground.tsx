@@ -20,6 +20,8 @@ import {
   type PrimaryTool, type PrimaryGame, type PrimaryConfig
 } from "@/lib/mispPrimaryConfig";
 import { useToast } from "@/hooks/use-toast";
+import { runPrimaryText, runPrimaryJson, normalizeGameData } from "@/lib/primaryAi";
+
 
 const PrimaryPlayground: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -43,6 +45,8 @@ const PrimaryPlayground: React.FC = () => {
   const [revealedClues, setRevealedClues] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [feedback, setFeedback] = useState<string>("");
+  const [answerLocked, setAnswerLocked] = useState(false);
+
 
   const [stats, setStats] = useState({ classes: 0, students: 0, prompts7d: 0 });
   const [boardMode, setBoardMode] = useState(false);
@@ -89,18 +93,12 @@ const PrimaryPlayground: React.FC = () => {
     setToolLoading(true);
     setToolReply("");
     try {
-      const prompt = tool.buildPrompt(toolInput.trim(), activeBand, themeLabel);
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          prompt: `You are a warm, expert IB PYP primary educator at Mahindra International School Pune. Be playful but precise. Use age-appropriate language. Plain-text math only — never LaTeX. Task: ${prompt}`,
-          subject: "IB PYP Primary",
-          gradeLevel: activeBand,
-          processTeaching: false,
-        },
+      const reply = await runPrimaryText({
+        prompt: tool.buildPrompt(toolInput.trim(), activeBand, themeLabel),
+        gradeBand: activeBand,
+        theme: themeLabel,
       });
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || "AI unavailable");
-      setToolReply(data.reply || "No response.");
+      setToolReply(reply);
     } catch (err: any) {
       toast({ title: "Oops!", description: err.message || "Try again.", variant: "destructive" });
     } finally {
@@ -129,22 +127,15 @@ const PrimaryPlayground: React.FC = () => {
     setRevealedClues(1);
     setUserAnswer("");
     setFeedback("");
+    setAnswerLocked(false);
     setGameLoading(true);
     try {
-      const prompt = game.generatePrompt(activeBand, themeLabel);
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          prompt: `Return ONLY valid JSON, no prose, no markdown fences. ${prompt}`,
-          subject: "IB PYP Primary Game",
-          gradeLevel: activeBand,
-          processTeaching: false,
-        },
+      const parsed = await runPrimaryJson({
+        prompt: game.generatePrompt(activeBand, themeLabel),
+        gradeBand: activeBand,
+        theme: themeLabel,
+        validate: (value) => normalizeGameData(game.id, value),
       });
-      if (error) throw error;
-      const raw = data?.reply || "{}";
-      const cleaned = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-      const match = cleaned.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(match ? match[0] : cleaned);
       setGameData(parsed);
     } catch (err: any) {
       toast({ title: "Couldn't load the game", description: err.message, variant: "destructive" });
@@ -153,6 +144,31 @@ const PrimaryPlayground: React.FC = () => {
       setGameLoading(false);
     }
   };
+
+  const checkAnswer = () => {
+    const mission = gameData?.missions?.[gameStep];
+    if (!mission || answerLocked) return;
+    const tidy = (v: string) =>
+      String(v).toLowerCase().replace(/[,\s]/g, "").replace(/[.!?]+$/, "");
+    const given = tidy(userAnswer);
+    const expected = tidy(mission.answer);
+    const asNum = (v: string) => {
+      const m = v.match(/-?\d+(\.\d+)?/);
+      return m ? Number(m[0]) : NaN;
+    };
+    const numMatch =
+      !Number.isNaN(asNum(given)) && !Number.isNaN(asNum(expected)) && asNum(given) === asNum(expected);
+    const correct = given === expected || expected.includes(given) && given.length > 2 || numMatch;
+    setAnswerLocked(true);
+    if (correct) {
+      setGameScore((s) => s + 1);
+      setFeedback("✅ Correct! Nice ninja moves.");
+    } else {
+      setFeedback(`❌ Almost — the answer is ${mission.answer}. ${mission.hint}`);
+    }
+
+  };
+
 
   return (
     <div className={`min-h-screen flex w-full bg-gradient-to-br ${config.bgGradient}`}>
@@ -444,26 +460,29 @@ const PrimaryPlayground: React.FC = () => {
                               <p className="text-lg font-semibold mb-4">{gameData.missions[gameStep].question}</p>
                               <div className="flex gap-2">
                                 <input
-                                  className="flex-1 px-3 py-2 rounded-lg border-2 focus:border-primary outline-none"
+                                  className="flex-1 px-3 py-2 rounded-lg border-2 focus:border-primary outline-none disabled:opacity-60"
                                   value={userAnswer}
+                                  disabled={answerLocked}
                                   onChange={(e) => setUserAnswer(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !answerLocked && userAnswer.trim()) checkAnswer();
+                                  }}
                                   placeholder="Your answer…"
                                 />
-                                <Button onClick={() => {
-                                  const correct = userAnswer.trim().toLowerCase() === String(gameData.missions[gameStep].answer).trim().toLowerCase();
-                                  if (correct) { setGameScore((s) => s + 1); setFeedback("✅ Correct!"); }
-                                  else setFeedback(`❌ Almost — answer: ${gameData.missions[gameStep].answer}`);
-                                }}>Check</Button>
+                                <Button onClick={checkAnswer} disabled={answerLocked || !userAnswer.trim()}>Check</Button>
                               </div>
-                              {feedback && <p className="mt-3 text-sm">{feedback}</p>}
-                              <p className="text-xs text-muted-foreground mt-3">💡 Hint: {gameData.missions[gameStep].hint}</p>
+                              {feedback && <p className="mt-3 text-sm font-medium">{feedback}</p>}
+                              {!answerLocked && (
+                                <p className="text-xs text-muted-foreground mt-3">💡 Hint: {gameData.missions[gameStep].hint}</p>
+                              )}
                               <Button
                                 className="mt-4 w-full"
                                 variant="outline"
-                                onClick={() => { setGameStep((s) => s + 1); setUserAnswer(""); setFeedback(""); }}
+                                onClick={() => { setGameStep((s) => s + 1); setUserAnswer(""); setFeedback(""); setAnswerLocked(false); }}
                               >
-                                Next mission <ArrowRight className="h-4 w-4 ml-1" />
+                                {gameStep === gameData.missions.length - 1 ? "Finish" : "Next mission"} <ArrowRight className="h-4 w-4 ml-1" />
                               </Button>
+
                             </CardContent>
                           </Card>
                         </>

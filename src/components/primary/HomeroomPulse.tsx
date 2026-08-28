@@ -9,6 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Activity, Loader2, Sparkles, Trash2, FileText, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { runPrimaryJson, runPrimaryText, normalizeObservation } from "@/lib/primaryAi";
+
 
 type Observation = {
   id: string;
@@ -79,27 +81,20 @@ const HomeroomPulse: React.FC<Props> = ({ userId, gradeBand, themeLabel }) => {
     }
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          prompt: `Return ONLY valid JSON, no prose, no markdown fences. You are an IB PYP primary teacher turning a scrappy classroom observation into professional, evidence-based documentation for a ${gradeBand} child${themeLabel ? ` during the unit "${themeLabel}"` : ""}. Observation: "${note.trim()}". Return: { "evidence": "2-3 sentence objective, strengths-based observation in professional report language, no jargon, no invented facts", "learnerProfile": ["1-3 IB Learner Profile attributes evidenced"], "nextStep": "one concrete, small next teaching step for this child" }`,
-          subject: "IB PYP Primary",
-          gradeLevel: gradeBand,
-          processTeaching: false,
-        },
+      const parsed = await runPrimaryJson({
+        prompt: `You are turning a scrappy classroom observation into professional, evidence-based IB PYP documentation for a ${gradeBand} child${themeLabel ? ` during the unit "${themeLabel}"` : ""}. Observation: "${note.trim()}". Return JSON: { "evidence": "2-3 sentence objective, strengths-based observation in professional report language, no jargon, no invented facts", "learnerProfile": ["1-3 IB Learner Profile attributes evidenced"], "nextStep": "one concrete, small next teaching step for this child" }`,
+        gradeBand,
+        theme: themeLabel,
+        validate: normalizeObservation,
       });
-      if (error) throw error;
-      const raw = data?.reply || "{}";
-      const cleaned = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-      const match = cleaned.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(match ? match[0] : cleaned);
 
       const { error: insErr } = await supabase.from("primary_observations").insert({
         teacher_id: userId,
         student_name: student.trim(),
         grade_band: gradeBand,
         raw_note: note.trim(),
-        refined_evidence: parsed.evidence || null,
-        learner_profile: Array.isArray(parsed.learnerProfile) ? parsed.learnerProfile : [],
+        refined_evidence: parsed.evidence,
+        learner_profile: parsed.learnerProfile,
         next_step: parsed.nextStep || null,
       });
       if (insErr) throw insErr;
@@ -113,6 +108,7 @@ const HomeroomPulse: React.FC<Props> = ({ userId, gradeBand, themeLabel }) => {
       setSaving(false);
     }
   };
+
 
   const remove = async (id: string) => {
     await supabase.from("primary_observations").delete().eq("id", id);
@@ -129,16 +125,13 @@ const HomeroomPulse: React.FC<Props> = ({ userId, gradeBand, themeLabel }) => {
       const digest = notes
         .map((n) => `- ${new Date(n.created_at).toLocaleDateString()}: ${n.refined_evidence || n.raw_note} [${(n.learner_profile || []).join(", ")}]`)
         .join("\n");
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          prompt: `You are writing an IB PYP report-card narrative for ${name}, a ${gradeBand} student, using ONLY the observation evidence below. Do not invent achievements. Write: (1) a warm 120-160 word narrative in professional report language weaving in Learner Profile attributes, (2) a short "Growing edge" line with one next step, (3) a one-sentence, jargon-free version a parent can read at home. Plain text only, no markdown headers.\n\nEvidence:\n${digest}`,
-          subject: "IB PYP Primary",
-          gradeLevel: gradeBand,
-          processTeaching: false,
-        },
+      const reply = await runPrimaryText({
+        prompt: `You are writing an IB PYP report-card narrative for ${name}, a ${gradeBand} student, using ONLY the observation evidence below. Do not invent achievements. Write: (1) a warm 120-160 word narrative in professional report language weaving in Learner Profile attributes, (2) a short "Growing edge" line with one next step, (3) a one-sentence, jargon-free version a parent can read at home. Plain text only, no markdown headers.\n\nEvidence:\n${digest}`,
+        gradeBand,
+        theme: themeLabel,
       });
-      if (error) throw error;
-      setReportText(data?.reply || "No response.");
+      setReportText(reply);
+
     } catch (err: any) {
       toast({ title: "Report failed", description: err.message, variant: "destructive" });
     } finally {
