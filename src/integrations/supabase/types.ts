@@ -881,6 +881,7 @@ export type Database = {
           curriculum_type: string
           description: string
           estimated_hours: number | null
+          grade_level: string | null
           icon_emoji: string | null
           id: string
           is_official: boolean | null
@@ -899,6 +900,7 @@ export type Database = {
           curriculum_type?: string
           description?: string
           estimated_hours?: number | null
+          grade_level?: string | null
           icon_emoji?: string | null
           id?: string
           is_official?: boolean | null
@@ -917,6 +919,7 @@ export type Database = {
           curriculum_type?: string
           description?: string
           estimated_hours?: number | null
+          grade_level?: string | null
           icon_emoji?: string | null
           id?: string
           is_official?: boolean | null
@@ -1174,6 +1177,7 @@ export type Database = {
           enrolled_count: number
           estimated_hours: number
           featured: boolean
+          grade_level: string | null
           id: string
           is_public: boolean
           modules: Json
@@ -1191,6 +1195,7 @@ export type Database = {
           enrolled_count?: number
           estimated_hours?: number
           featured?: boolean
+          grade_level?: string | null
           id?: string
           is_public?: boolean
           modules?: Json
@@ -1208,6 +1213,7 @@ export type Database = {
           enrolled_count?: number
           estimated_hours?: number
           featured?: boolean
+          grade_level?: string | null
           id?: string
           is_public?: boolean
           modules?: Json
@@ -2899,6 +2905,13 @@ export type Database = {
           school_id: string
           subject: string
           teacher_id: string
+        }[]
+      }
+      get_content_authors: {
+        Args: { _ids: string[] }
+        Returns: {
+          full_name: string
+          user_id: string
         }[]
       }
       get_registration_payment_info: {
