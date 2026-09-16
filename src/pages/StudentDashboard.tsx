@@ -12,6 +12,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import DashboardSidebar from '@/components/DashboardSidebar';
+import ClaimGoogleAccountCard from '@/components/ClaimGoogleAccountCard';
 import { useSchoolCheck } from '@/hooks/useSchoolCheck';
 import {
   Book, Brain, Calendar, Clock, FileText, GraduationCap, TrendingUp,
@@ -319,6 +320,8 @@ const StudentDashboard = () => {
           <h1 className="text-3xl font-bold text-foreground">Student Dashboard</h1>
           <p className="text-muted-foreground">Welcome back, {displayName}!</p>
         </div>
+
+        <ClaimGoogleAccountCard />
 
           <Tabs defaultValue={activeTab}>
             <TabsList className="mb-8 flex-wrap">
