@@ -1,99 +1,72 @@
-# Refyn: Revolutionary Feature Ideation
+# Bulk student onboarding for the Mahindra pilot
 
-A curated set of high-impact features designed to push Refyn from "AI governance gateway" into the category-defining AI learning OS for schools. Grouped by role, each idea is tied to Refyn's existing DNA: Process Teaching Mode, governance, and the four-role ecosystem.
+Give the master admin a single screen to download a CSV template, fill it with student names, emails, grade levels and sections, upload it, and have every account, class and enrolment created in one pass — with passwords generated automatically and handed back as a credentials file.
 
----
+## 1. The CSV
 
-## STUDENT — Make learning sticky, ethical, and personal
+Template columns (downloadable, pre-filled with one example row):
 
-### 1. "Thinking Replay" — Cognitive Footprint
-Every AI chat session is auto-distilled into a visual *thought map*: questions asked, dead-ends hit, breakthroughs reached. Students see how they actually think — not just final answers. Shareable with teachers as proof of process.
+```text
+full_name,email,grade_level,section,classes
+Aarav Shah,aarav.shah@misp.org,MYP 4,A,"vinod-science;vineet-math;rohit-is"
+Diya Rao,diya.rao@misp.org,DP 1,A,"vinod-physics-hl;vineet-ai-sl;rohit-is"
+```
 
-### 2. Live "Stuck Detector"
-Passive signal model watches typing pauses, repeat questions, and rephrasing patterns. When a student is genuinely stuck (vs. lazy), Refyn proactively offers a Socratic hint — not the answer. Logs a "struggle moment" that earns XP.
+- `grade_level` must be one of: MYP 1, MYP 2, MYP 3, MYP 4, MYP 5, DP 1, DP 2
+- `section` is a free letter (A, B, C…) — used for MYP class grouping
+- `classes` is a semicolon-separated list of class keys (below)
 
-### 3. Voice-First Tutor Mode
-Hands-free walking/commute learning. Student talks; AI responds in voice, quizzes them on yesterday's class material, and writes a short journal entry to their portfolio automatically.
+Class keys offered to the admin:
 
-### 4. "Future Self" Career Simulator
-Students pick a target career, and Refyn generates a 3-year AI-personalized roadmap tying current coursework → skills → real-world projects → portfolio artifacts. Updates monthly based on grades and interests.
+| Key | Teacher | Subject | Applies to |
+| --- | --- | --- | --- |
+| `rohit-is` | Mr Rohit Phalke | Individuals and Societies | MYP 1-5, DP 1-2 |
+| `vinod-science` | Mr Vinod Chacko | Integrated Science | MYP 1-5 |
+| `vinod-physics-sl` | Mr Vinod Chacko | Physics SL | DP 1-2 |
+| `vinod-physics-hl` | Mr Vinod Chacko | Physics HL | DP 1-2 |
+| `vineet-math` | Mr Vineet Sharma | Mathematics | MYP 1-5 |
+| `vineet-ai-sl` | Mr Vineet Sharma | Math AI SL | DP 1-2 |
+| `vineet-ai-hl` | Mr Vineet Sharma | Math AI HL | DP 1-2 |
 
-### 5. Peer-Compare (Anonymous) Benchmarks
-"You're in the top 20% of students who mastered quadratics — but bottom 30% on word problems." Drives healthy competition without leaderboards.
+Class naming rules on creation:
+- MYP: one class per grade **and** section, e.g. "Integrated Science — MYP 4A"
+- DP: one class per grade and level, e.g. "Physics HL — DP 1"
 
-### 6. Offline "Pocket Refyn"
-PWA cache of current course + last 20 chats. Lets students study on subway/airplane; syncs back when online.
+Classes are created only if they don't already exist, so repeat uploads add students to the same class rather than duplicating it.
 
----
+## 2. Admin screen
 
-## TEACHER — Reclaim hours, multiply impact
+New page `/pilot/mahindra/students`, reachable from the Pilot Console, master-admin only:
 
-### 1. Auto-IEP / Differentiation Engine
-One click: Refyn ingests class roster + recent performance and generates *per-student* lesson variants (reading level, examples, scaffolding). Saves the 10+ hours teachers spend differentiating.
+1. Download CSV template button
+2. Reference table of grade levels and class keys
+3. File picker with a parsed preview: every row validated before anything is created (bad grade level, unknown class key, malformed or duplicate email are flagged inline)
+4. "Create accounts" button, disabled while any row has an error
+5. Result table: each student, their generated password, and status — plus a "Download credentials CSV" button (shown once; passwords are not stored anywhere readable afterwards)
 
-### 2. "Lesson Autopilot" — Live Class Companion
-During class, teacher streams audio. Refyn transcribes, detects confusion moments from student device signals, and whispers suggestions in the teacher's earpiece/screen: *"3 students seem lost on step 2 — show example B."*
+## 3. What gets created per student
 
-### 3. Parent Auto-Brief
-Weekly AI-generated personalized parent email per student in the parent's preferred language, summarizing wins, struggles, next steps. Teacher reviews & sends in 30 seconds instead of writing 25 emails.
+- Auth account with the provided email, email pre-confirmed, strong random password
+- Pre-approved registration request so the signup trigger assigns the `student` role deterministically (mirrors the existing teacher provisioning)
+- Profile with full name, email and grade level
+- School membership in Mahindra International School Pune
+- Active student plan with pilot token allowance
+- Enrolment into each requested class, with the class auto-created under the right teacher if missing
+- Seat usage on the school updated to match
 
-### 4. Cross-Class Curriculum Conflict Detector
-AI scans all teachers' lesson plans in a school and flags overlaps, gaps, and uneven workload weeks ("All 9th-grade subjects have major assignments due same Friday").
+Re-uploading the same email does not create a duplicate: the existing account is reused, its class enrolments topped up, and it is reported as "already existed" with no password reset.
 
-### 5. Plagiarism → "Process Authenticity Score"
-Move past binary cheat detection. Refyn produces a 0–100 authenticity score based on the student's actual chat process, edit history, and typing cadence. Reframes integrity around *evidence of thinking*.
+## 4. Claiming with the school Google account
 
-### 6. AI Rubric Calibration
-Teacher grades 5 sample papers; Refyn learns their grading style and grades the remaining 25 in that exact voice. Teacher reviews, not writes.
+Because each account is created with the student's real school email and is pre-verified, signing in with Google using that same address attaches the Google identity to the existing account rather than making a second one.
 
----
+- A short "Claim your account" card on the student dashboard, shown until the account has a Google identity, explaining they can switch to one-click Google sign-in
+- The card's button runs Google sign-in; after it succeeds the card disappears
+- The login page gets a line telling pilot students they can use either their temporary password or Google with the same school email
 
-## ADMIN — From governance to intelligence
+## Technical notes
 
-### 1. School AI Health Score
-A single dashboard number (like a credit score) summarizing: policy compliance, student usage equity, bypass attempts, learning outcomes, parent sentiment. Board-meeting-ready.
-
-### 2. Predictive At-Risk Radar (Whole School)
-Aggregate model that flags students at risk of failing/disengaging *6 weeks before grades drop*, using AI usage patterns + performance + attendance signals.
-
-### 3. Policy Sandbox — "What If" Mode
-Before changing AI policy, admin simulates: *"What if I disable image-gen for grades 6–8?"* Refyn replays last 30 days of usage and shows projected impact on workflows.
-
-### 4. Inter-School Benchmark Network (opt-in)
-Anonymous comparison: *"Your school's process-teaching adoption is in the top decile nationally."* Network effect that makes Refyn stickier than any LMS.
-
-### 5. Auto-Compliance Reports
-One-click FERPA / GDPR / state-AI-policy compliance PDF for auditors and boards. Generated from live logs.
-
-### 6. "Ethics Incident Replay"
-When a bypass attempt or flagged prompt happens, admin gets a cinematic timeline: prompt → moderation decision → student reaction → follow-up. Becomes training material for staff.
-
-### 7. Budget Optimizer
-AI suggests which models to route which prompts to, to cut Lovable AI token spend 30–60% without quality loss. Shows projected $ savings live.
-
----
-
-## CROSS-ROLE / PLATFORM-LEVEL — Category-defining moves
-
-### 1. "Refyn Graph" — Open Knowledge Layer
-Every student interaction, every teacher resource, every class outcome becomes nodes in a school-wide knowledge graph. Powers all other features and becomes Refyn's defensible data moat.
-
-### 2. Marketplace for Teacher-Built Process Recipes
-Teachers publish their best Process-Teaching prompt templates and learning paths. Other teachers (in their school or globally) install in one click. Refyn takes a small cut → revenue stream.
-
-### 3. Parent Co-Pilot App
-Dedicated mobile app where parents ask Refyn: *"How is my kid doing in math?"* — answered with actual evidence, not vague reports. Strengthens the underused parent role.
-
-### 4. Standards Auto-Mapper
-Every lesson, chat, and assignment auto-tagged against IB / AP / Cambridge / Common Core standards. Powers compliance, reports, and personalization.
-
-### 5. White-Label "Refyn Inside"
-Let textbook publishers / tutoring chains embed Refyn's governance + process-teaching engine in their own products. B2B2C distribution flywheel.
-
----
-
-## Suggested Next Step
-
-Pick 2–3 features from above (ideally one per role, or one cross-role headline feature) and I'll turn them into a concrete build plan with schema changes, UI flows, and edge-function design.
-
-Which directions resonate — and should I prioritize *student stickiness*, *teacher time-savings*, *admin intelligence*, or *platform moat*?
+- New edge function `pilot-bulk-students`: master-admin verified server-side, service-role account creation, idempotent class lookup/creation by `(school_id, teacher_id, name)`, returns per-row results with generated passwords. Parsing happens client-side; the function receives validated JSON rows.
+- A small shared config module holds the grade levels and the class-key table so the page, the template and the function stay in sync.
+- No schema changes: uses existing `classes`, `class_members`, `profiles`, `user_roles`, `school_members`, `user_plans`, `school_seat_limits`.
+- Google provider must be enabled on the backend for claiming; it is already used elsewhere in the app.
