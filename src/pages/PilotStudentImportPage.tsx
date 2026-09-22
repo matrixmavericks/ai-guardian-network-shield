@@ -13,16 +13,15 @@ import {
   ArrowLeft, Download, Upload, Users, Loader2, CheckCircle2, AlertTriangle, KeyRound,
 } from "lucide-react";
 import {
-  CSV_TEMPLATE, MISP_CLASSES, MISP_GRADE_LEVELS, ParsedRow,
+  CSV_TEMPLATE, MISP_GRADE_LEVELS, MISP_STUDENT_DOMAIN, ParsedRow,
   toCredentialsCsv, validateImportCsv,
 } from "@/lib/mispRoster";
 
 type ResultRow = {
   email: string;
+  username?: string;
   full_name: string;
   grade_level?: string;
-  section?: string;
-  classes?: string[];
   password?: string;
   status: string;
   error?: string;
@@ -63,8 +62,8 @@ const PilotStudentImportPage = () => {
     try {
       const { data, error } = await supabase.functions.invoke("pilot-bulk-students", {
         body: {
-          rows: rows.map(({ full_name, email, grade_level, section, classes }) => ({
-            full_name, email, grade_level, section, classes,
+          rows: rows.map(({ first_name, last_name, grade_level, username, email }) => ({
+            first_name, last_name, grade_level, username, email,
           })),
         },
       });
@@ -94,8 +93,8 @@ const PilotStudentImportPage = () => {
               <Users className="h-7 w-7 text-primary" /> Bulk student onboarding
             </h1>
             <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-              Upload one spreadsheet to create student accounts, assign grade levels and sections, and enrol every
-              student into their teachers' classes. Passwords are generated for you.
+              Upload one spreadsheet with first name, last name and grade. Every student gets a unique login and a
+              generated password automatically.
             </p>
           </div>
           <Button variant="outline" onClick={() => downloadFile("mahindra-students-template.csv", CSV_TEMPLATE)}>
@@ -106,8 +105,8 @@ const PilotStudentImportPage = () => {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Grade levels</CardTitle>
-              <CardDescription>Use these exact values in the grade_level column.</CardDescription>
+              <CardTitle className="text-base">Grades</CardTitle>
+              <CardDescription>Use these exact values in the grade column.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {MISP_GRADE_LEVELS.map((g) => (
@@ -118,18 +117,19 @@ const PilotStudentImportPage = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Class keys</CardTitle>
-              <CardDescription>Separate several classes with a semicolon.</CardDescription>
+              <CardTitle className="text-base">How logins are built</CardTitle>
+              <CardDescription>First 2 letters of each name plus the grade, kept unique.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {MISP_CLASSES.map((c) => (
-                <div key={c.key} className="flex items-center justify-between gap-3 border-b last:border-0 pb-2 last:pb-0">
-                  <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{c.key}</code>
-                  <span className="text-muted-foreground text-xs text-right">
-                    {c.teacherName} · {c.subject} · {c.key === "rohit-is" ? "MYP + DP" : c.stage}
-                  </span>
-                </div>
-              ))}
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                Aarav Shah, MYP 4 →{" "}
+                <code className="text-xs bg-muted px-1.5 py-0.5 rounded">aa.sh.myp4@{MISP_STUDENT_DOMAIN}</code>
+              </p>
+              <p>
+                If two students would get the same login, a number is added (aa.sh.myp4<strong>2</strong>), so no
+                account is ever shared.
+              </p>
+              <p>Classes are not part of this file — students are mapped to courses by grade afterwards.</p>
             </CardContent>
           </Card>
         </div>
@@ -175,22 +175,20 @@ const PilotStudentImportPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
+                      <TableHead>First name</TableHead>
+                      <TableHead>Last name</TableHead>
                       <TableHead>Grade</TableHead>
-                      <TableHead>Section</TableHead>
-                      <TableHead>Classes</TableHead>
+                      <TableHead>Login</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {rows.map((r, i) => (
                       <TableRow key={i} className={r.errors.length ? "bg-destructive/5" : undefined}>
-                        <TableCell>{r.full_name}</TableCell>
-                        <TableCell className="font-mono text-xs">{r.email}</TableCell>
+                        <TableCell>{r.first_name}</TableCell>
+                        <TableCell>{r.last_name}</TableCell>
                         <TableCell>{r.grade_level}</TableCell>
-                        <TableCell>{r.section || "—"}</TableCell>
-                        <TableCell className="text-xs">{r.classes.join(", ")}</TableCell>
+                        <TableCell className="font-mono text-xs">{r.email || "—"}</TableCell>
                         <TableCell className="text-xs">
                           {r.errors.length ? (
                             <span className="text-destructive">{r.errors.join("; ")}</span>
@@ -240,9 +238,9 @@ const PilotStudentImportPage = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
+                      <TableHead>Grade</TableHead>
+                      <TableHead>Login</TableHead>
                       <TableHead>Password</TableHead>
-                      <TableHead>Classes</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -250,9 +248,9 @@ const PilotStudentImportPage = () => {
                     {results.map((r, i) => (
                       <TableRow key={i}>
                         <TableCell>{r.full_name}</TableCell>
+                        <TableCell>{r.grade_level ?? "—"}</TableCell>
                         <TableCell className="font-mono text-xs">{r.email}</TableCell>
                         <TableCell className="font-mono text-xs">{r.password ?? "—"}</TableCell>
-                        <TableCell className="text-xs">{(r.classes ?? []).join(", ") || "—"}</TableCell>
                         <TableCell className="text-xs">
                           {r.status === "failed" ? (
                             <span className="text-destructive">{r.error}</span>
