@@ -1,7 +1,7 @@
 // Bulk student provisioning for the Mahindra International School Pune pilot.
-// Master-admin only. Creates auth users, profiles, roles, school membership,
-// student plans, and enrols each student into the requested classes
-// (creating the class under the right teacher if it does not exist yet).
+// Master-admin only. Creates auth users (generated unique usernames + passwords),
+// profiles, roles, school membership and student plans.
+// Classes are NOT assigned here — students are mapped to courses by grade later.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -12,36 +12,15 @@ const corsHeaders = {
 const MASTER_ADMIN = "info.aiconditioner@gmail.com";
 const SUBDOMAIN = "mahindra-pune";
 const STUDENT_TOKEN_LIMIT = 50_000;
-
-type ClassDef = {
-  key: string;
-  teacherEmail: string;
-  subject: string;
-  label: string;
-  stage: "MYP" | "DP";
-  perSection: boolean;
-};
-
-const CLASSES: ClassDef[] = [
-  { key: "rohit-is", teacherEmail: "rohit.phalke@misp.org", subject: "Individuals and Societies", label: "Individuals and Societies", stage: "MYP", perSection: true },
-  { key: "vinod-science", teacherEmail: "vinod.chacko@misp.org", subject: "Integrated Science", label: "Integrated Science", stage: "MYP", perSection: true },
-  { key: "vinod-physics-sl", teacherEmail: "vinod.chacko@misp.org", subject: "Physics SL", label: "Physics SL", stage: "DP", perSection: false },
-  { key: "vinod-physics-hl", teacherEmail: "vinod.chacko@misp.org", subject: "Physics HL", label: "Physics HL", stage: "DP", perSection: false },
-  { key: "vineet-math", teacherEmail: "vineet.sharma@misp.org", subject: "Mathematics", label: "Mathematics", stage: "MYP", perSection: true },
-  { key: "vineet-ai-sl", teacherEmail: "vineet.sharma@misp.org", subject: "Mathematics AI SL", label: "Math AI SL", stage: "DP", perSection: false },
-  { key: "vineet-ai-hl", teacherEmail: "vineet.sharma@misp.org", subject: "Mathematics AI HL", label: "Math AI HL", stage: "DP", perSection: false },
-];
+const STUDENT_DOMAIN = "mahindra-pilot.refyntech.us";
 
 const GRADES = ["MYP 1", "MYP 2", "MYP 3", "MYP 4", "MYP 5", "DP 1", "DP 2"];
-const isDp = (g: string) => g.trim().toUpperCase().startsWith("DP");
 
-function shape(def: ClassDef, grade: string): ClassDef {
-  if (def.key === "rohit-is" && isDp(grade)) return { ...def, perSection: false, stage: "DP" };
-  return def;
-}
-function className(def: ClassDef, grade: string, section: string) {
-  return def.perSection ? `${def.label} — ${grade}${section.toUpperCase()}` : `${def.label} — ${grade}`;
-}
+const letters = (s: string, n: number) =>
+  s.toLowerCase().replace(/[^a-z]/g, "").slice(0, n);
+const gradeToken = (g: string) => g.toLowerCase().replace(/[^a-z0-9]/g, "");
+const buildUsername = (first: string, last: string, grade: string) =>
+  `${letters(first, 2)}.${letters(last, 2)}.${gradeToken(grade)}`;
 
 function genPassword(): string {
   const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -54,13 +33,6 @@ function genPassword(): string {
   let out = pick(upper) + pick(lower) + pick(digits);
   for (let i = 0; i < 9; i++) out += all[bytes[i] % all.length];
   return out;
-}
-
-function genJoinCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = new Uint8Array(6);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => chars[b % chars.length]).join("");
 }
 
 Deno.serve(async (req) => {
@@ -99,63 +71,50 @@ Deno.serve(async (req) => {
       .from("schools").select("id, name").eq("subdomain", SUBDOMAIN).maybeSingle();
     if (!school) return json({ error: "Pilot school not found. Run pilot setup first." }, 400);
 
-    // Teacher lookup (email -> user_id)
-    const teacherEmails = [...new Set(CLASSES.map((c) => c.teacherEmail))];
-    const { data: teacherProfiles } = await admin
-      .from("profiles").select("user_id, email").in("email", teacherEmails);
-    const teacherIds = new Map<string, string>();
-    (teacherProfiles ?? []).forEach((p: any) => teacherIds.set((p.email ?? "").toLowerCase(), p.user_id));
+    // Usernames already taken in this batch (server-side safety net).
+    const batchUsed = new Set<string>();
 
-    // Cache of class name -> class id
-    const classCache = new Map<string, string>();
-
-    async function ensureClass(def: ClassDef, grade: string, section: string): Promise<string> {
-      const name = className(def, grade, section);
-      const cached = classCache.get(name);
-      if (cached) return cached;
-
-      const teacherId = teacherIds.get(def.teacherEmail);
-      if (!teacherId) throw new Error(`Teacher account missing for ${def.teacherEmail}`);
-
-      const { data: existing } = await admin
-        .from("classes").select("id")
-        .eq("school_id", school.id).eq("teacher_id", teacherId).eq("name", name)
-        .maybeSingle();
-      if (existing) {
-        classCache.set(name, existing.id);
-        return existing.id;
+    /** Find a username not used in this batch and not already in profiles. */
+    async function resolveUsername(base: string): Promise<string> {
+      let candidate = base;
+      let n = 1;
+      // limit attempts to avoid runaway loops
+      while (n < 100) {
+        const email = `${candidate}@${STUDENT_DOMAIN}`;
+        if (!batchUsed.has(candidate)) {
+          const { data: taken } = await admin
+            .from("profiles").select("user_id").eq("email", email).maybeSingle();
+          if (!taken) {
+            batchUsed.add(candidate);
+            return candidate;
+          }
+        }
+        n++;
+        candidate = `${base}${n}`;
       }
-
-      const { data: created, error } = await admin.from("classes").insert({
-        name,
-        subject: def.subject,
-        description: `${def.subject} · ${grade}${def.perSection ? ` section ${section.toUpperCase()}` : ""} — Mahindra pilot`,
-        join_code: genJoinCode(),
-        teacher_id: teacherId,
-        school_id: school.id,
-        curriculum_type: isDp(grade) ? "IB DP" : "IB MYP",
-      }).select("id").single();
-      if (error) throw error;
-      classCache.set(name, created.id);
-      return created.id;
+      throw new Error(`Could not generate a unique login for ${base}`);
     }
 
     const results: any[] = [];
     let newStudents = 0;
 
     for (const raw of rows) {
-      const email = String(raw.email ?? "").trim().toLowerCase();
-      const fullName = String(raw.full_name ?? "").trim();
-      const grade = String(raw.grade_level ?? "").trim();
-      const section = String(raw.section ?? "").trim().toUpperCase();
-      const keys: string[] = Array.isArray(raw.classes) ? raw.classes : [];
+      const firstName = String(raw.first_name ?? "").trim();
+      const lastName = String(raw.last_name ?? "").trim();
+      const grade = String(raw.grade_level ?? raw.grade ?? "").trim();
+      const fullName = `${firstName} ${lastName}`.trim();
 
-      if (!email || !fullName || !GRADES.includes(grade)) {
-        results.push({ email, full_name: fullName, status: "skipped", error: "Invalid row" });
+      if (letters(firstName, 2).length < 2 || letters(lastName, 2).length < 2 || !GRADES.includes(grade)) {
+        results.push({ email: "", full_name: fullName, grade_level: grade, status: "skipped", error: "Invalid row" });
         continue;
       }
 
+      let email = "";
+      let username = "";
       try {
+        username = await resolveUsername(buildUsername(firstName, lastName, grade));
+        email = `${username}@${STUDENT_DOMAIN}`;
+
         // Pre-approve so the signup trigger assigns 'student' deterministically.
         const { data: existingReq } = await admin
           .from("registration_requests").select("id").ilike("email", email).limit(1);
@@ -175,7 +134,7 @@ Deno.serve(async (req) => {
           email,
           password,
           email_confirm: true,
-          user_metadata: { full_name: fullName, requested_role: "student", grade_level: grade, section, school: school.name },
+          user_metadata: { full_name: fullName, requested_role: "student", grade_level: grade, school: school.name },
         });
         if (createErr) {
           if (String(createErr.message).toLowerCase().includes("already")) alreadyExisted = true;
@@ -228,35 +187,24 @@ Deno.serve(async (req) => {
           });
         }
 
-        const enrolled: string[] = [];
-        for (const key of keys) {
-          const base = CLASSES.find((c) => c.key === key.trim().toLowerCase());
-          if (!base) continue;
-          const def = shape(base, grade);
-          const classId = await ensureClass(def, grade, section);
-          const { data: member } = await admin
-            .from("class_members").select("id").eq("class_id", classId).eq("student_id", userId).maybeSingle();
-          if (!member) await admin.from("class_members").insert({ class_id: classId, student_id: userId });
-          enrolled.push(className(def, grade, section));
-        }
-
         if (!alreadyExisted) newStudents++;
 
         results.push({
           email,
+          username,
           full_name: fullName,
           grade_level: grade,
-          section,
-          classes: enrolled,
           password: alreadyExisted ? undefined : password,
           status: alreadyExisted ? "already existed" : "created",
         });
       } catch (e: any) {
-        results.push({ email, full_name: fullName, status: "failed", error: String(e?.message ?? e) });
+        results.push({
+          email, username, full_name: fullName, grade_level: grade,
+          status: "failed", error: String(e?.message ?? e),
+        });
       }
     }
 
-    // Keep seat usage roughly accurate
     if (newStudents > 0) {
       const { data: seats } = await admin
         .from("school_seat_limits").select("students_used").eq("school_id", school.id).maybeSingle();
