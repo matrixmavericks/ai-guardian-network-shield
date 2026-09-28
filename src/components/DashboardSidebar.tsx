@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSchoolCheck } from '@/hooks/useSchoolCheck';
+import StudentSidebar from '@/components/student/StudentSidebar';
 
 type NavItem = {
   title: string;
@@ -26,6 +27,8 @@ const DashboardSidebar = () => {
   const isInSchool = useSchoolCheck();
 
   if (isInSchool) return null;
+  // Students get the redesigned portal sidebar; admins and teachers keep this one
+  if ((user?.role || 'student') === 'student') return <StudentSidebar />;
 
   const handleLogout = async () => {
     await logout();

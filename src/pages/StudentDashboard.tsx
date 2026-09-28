@@ -1,32 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PilotFeedbackPrompt from '@/components/PilotFeedbackPrompt';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend,
+  AreaChart, Area, BarChart, Bar as ReBar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import ClaimGoogleAccountCard from '@/components/ClaimGoogleAccountCard';
 import { useSchoolCheck } from '@/hooks/useSchoolCheck';
 import {
-  Book, Brain, Calendar, Clock, FileText, GraduationCap, TrendingUp,
-  CheckCircle2, AlertTriangle, Shield, MessageSquare, Send, Search, Loader, Trophy, Sparkles,
+  ArrowRight, ArrowUpRight, Book, Brain, Check, CheckCircle2, ChevronRight, Clock, FileText, GraduationCap,
+  LayoutGrid, MessageSquare, Search, Send, Shield, Sparkles, Trophy, TrendingUp, AlertTriangle,
 } from 'lucide-react';
 import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
 import StudentPlanCard from '@/components/StudentPlanCard';
 import StudentAssignmentView from '@/components/StudentAssignmentView';
 import FeatureGate from '@/components/FeatureGate';
-import { formatDistanceToNow, format } from 'date-fns';
+import {
+  formatDistanceToNow, format, startOfWeek, endOfWeek, isWithinInterval, isToday, isTomorrow,
+} from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import QuizLibrary from '@/components/livequiz/QuizLibrary';
 import LiveQuizPlayer from '@/components/livequiz/LiveQuizPlayer';
+import { cn } from '@/lib/utils';
+import { GlowButton } from '@/components/landing/primitives';
+import {
+  Bar, EmptyState, Panel, PanelHead, Ring, chip, ghostBtn, gradeLabel, gradeText, gradeTone, useCountUp,
+} from '@/components/student/ui';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 interface ClassAssignment {
@@ -56,7 +57,7 @@ interface LearningPathProgress {
   progress: number;
   completed_modules: string[];
   last_accessed_at: string;
-  path?: { title: string; subject: string; modules: any };
+  path?: { title: string; subject: string; modules: unknown };
 }
 
 interface Contact {
@@ -73,11 +74,91 @@ interface Message {
   read: boolean;
 }
 
+// ─── Small presentational helpers ─────────────────────────────────────────
+const TABS = [
+  { value: 'overview', label: 'Overview', icon: LayoutGrid },
+  { value: 'myplan', label: 'My Plan', icon: Sparkles },
+  { value: 'assignments', label: 'Assignments', icon: FileText },
+  { value: 'progress', label: 'Progress', icon: GraduationCap },
+  { value: 'learning', label: 'AI Learning', icon: Brain },
+  { value: 'messages', label: 'Messages', icon: MessageSquare },
+  { value: 'adaptive', label: 'Adaptive Profile', icon: Shield },
+  { value: 'quizzes', label: 'Quiz Library', icon: Trophy },
+];
+
+const AI_PROMPTS = [
+  'Help me plan my essay',
+  'Explain this topic simply',
+  'Quiz me before my test',
+  'Check my working on a problem',
+];
+
+const dueLabel = (iso: string) => {
+  const d = new Date(iso);
+  if (d <= new Date()) return `Overdue · ${formatDistanceToNow(d)} ago`;
+  if (isToday(d)) return `Due today, ${format(d, 'p')}`;
+  if (isTomorrow(d)) return `Due tomorrow, ${format(d, 'p')}`;
+  return `Due ${format(d, 'EEE d MMM')}`;
+};
+
+const ChartTooltip: React.FC<{ active?: boolean; payload?: { value: number }[]; label?: string; suffix?: string }> = ({
+  active,
+  payload,
+  label,
+  suffix = '%',
+}) =>
+  active && payload?.length ? (
+    <div className="rounded-xl border border-lp-line bg-lp-deep/95 px-3 py-2 text-[12px] shadow-xl backdrop-blur">
+      <p className="text-lp-mute">{label}</p>
+      <p className="mt-0.5 text-[14px] font-semibold text-white">
+        {payload[0].value}
+        {suffix}
+      </p>
+    </div>
+  ) : null;
+
+const StatTile: React.FC<{
+  icon: React.ElementType;
+  label: string;
+  value: number;
+  detail: React.ReactNode;
+  detailTone?: 'mute' | 'red' | 'sky';
+  onClick: () => void;
+  delay: number;
+}> = ({ icon: Icon, label, value, detail, detailTone = 'mute', onClick, delay }) => {
+  const n = useCountUp(value);
+  return (
+    <Panel delay={delay} as="div" className="group">
+      <button type="button" onClick={onClick} className="flex h-full w-full flex-col p-5 text-left focus-visible:outline-none">
+        <div className="flex items-center justify-between">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-lp-raised text-lp-sky transition-colors group-hover:bg-lp-blue group-hover:text-white">
+            <Icon className="h-[18px] w-[18px]" />
+          </span>
+          <ArrowUpRight className="h-4 w-4 text-lp-mute opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
+        </div>
+        <p className="mt-5 text-[32px] font-semibold leading-none tracking-[-0.04em] tabular-nums text-white">{n}</p>
+        <p className="mt-2 text-[13.5px] text-lp-soft">{label}</p>
+        <p
+          className={cn(
+            'mt-1 text-[12.5px]',
+            detailTone === 'red' ? 'text-lp-red' : detailTone === 'sky' ? 'text-lp-sky' : 'text-lp-mute',
+          )}
+        >
+          {detail}
+        </p>
+      </button>
+    </Panel>
+  );
+};
+
+const Skeleton: React.FC<{ className?: string }> = ({ className }) => <div className={cn('lp-skeleton rounded-3xl', className)} />;
+
 // ─── Component ────────────────────────────────────────────────────────────
 const StudentDashboard = () => {
   const isInSchool = useSchoolCheck();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
+  const setTab = (tab: string) => setSearchParams(tab === 'overview' ? {} : { tab }, { replace: true });
   const { user } = useAuth();
   const navigate = useNavigate();
   const displayName = user?.fullName || user?.email?.split('@')[0] || 'Student';
@@ -126,11 +207,11 @@ const StudentDashboard = () => {
 
         setAssignments((assignRes.data as ClassAssignment[]) || []);
         setSubmissions((subRes.data as Submission[]) || []);
-        setAiSessionCount((sessRes as any).count || 0);
-        setAiMessageCount((msgCountRes as any).count || 0);
+        setAiSessionCount((sessRes as { count: number | null }).count || 0);
+        setAiMessageCount((msgCountRes as { count: number | null }).count || 0);
 
         // Enrich path progress with path data
-        const progressData = (pathRes.data || []) as any[];
+        const progressData = (pathRes.data || []) as Omit<LearningPathProgress, 'path'>[];
         if (progressData.length > 0) {
           const pathIds = progressData.map(p => p.path_id);
           const { data: paths } = await supabase.from('learning_paths').select('id, title, subject, modules').in('id', pathIds);
@@ -142,7 +223,7 @@ const StudentDashboard = () => {
 
         // Contacts for messaging — use security definer function for cross-role visibility
         const { data: contactData } = await supabase.rpc('get_user_contacts', { _user_id: user.id });
-        setContacts((contactData || []).map((c: any) => ({ user_id: c.user_id, full_name: c.full_name })));
+        setContacts(((contactData || []) as Contact[]).map((c) => ({ user_id: c.user_id, full_name: c.full_name })));
 
         // Unread counts
         if (contactData?.length) {
@@ -277,553 +358,832 @@ const StudentDashboard = () => {
       score: Math.round((s.grade! / s.max_grade) * 100),
     }));
 
-  const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
-
-  const getGradeColor = (pct: number) => {
-    if (pct >= 90) return 'text-green-600';
-    if (pct >= 80) return 'text-blue-600';
-    if (pct >= 70) return 'text-yellow-600';
-    if (pct >= 60) return 'text-orange-600';
-    return 'text-red-600';
-  };
-  const getGradeLabel = (pct: number) => {
-    if (pct >= 90) return 'A';
-    if (pct >= 80) return 'B';
-    if (pct >= 70) return 'C';
-    if (pct >= 60) return 'D';
-    return 'F';
-  };
-
   const filteredContacts = contacts.filter(c =>
     c.full_name.toLowerCase().includes(contactSearch.toLowerCase())
   );
   const getInitials = (name: string) => name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   const totalUnread = Object.values(unreadCounts).reduce((s, c) => s + c, 0);
 
+  // This week, and the short list of things that need attention
+  const now = new Date();
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+  const weekAssignments = assignments.filter(a => a.due_date && isWithinInterval(new Date(a.due_date), { start: weekStart, end: weekEnd }));
+  const weekDone = weekAssignments.filter(a => !!getSubmission(a.id)).length;
+  const weekPct = weekAssignments.length > 0 ? Math.round((weekDone / weekAssignments.length) * 100) : 0;
+  const overdueOpen = overdueAssignments.filter(a => !getSubmission(a.id));
+  const focusList = [
+    ...overdueAssignments.map(a => ({ a, state: getSubmission(a.id) ? 'submitted' : 'overdue' })),
+    ...upcomingAssignments.map(a => ({ a, state: getSubmission(a.id) ? 'submitted' : 'todo' })),
+  ].slice(0, 5);
+  const nextDeadline = upcomingAssignments.find(a => !getSubmission(a.id));
+
+  const recentPaths = [...pathProgress]
+    .sort((a, b) => new Date(b.last_accessed_at).getTime() - new Date(a.last_accessed_at).getTime())
+    .slice(0, 3);
+  const recentGrades = [...gradedSubmissions]
+    .sort((a, b) => new Date(b.graded_at || b.submitted_at).getTime() - new Date(a.graded_at || a.submitted_at).getTime())
+    .slice(0, 5);
+
+  const firstName = displayName.split(' ')[0];
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const summary = overdueOpen.length > 0
+    ? `You have ${overdueOpen.length} overdue assignment${overdueOpen.length > 1 ? 's' : ''}. Start there, then keep going.`
+    : weekAssignments.length - weekDone > 0
+      ? `${weekAssignments.length - weekDone} assignment${weekAssignments.length - weekDone > 1 ? 's' : ''} left to hand in this week.`
+      : "You're all caught up. A good moment to pick up a learning path.";
+
+  const gradePct = (s: Submission) => Math.round((s.grade! / s.max_grade) * 100);
+  const gradePcts = gradedSubmissions.map(gradePct);
+  const latestPct = recentGrades.length > 0 ? gradePct(recentGrades[0]) : 0;
+
+  const avgRounded = Math.round(overallAverage);
+  const avgShown = useCountUp(avgRounded);
+  const tone = gradeTone(avgRounded);
+
+  // ─── Layout wrapper ──────────────────────────────────────────────────
+  const shell = (children: React.ReactNode) => {
+    const content = (
+      <div className="lp-app relative z-[1] min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-lp-bg font-ui antialiased selection:bg-lp-blue/40 selection:text-white">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[900px] -translate-x-1/2 rounded-full opacity-40 blur-[130px]"
+          style={{ background: 'radial-gradient(closest-side, rgba(59,130,246,0.45), transparent)' }}
+        />
+        <div className="relative mx-auto max-w-[1280px] px-5 pb-28 pt-8 sm:px-8 lg:px-10 lg:pb-14 lg:pt-10">{children}</div>
+      </div>
+    );
+    if (isInSchool) return content;
+    return (
+      <div className="flex h-screen bg-lp-bg">
+        <DashboardSidebar />
+        {content}
+      </div>
+    );
+  };
+
   // ─── Render ─────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div className={isInSchool ? "flex-1 flex items-center justify-center" : "flex h-screen bg-background"}>
-        {!isInSchool && <DashboardSidebar />}
-        <div className="flex-1 flex items-center justify-center">
-          <Loader className="h-6 w-6 animate-spin text-primary mr-2" />
-          <span className="text-muted-foreground">Loading dashboard...</span>
+    return shell(
+      <div aria-busy="true" aria-label="Loading dashboard">
+        <Skeleton className="h-4 w-40 rounded-full" />
+        <Skeleton className="mt-4 h-12 w-80 max-w-full rounded-2xl" />
+        <Skeleton className="mt-8 h-12 w-full rounded-2xl" />
+        <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-12">
+          <Skeleton className="h-[360px] lg:col-span-7" />
+          <Skeleton className="h-[360px] lg:col-span-5" />
         </div>
-      </div>
+        <div className="mt-5 grid grid-cols-2 gap-5 lg:grid-cols-4">
+          {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-[168px]" />)}
+        </div>
+      </div>,
     );
   }
 
-  const dashboardContent = (
-    <div className="flex-1 overflow-y-auto">
-      <div className="container py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Student Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, {displayName}!</p>
+  return shell(
+    <>
+      {/* ═══════════ HEADER ═══════════ */}
+      <header className="lp-fade flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <p className="text-[13px] font-medium text-lp-mute">{format(now, 'EEEE, d MMMM')}</p>
+          <h1 className="mt-2 text-[36px] font-normal leading-[1] tracking-[-0.045em] text-white sm:text-[48px]">
+            {greeting},{' '}
+            <span className="bg-gradient-to-r from-lp-sky via-[#A5CCFF] to-lp-cyan bg-clip-text text-transparent">{firstName}</span>
+          </h1>
+          <p className="mt-3 max-w-[40rem] text-[15.5px] text-lp-soft">{summary}</p>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" className={cn(ghostBtn, 'relative h-12 rounded-2xl px-5')} onClick={() => setTab('messages')}>
+            <MessageSquare className="h-4 w-4" /> Messages
+            {totalUnread > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-lp-red px-1 text-[11px] font-semibold text-white">
+                {totalUnread}
+              </span>
+            )}
+          </button>
+          <GlowButton to="/ai-learning-assistant">
+            <Sparkles className="h-4 w-4" /> Ask Refyn
+          </GlowButton>
+        </div>
+      </header>
 
+      <div className="mt-6 empty:hidden">
         <ClaimGoogleAccountCard />
+      </div>
 
-          <Tabs defaultValue={activeTab}>
-            <TabsList className="mb-8 flex-wrap">
-              <TabsTrigger value="overview"><TrendingUp className="mr-2 h-4 w-4" />Overview</TabsTrigger>
-              <TabsTrigger value="myplan"><Sparkles className="mr-2 h-4 w-4" />My Plan</TabsTrigger>
-              <TabsTrigger value="assignments"><FileText className="mr-2 h-4 w-4" />Assignments</TabsTrigger>
-              <TabsTrigger value="progress"><GraduationCap className="mr-2 h-4 w-4" />Progress</TabsTrigger>
-              <TabsTrigger value="learning"><Brain className="mr-2 h-4 w-4" />AI Learning</TabsTrigger>
-              <TabsTrigger value="messages" className="relative">
-                <MessageSquare className="mr-2 h-4 w-4" />Messages
-                {totalUnread > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">
+      <Tabs value={activeTab} onValueChange={setTab} className="mt-8">
+        <TabsList className="lp-fade h-auto w-full justify-start gap-1 overflow-x-auto rounded-2xl border border-lp-line bg-lp-surface/60 p-1.5 [scrollbar-width:none]" style={{ animationDelay: '60ms', animationFillMode: 'both' }}>
+          {TABS.map(t => {
+            const Icon = t.icon;
+            return (
+              <TabsTrigger
+                key={t.value}
+                value={t.value}
+                className="relative shrink-0 gap-2 rounded-xl px-3.5 py-2 text-[13.5px] font-medium text-lp-soft transition-all hover:text-white data-[state=active]:bg-lp-blue data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_-8px_rgba(59,130,246,0.8)]"
+              >
+                <Icon className="h-4 w-4" />
+                {t.label}
+                {t.value === 'messages' && totalUnread > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-lp-red px-1 text-[10px] font-semibold text-white">
                     {totalUnread}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="adaptive"><Shield className="mr-2 h-4 w-4" />Adaptive Profile</TabsTrigger>
-              <TabsTrigger value="quizzes"><Trophy className="mr-2 h-4 w-4" />Quiz Library</TabsTrigger>
-            </TabsList>
+            );
+          })}
+        </TabsList>
 
-            {/* ═══════════ MY PLAN ═══════════ */}
-            <TabsContent value="myplan">
-              <div className="max-w-2xl mx-auto">
-                <StudentPlanCard />
-              </div>
-            </TabsContent>
-
-            {/* ═══════════ OVERVIEW ═══════════ */}
-            <TabsContent value="overview">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Overall Grade</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span className={`text-3xl font-bold ${getGradeColor(overallAverage)}`}>
-                        {gradedSubmissions.length > 0 ? `${Math.round(overallAverage)}%` : '—'}
-                      </span>
-                      {gradedSubmissions.length > 0 && (
-                        <Badge variant="outline" className={`text-lg ${getGradeColor(overallAverage)}`}>
-                          {getGradeLabel(overallAverage)}
-                        </Badge>
-                      )}
-                    </div>
-                    {gradedSubmissions.length > 0 && <Progress value={overallAverage} className="mt-2" />}
-                    <p className="text-xs text-muted-foreground mt-1">{gradedSubmissions.length} graded assignment{gradedSubmissions.length !== 1 ? 's' : ''}</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Upcoming Due</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{upcomingAssignments.length}</div>
-                    {overdueAssignments.length > 0 && (
-                      <p className="text-sm text-destructive flex items-center gap-1 mt-1">
-                        <AlertTriangle className="h-3 w-3" />{overdueAssignments.length} overdue
-                      </p>
-                    )}
-                    {upcomingAssignments.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Next: {formatDistanceToNow(new Date(upcomingAssignments[0].due_date!), { addSuffix: true })}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Learning Paths</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{pathProgress.length}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {pathProgress.filter(p => p.progress >= 100).length} completed
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">AI Sessions</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{aiSessionCount}</div>
-                    <p className="text-xs text-muted-foreground mt-1">{aiMessageCount} questions asked</p>
-                  </CardContent>
-                </Card>
+        {/* ═══════════ OVERVIEW ═══════════ */}
+        <TabsContent value="overview" className="mt-6 space-y-5 focus-visible:ring-0">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+            {/* This week */}
+            <Panel delay={80} className="p-6 sm:p-7 lg:col-span-7">
+              <PanelHead
+                title="This week"
+                icon={Clock}
+                meta={`${format(weekStart, 'd MMM')} – ${format(weekEnd, 'd MMM')}`}
+              />
+              <div className="mt-6 flex items-center justify-between gap-6">
+                <div>
+                  <p className="leading-none">
+                    <span className="text-[56px] font-semibold tracking-[-0.05em] tabular-nums text-white">{weekDone}</span>
+                    <span className="ml-2 text-[22px] font-medium text-lp-mute">of {weekAssignments.length}</span>
+                  </p>
+                  <p className="mt-2 text-[14px] text-lp-soft">
+                    {weekAssignments.length > 0 ? 'assignments handed in this week' : 'nothing due this week'}
+                  </p>
+                </div>
+                <Ring
+                  value={weekAssignments.length > 0 ? weekPct : 100}
+                  size={96}
+                  stroke={8}
+                  label={weekAssignments.length > 0 ? `${weekPct}%` : <Check className="h-6 w-6 text-lp-green" />}
+                  tone={weekAssignments.length > 0 ? 'blue' : 'green'}
+                />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                <Card className="lg:col-span-2">
-                  <CardHeader>
-                    <CardTitle>Performance Over Time</CardTitle>
-                    <CardDescription>Your grade trend based on graded assignments</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {timelineData.length > 0 ? (
-                      <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={timelineData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
-                            <YAxis domain={[0, 100]} />
-                            <Tooltip />
-                            <Area type="monotone" dataKey="score" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.15} name="Grade %" />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-72 text-muted-foreground">
-                        <TrendingUp className="h-12 w-12 mb-2 opacity-30" />
-                        <p>No graded assignments yet</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Subject Distribution</CardTitle>
-                    <CardDescription>Assignments by subject</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {subjectStats.length > 0 ? (
-                      <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie data={subjectStats.map((s, i) => ({ name: s.subject, value: s.total, fill: COLORS[i % COLORS.length] }))}
-                              cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={4} dataKey="value"
-                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}>
-                              {subjectStats.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-72 text-muted-foreground">
-                        <Book className="h-12 w-12 mb-2 opacity-30" />
-                        <p>No subjects yet</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Upcoming Assignments</CardTitle>
-                    <CardDescription>Due soon</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {upcomingAssignments.length > 0 ? (
-                      <div className="space-y-3">
-                        {upcomingAssignments.slice(0, 5).map(a => (
-                          <div key={a.id} className="flex items-start gap-3">
-                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <Calendar className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">{a.title}</p>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                Due {formatDistanceToNow(new Date(a.due_date!), { addSuffix: true })}
-                              </p>
-                              {a.subject && <Badge variant="secondary" className="text-xs mt-1">{a.subject}</Badge>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center py-8 text-muted-foreground">
-                        <CheckCircle2 className="h-10 w-10 mb-2 opacity-30" />
-                        <p>All caught up!</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Grades</CardTitle>
-                    <CardDescription>Latest graded assignments</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {gradedSubmissions.length > 0 ? (
-                      <div className="space-y-3">
-                        {gradedSubmissions
-                          .sort((a, b) => new Date(b.graded_at!).getTime() - new Date(a.graded_at!).getTime())
-                          .slice(0, 5)
-                          .map(sub => {
-                            const assignment = assignments.find(a => a.id === sub.assignment_id);
-                            const pct = Math.round((sub.grade! / sub.max_grade) * 100);
-                            return (
-                              <div key={sub.id} className="flex items-start gap-3">
-                                <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex justify-between items-center">
-                                    <p className="font-medium text-sm truncate">{assignment?.title || 'Assignment'}</p>
-                                    <span className={`font-bold text-sm ${getGradeColor(pct)}`}>{pct}%</span>
-                                  </div>
-                                  {assignment?.subject && <Badge variant="secondary" className="text-xs mt-1">{assignment.subject}</Badge>}
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center py-8 text-muted-foreground">
-                        <FileText className="h-10 w-10 mb-2 opacity-30" />
-                        <p>No grades yet</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* ═══════════ ASSIGNMENTS ═══════════ */}
-            <TabsContent value="assignments">
-              <StudentAssignmentView />
-            </TabsContent>
-
-            {/* ═══════════ PROGRESS ═══════════ */}
-            <TabsContent value="progress">
-              <div className="space-y-6">
-                {/* Subject performance chart */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Subject Performance</CardTitle>
-                    <CardDescription>Average grades across subjects</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {subjectStats.length > 0 ? (
-                      <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={subjectStats.map(s => ({ name: s.subject, average: s.average, completed: s.completed, pending: s.pending }))}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis domain={[0, 100]} />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="average" name="Average Grade %" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-72 text-muted-foreground">
-                        <TrendingUp className="h-12 w-12 mb-2 opacity-30" />
-                        <p>No grade data yet</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Subject cards */}
-                {subjectStats.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {subjectStats.map(stat => (
-                      <Card key={stat.subject}>
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between items-center">
-                            <CardTitle className="text-base">{stat.subject}</CardTitle>
-                            <span className={`text-xl font-bold ${getGradeColor(stat.average)}`}>
-                              {stat.average > 0 ? `${stat.average}%` : '—'}
+              {focusList.length > 0 ? (
+                <ul className="mt-6 space-y-1 border-t border-lp-line pt-4">
+                  {focusList.map(({ a, state }) => (
+                    <li key={a.id}>
+                      <button
+                        type="button"
+                        onClick={() => setTab('assignments')}
+                        className={cn(
+                          'group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04]',
+                          state === 'overdue' && 'bg-lp-red/[0.06]',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2',
+                            state === 'submitted' && 'border-lp-blue bg-lp-blue text-white',
+                            state === 'overdue' && 'border-lp-red',
+                            state === 'todo' && 'border-lp-line',
+                          )}
+                        >
+                          {state === 'submitted' && <Check className="h-3.5 w-3.5" />}
+                          {state === 'overdue' && <span className="h-2 w-2 rounded-full bg-lp-red" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={cn(
+                              'block truncate text-[14.5px]',
+                              state === 'submitted' ? 'text-lp-mute line-through decoration-lp-mute/60' : 'font-medium text-white',
+                            )}
+                          >
+                            {a.title}
+                          </span>
+                          <span className="mt-0.5 flex flex-wrap items-center gap-2">
+                            {a.subject && <span className={chip}>{a.subject}</span>}
+                            <span
+                              className={cn(
+                                'text-[12.5px]',
+                                state === 'submitted' ? 'text-lp-mute' : state === 'overdue' ? 'text-lp-red' : 'text-lp-sky',
+                              )}
+                            >
+                              {state === 'submitted' ? 'Handed in · awaiting grade' : dueLabel(a.due_date!)}
                             </span>
-                          </div>
-                          <div className="pt-1">
-                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                              <span>Progress</span>
-                              <span>{stat.progressPct}%</span>
-                            </div>
-                            <Progress value={stat.progressPct} />
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-muted rounded-lg p-3">
-                              <p className="text-xs text-muted-foreground">Completed</p>
-                              <p className="text-xl font-bold">{stat.completed}</p>
-                            </div>
-                            <div className="bg-muted rounded-lg p-3">
-                              <p className="text-xs text-muted-foreground">Pending</p>
-                              <p className="text-xl font-bold">{stat.pending}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          </span>
+                        </span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-lp-mute transition-transform group-hover:translate-x-0.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <EmptyState
+                  icon={CheckCircle2}
+                  title="All caught up"
+                  body="Nothing is due right now. New assignments from your teachers will appear here."
+                  className="mt-4 border-t border-lp-line"
+                />
+              )}
+
+              {nextDeadline && (
+                <p className="mt-4 rounded-xl bg-lp-bg/60 px-4 py-3 text-[13px] text-lp-soft">
+                  <span className="text-lp-mute">Next deadline:</span>{' '}
+                  <span className="font-medium text-white">{nextDeadline.title}</span>, {format(new Date(nextDeadline.due_date!), 'EEE d MMM, p')}
+                </p>
+              )}
+            </Panel>
+
+            {/* Overall grade */}
+            <Panel delay={140} className="flex flex-col p-6 sm:p-7 lg:col-span-5">
+              <PanelHead
+                title="Overall grade"
+                icon={GraduationCap}
+                meta={`${gradedSubmissions.length} graded`}
+              />
+              {gradedSubmissions.length > 0 ? (
+                <>
+                  <div className="mt-6 flex items-center justify-between gap-4">
+                    <div>
+                      <p className="leading-none">
+                        <span className={cn('text-[56px] font-semibold tracking-[-0.05em] tabular-nums', gradeText[tone])}>{avgShown}</span>
+                        <span className="text-[26px] font-medium text-lp-mute">%</span>
+                      </p>
+                      <p className="mt-2 text-[14px] text-lp-soft">average across graded work</p>
+                    </div>
+                    <Ring value={avgRounded} size={96} stroke={8} tone={tone} label={<span className={cn('text-[26px]', gradeText[tone])}>{gradeLabel(avgRounded)}</span>} />
+                  </div>
+                  <div className="mt-6 grid grid-cols-3 gap-3">
+                    {[
+                      { label: 'Highest', value: `${Math.max(...gradePcts)}%` },
+                      { label: 'Latest', value: `${latestPct}%` },
+                      { label: 'Graded', value: `${gradedSubmissions.length}` },
+                    ].map(s => (
+                      <div key={s.label} className="rounded-2xl border border-lp-line bg-lp-bg/50 px-4 py-3">
+                        <p className="text-[20px] font-semibold tabular-nums text-white">{s.value}</p>
+                        <p className="text-[12px] text-lp-mute">{s.label}</p>
+                      </div>
                     ))}
                   </div>
-                )}
+                  <div className="mt-6 min-h-[140px] flex-1">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={timelineData} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="gradeFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.45} />
+                            <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="date" hide />
+                        <YAxis domain={[0, 100]} hide />
+                        <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#1A2744' }} />
+                        <Area type="monotone" dataKey="score" stroke="#7CB4FF" strokeWidth={2.5} fill="url(#gradeFill)" name="Grade" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              ) : (
+                <EmptyState
+                  icon={TrendingUp}
+                  title="No grades yet"
+                  body="Once a teacher grades your work, your average and trend will show up here."
+                  className="flex-1"
+                />
+              )}
+            </Panel>
+          </div>
 
-                {/* Learning paths progress */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Learning Paths</CardTitle>
-                    <CardDescription>Your enrolled learning paths and progress</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {pathProgress.length > 0 ? (
-                      <div className="space-y-4">
-                        {pathProgress.map(pp => {
-                          const totalModules = Array.isArray(pp.path?.modules) ? pp.path!.modules.length : 0;
-                          return (
-                            <div key={pp.id} className="flex items-center gap-4 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
-                              onClick={() => navigate(`/learning-path/${pp.path_id}`)}>
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                <Book className="h-5 w-5 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">{pp.path?.title || 'Learning Path'}</p>
-                                <p className="text-xs text-muted-foreground">{pp.path?.subject} • {pp.completed_modules?.length || 0}/{totalModules} modules</p>
-                                <Progress value={pp.progress} className="mt-1 h-1.5" />
-                              </div>
-                              <Badge variant={pp.progress >= 100 ? 'default' : 'secondary'}>
-                                {pp.progress >= 100 ? 'Complete' : `${pp.progress}%`}
-                              </Badge>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center py-8 text-muted-foreground">
-                        <Book className="h-10 w-10 mb-2 opacity-30" />
-                        <p>No learning paths started yet</p>
-                        <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate('/learning-paths')}>
-                          Browse Learning Paths
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+          {/* Quick stats */}
+          <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+            <StatTile
+              delay={200}
+              icon={Clock}
+              label="Due soon"
+              value={upcomingAssignments.length}
+              detail={
+                overdueAssignments.length > 0 ? (
+                  <span className="inline-flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{overdueAssignments.length} overdue</span>
+                ) : upcomingAssignments.length > 0 ? (
+                  `Next ${formatDistanceToNow(new Date(upcomingAssignments[0].due_date!), { addSuffix: true })}`
+                ) : 'Nothing pending'
+              }
+              detailTone={overdueAssignments.length > 0 ? 'red' : 'mute'}
+              onClick={() => setTab('assignments')}
+            />
+            <StatTile
+              delay={240}
+              icon={Book}
+              label="Learning paths"
+              value={pathProgress.length}
+              detail={`${pathProgress.filter(p => p.progress >= 100).length} completed`}
+              onClick={() => navigate('/learning-paths')}
+            />
+            <StatTile
+              delay={280}
+              icon={Brain}
+              label="Questions asked"
+              value={aiMessageCount}
+              detail={`${aiSessionCount} AI session${aiSessionCount === 1 ? '' : 's'}`}
+              onClick={() => navigate('/ai-learning-assistant')}
+            />
+            <StatTile
+              delay={320}
+              icon={MessageSquare}
+              label="Unread messages"
+              value={totalUnread}
+              detail={`${contacts.length} contact${contacts.length === 1 ? '' : 's'}`}
+              detailTone={totalUnread > 0 ? 'sky' : 'mute'}
+              onClick={() => setTab('messages')}
+            />
+          </div>
+
+          {/* Continue learning */}
+          <section className="lp-fade pt-4" style={{ animationDelay: '360ms', animationFillMode: 'both' }}>
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <h2 className="text-[22px] font-medium tracking-[-0.03em] text-white">Continue learning</h2>
+              <Link to="/learning-paths" className="inline-flex items-center gap-1 text-[13.5px] font-medium text-lp-sky transition-colors hover:text-white">
+                All paths <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+            {recentPaths.length > 0 ? (
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                {recentPaths.map((pp, i) => {
+                  const totalModules = Array.isArray(pp.path?.modules) ? (pp.path!.modules as unknown[]).length : 0;
+                  const done = pp.progress >= 100;
+                  return (
+                    <Panel key={pp.id} delay={380 + i * 60} as="div" className="group">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/learning-path/${pp.path_id}`)}
+                        className="flex h-full w-full flex-col p-5 text-left transition-transform duration-300 group-hover:-translate-y-0.5"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className={chip}>{pp.path?.subject || 'Learning path'}</span>
+                          <Ring value={pp.progress} size={44} stroke={5} tone={done ? 'green' : 'blue'} label={<span className="text-[11px]">{pp.progress}%</span>} />
+                        </div>
+                        <p className="mt-4 line-clamp-2 text-[16px] font-medium leading-snug text-white">{pp.path?.title || 'Learning path'}</p>
+                        <p className="mt-1 text-[12.5px] text-lp-mute">
+                          {pp.completed_modules?.length || 0}/{totalModules} modules · opened {formatDistanceToNow(new Date(pp.last_accessed_at), { addSuffix: true })}
+                        </p>
+                        <Bar value={pp.progress} tone={done ? 'green' : 'blue'} className="mt-4" delay={400 + i * 60} />
+                        <span className="mt-4 inline-flex items-center gap-1 text-[13px] font-medium text-lp-sky transition-colors group-hover:text-white">
+                          {done ? 'Review' : 'Continue'} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                        </span>
+                      </button>
+                    </Panel>
+                  );
+                })}
               </div>
-            </TabsContent>
+            ) : (
+              <Panel delay={380}>
+                <EmptyState
+                  icon={Book}
+                  title="No learning paths yet"
+                  body="Paths break a topic into short modules with quizzes, pitched at your level."
+                  action={<Link to="/learning-paths" className={ghostBtn}>Browse learning paths <ArrowRight className="h-4 w-4" /></Link>}
+                />
+              </Panel>
+            )}
+          </section>
 
-            {/* ═══════════ AI LEARNING ═══════════ */}
-            <TabsContent value="learning">
-              <FeatureGate feature="aiAssistant">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>AI Learning Assistant</CardTitle>
-                      <CardDescription>Get help with your studies</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2 mb-4">
-                        {['Answering questions about assignments', 'Explaining difficult concepts', 'Providing study tips', 'Creating practice questions'].map(item => (
-                          <li key={item} className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />{item}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                    <CardFooter>
-                      <Button className="w-full" onClick={() => navigate('/ai-learning-assistant')}>
-                        <Brain className="mr-2 h-4 w-4" />Open AI Assistant
-                      </Button>
-                    </CardFooter>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Your AI Activity</CardTitle>
-                      <CardDescription>Real usage stats</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <div><h4 className="font-medium text-sm">Chat Sessions</h4><p className="text-xs text-muted-foreground">Total conversations</p></div>
-                          <div className="text-2xl font-bold">{aiSessionCount}</div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div><h4 className="font-medium text-sm">Questions Asked</h4><p className="text-xs text-muted-foreground">To the AI assistant</p></div>
-                          <div className="text-2xl font-bold">{aiMessageCount}</div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div><h4 className="font-medium text-sm">Learning Paths</h4><p className="text-xs text-muted-foreground">Active paths</p></div>
-                          <div className="text-2xl font-bold">{pathProgress.length}</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+          {/* Performance + subjects */}
+          <div className="grid grid-cols-1 gap-5 pt-4 lg:grid-cols-12">
+            <Panel delay={440} className="flex flex-col p-6 sm:p-7 lg:col-span-7">
+              <PanelHead title="Performance over time" icon={TrendingUp} meta="Grade %" />
+              {timelineData.length > 0 ? (
+                <div className="mt-6 min-h-[256px] flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={timelineData} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="perfFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3FE9FF" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="perfStroke" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#3B82F6" />
+                          <stop offset="100%" stopColor="#3FE9FF" />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} stroke="#1A2744" />
+                      <XAxis dataKey="date" tick={{ fill: '#7688A6', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis domain={[0, 100]} tick={{ fill: '#7688A6', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#2A3A5E' }} />
+                      <Area type="monotone" dataKey="score" stroke="url(#perfStroke)" strokeWidth={2.5} fill="url(#perfFill)" name="Grade %" activeDot={{ r: 5, fill: '#3FE9FF', stroke: '#050A18', strokeWidth: 2 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
-              </FeatureGate>
-            </TabsContent>
+              ) : (
+                <EmptyState icon={TrendingUp} title="No graded assignments yet" body="Your grade trend will draw itself here as work gets marked." />
+              )}
+            </Panel>
 
-            {/* ═══════════ MESSAGES ═══════════ */}
-            <TabsContent value="messages">
-              <Card className="h-[calc(80vh-4rem)]">
-                <div className="grid md:grid-cols-3 h-full">
-                  {/* Contact list */}
-                  <div className="border-r border-border flex flex-col">
-                    <div className="p-3 border-b border-border">
-                      <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Search contacts..." className="pl-9" value={contactSearch}
-                          onChange={e => setContactSearch(e.target.value)} />
+            <Panel delay={500} className="p-6 sm:p-7 lg:col-span-5">
+              <PanelHead title="By subject" icon={Book} meta={`${subjectStats.length} subject${subjectStats.length === 1 ? '' : 's'}`} />
+              {subjectStats.length > 0 ? (
+                <ul className="mt-6 space-y-5">
+                  {subjectStats.map((s, i) => {
+                    const t = gradeTone(s.average);
+                    return (
+                      <li key={s.subject}>
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="truncate text-[14.5px] font-medium text-white">{s.subject}</span>
+                          <span className={cn('text-[15px] font-semibold tabular-nums', s.average > 0 ? gradeText[t] : 'text-lp-mute')}>
+                            {s.average > 0 ? `${s.average}%` : '—'}
+                          </span>
+                        </div>
+                        <Bar value={s.average} tone={t} className="mt-2" delay={520 + i * 80} />
+                        <p className="mt-1.5 text-[12px] text-lp-mute">{s.completed} of {s.total} graded · {s.pending} pending</p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <EmptyState icon={Book} title="No subjects yet" body="Subjects appear as your teachers set assignments." />
+              )}
+            </Panel>
+          </div>
+
+          {/* Recent grades + Ask Refyn */}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+            <Panel delay={560} className="p-6 sm:p-7 lg:col-span-7">
+              <PanelHead title="Recent grades" icon={FileText} meta={recentGrades.length > 0 ? 'Latest first' : undefined} />
+              {recentGrades.length > 0 ? (
+                <ul className="mt-5 divide-y divide-lp-line">
+                  {recentGrades.map(sub => {
+                    const assignment = assignments.find(a => a.id === sub.assignment_id);
+                    const pct = Math.round((sub.grade! / sub.max_grade) * 100);
+                    const t = gradeTone(pct);
+                    return (
+                      <li key={sub.id} className="flex items-center gap-4 py-3.5">
+                        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border text-[16px] font-semibold', {
+                          'border-lp-green/30 bg-lp-green/10 text-lp-green': t === 'green',
+                          'border-lp-sky/30 bg-lp-sky/10 text-lp-sky': t === 'blue',
+                          'border-[#FBBF24]/30 bg-[#FBBF24]/10 text-[#FBBF24]': t === 'amber',
+                          'border-lp-red/30 bg-lp-red/10 text-lp-red': t === 'red',
+                        })}>
+                          {gradeLabel(pct)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[14.5px] font-medium text-white">{assignment?.title || 'Assignment'}</p>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[12.5px] text-lp-mute">
+                            {assignment?.subject && <span className={chip}>{assignment.subject}</span>}
+                            {sub.graded_at && `Graded ${formatDistanceToNow(new Date(sub.graded_at), { addSuffix: true })}`}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className={cn('text-[17px] font-semibold tabular-nums', gradeText[t])}>{pct}%</p>
+                          <p className="text-[11.5px] tabular-nums text-lp-mute">{sub.grade}/{sub.max_grade}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <EmptyState icon={FileText} title="No grades yet" body="Marked work and feedback from your teachers will be listed here." />
+              )}
+            </Panel>
+
+            <Panel delay={620} className="relative overflow-hidden p-6 sm:p-7 lg:col-span-5">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full opacity-50 blur-3xl"
+                style={{ background: 'radial-gradient(circle, rgba(63,233,255,0.45), transparent 70%)' }}
+              />
+              <div className="relative">
+                <PanelHead title="Ask Refyn" icon={Sparkles} />
+                <p className="mt-4 text-[20px] leading-snug tracking-[-0.02em] text-white">
+                  Stuck on homework? Refyn won't hand you the answer. It'll help you get there yourself.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {AI_PROMPTS.map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => navigate('/ai-learning-assistant')}
+                      className="rounded-full border border-lp-line bg-lp-bg/50 px-3 py-1.5 text-[12.5px] text-lp-soft transition-all hover:border-lp-blue/50 hover:text-white"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-lp-line bg-lp-bg/50 p-4">
+                    <p className="text-[24px] font-semibold tabular-nums text-white">{aiSessionCount}</p>
+                    <p className="text-[12px] text-lp-mute">conversations</p>
+                  </div>
+                  <div className="rounded-2xl border border-lp-line bg-lp-bg/50 p-4">
+                    <p className="text-[24px] font-semibold tabular-nums text-white">{aiMessageCount}</p>
+                    <p className="text-[12px] text-lp-mute">questions asked</p>
+                  </div>
+                </div>
+                <GlowButton to="/ai-learning-assistant" className="mt-6">
+                  Open the assistant <ArrowRight className="h-4 w-4" />
+                </GlowButton>
+              </div>
+            </Panel>
+          </div>
+        </TabsContent>
+
+        {/* ═══════════ MY PLAN ═══════════ */}
+        <TabsContent value="myplan" className="mt-6">
+          <div className="lp-fade mx-auto max-w-2xl">
+            <StudentPlanCard />
+          </div>
+        </TabsContent>
+
+        {/* ═══════════ ASSIGNMENTS ═══════════ */}
+        <TabsContent value="assignments" className="mt-6">
+          <div className="lp-fade">
+            <StudentAssignmentView />
+          </div>
+        </TabsContent>
+
+        {/* ═══════════ PROGRESS ═══════════ */}
+        <TabsContent value="progress" className="mt-6 space-y-5">
+          <Panel className="p-6 sm:p-7">
+            <PanelHead title="Subject performance" icon={TrendingUp} meta="Average grade %" />
+            {subjectStats.length > 0 ? (
+              <div className="mt-6 h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={subjectStats.map(s => ({ name: s.subject, average: s.average }))} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3FE9FF" />
+                        <stop offset="100%" stopColor="#3B82F6" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} stroke="#1A2744" />
+                    <XAxis dataKey="name" tick={{ fill: '#7688A6', fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fill: '#7688A6', fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(124,180,255,0.06)' }} />
+                    <ReBar dataKey="average" name="Average Grade %" radius={[8, 8, 0, 0]} maxBarSize={56}>
+                      {subjectStats.map(s => <Cell key={s.subject} fill="url(#barFill)" />)}
+                    </ReBar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <EmptyState icon={TrendingUp} title="No grade data yet" body="Subject averages appear once assignments are graded." />
+            )}
+          </Panel>
+
+          {subjectStats.length > 0 && (
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              {subjectStats.map((stat, i) => {
+                const t = gradeTone(stat.average);
+                return (
+                  <Panel key={stat.subject} delay={60 + i * 50} className="p-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-[17px] font-medium text-white">{stat.subject}</p>
+                        <p className="mt-1 text-[12.5px] text-lp-mute">{stat.progressPct}% of work graded</p>
+                      </div>
+                      <Ring
+                        value={stat.average}
+                        size={64}
+                        stroke={6}
+                        tone={t}
+                        label={<span className={cn('text-[13px]', stat.average > 0 ? gradeText[t] : 'text-lp-mute')}>{stat.average > 0 ? `${stat.average}%` : '—'}</span>}
+                      />
+                    </div>
+                    <Bar value={stat.progressPct} className="mt-5" />
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl border border-lp-line bg-lp-bg/50 p-3.5">
+                        <p className="text-[12px] text-lp-mute">Completed</p>
+                        <p className="text-[22px] font-semibold tabular-nums text-white">{stat.completed}</p>
+                      </div>
+                      <div className="rounded-2xl border border-lp-line bg-lp-bg/50 p-3.5">
+                        <p className="text-[12px] text-lp-mute">Pending</p>
+                        <p className="text-[22px] font-semibold tabular-nums text-white">{stat.pending}</p>
                       </div>
                     </div>
-                    <div className="overflow-y-auto flex-1">
-                      {filteredContacts.length > 0 ? filteredContacts.map(c => (
-                        <div key={c.user_id}
-                          className={`flex items-center px-4 py-3 cursor-pointer hover:bg-accent transition-colors ${activeContact?.user_id === c.user_id ? 'bg-accent' : ''}`}
-                          onClick={() => setActiveContact(c)}>
-                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-sm mr-3 shrink-0">
-                            {getInitials(c.full_name)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{c.full_name}</p>
-                          </div>
-                          {(unreadCounts[c.user_id] || 0) > 0 && (
-                            <span className="bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center shrink-0">
-                              {unreadCounts[c.user_id]}
-                            </span>
-                          )}
+                  </Panel>
+                );
+              })}
+            </div>
+          )}
+
+          <Panel className="p-6 sm:p-7">
+            <PanelHead title="Learning paths" icon={Book} meta={`${pathProgress.length} enrolled`} />
+            {pathProgress.length > 0 ? (
+              <ul className="mt-5 space-y-2">
+                {pathProgress.map(pp => {
+                  const totalModules = Array.isArray(pp.path?.modules) ? (pp.path!.modules as unknown[]).length : 0;
+                  const done = pp.progress >= 100;
+                  return (
+                    <li key={pp.id}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/learning-path/${pp.path_id}`)}
+                        className="group flex w-full items-center gap-4 rounded-2xl border border-lp-line bg-lp-bg/40 p-4 text-left transition-all hover:border-lp-blue/40 hover:bg-lp-bg/70"
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lp-raised text-lp-sky">
+                          <Book className="h-5 w-5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[14.5px] font-medium text-white">{pp.path?.title || 'Learning Path'}</p>
+                          <p className="mt-0.5 text-[12.5px] text-lp-mute">{pp.path?.subject} · {pp.completed_modules?.length || 0}/{totalModules} modules</p>
+                          <Bar value={pp.progress} tone={done ? 'green' : 'blue'} className="mt-2" />
                         </div>
-                      )) : (
-                        <p className="text-center text-muted-foreground py-8 text-sm">No contacts found</p>
+                        <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium', done ? 'bg-lp-green/15 text-lp-green' : 'bg-lp-blue/15 text-lp-sky')}>
+                          {done ? 'Complete' : `${pp.progress}%`}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <EmptyState
+                icon={Book}
+                title="No learning paths started yet"
+                action={<Link to="/learning-paths" className={ghostBtn}>Browse learning paths <ArrowRight className="h-4 w-4" /></Link>}
+              />
+            )}
+          </Panel>
+        </TabsContent>
+
+        {/* ═══════════ AI LEARNING ═══════════ */}
+        <TabsContent value="learning" className="mt-6">
+          <FeatureGate feature="aiAssistant">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <Panel className="relative overflow-hidden p-7">
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full opacity-50 blur-3xl"
+                  style={{ background: 'radial-gradient(circle, rgba(63,233,255,0.4), transparent 70%)' }}
+                />
+                <div className="relative">
+                  <PanelHead title="AI Learning Assistant" icon={Brain} />
+                  <p className="mt-4 text-[20px] leading-snug tracking-[-0.02em] text-white">Get help with your studies, the guided way.</p>
+                  <ul className="mt-5 space-y-2.5">
+                    {['Answering questions about assignments', 'Explaining difficult concepts', 'Providing study tips', 'Creating practice questions'].map(item => (
+                      <li key={item} className="flex items-center gap-2.5 text-[14px] text-lp-soft">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-lp-green/15 text-lp-green">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <GlowButton to="/ai-learning-assistant" className="mt-7">
+                    <Brain className="h-4 w-4" /> Open AI Assistant
+                  </GlowButton>
+                </div>
+              </Panel>
+
+              <Panel delay={60} className="p-7">
+                <PanelHead title="Your AI activity" icon={TrendingUp} meta="Real usage" />
+                <ul className="mt-6 space-y-3">
+                  {[
+                    { label: 'Chat sessions', desc: 'Total conversations', value: aiSessionCount },
+                    { label: 'Questions asked', desc: 'To the AI assistant', value: aiMessageCount },
+                    { label: 'Learning paths', desc: 'Active paths', value: pathProgress.length },
+                  ].map(row => (
+                    <li key={row.label} className="flex items-center justify-between rounded-2xl border border-lp-line bg-lp-bg/50 px-5 py-4">
+                      <div>
+                        <p className="text-[14.5px] font-medium text-white">{row.label}</p>
+                        <p className="text-[12.5px] text-lp-mute">{row.desc}</p>
+                      </div>
+                      <p className="text-[28px] font-semibold tabular-nums text-white">{row.value}</p>
+                    </li>
+                  ))}
+                </ul>
+              </Panel>
+            </div>
+          </FeatureGate>
+        </TabsContent>
+
+        {/* ═══════════ MESSAGES ═══════════ */}
+        <TabsContent value="messages" className="mt-6">
+          <Panel className="h-[calc(100vh-18rem)] min-h-[480px] overflow-hidden">
+            <div className="grid h-full md:grid-cols-3">
+              {/* Contact list */}
+              <div className={cn('flex min-h-0 flex-col border-lp-line md:border-r', activeContact && 'hidden md:flex')}>
+                <div className="border-b border-lp-line p-4">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-lp-mute" />
+                    <input
+                      placeholder="Search contacts…"
+                      value={contactSearch}
+                      onChange={e => setContactSearch(e.target.value)}
+                      className="h-10 w-full rounded-xl border border-lp-line bg-lp-bg/60 pl-10 pr-3 text-[14px] text-white placeholder:text-lp-mute outline-none transition focus:border-lp-blue/60"
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2">
+                  {filteredContacts.length > 0 ? filteredContacts.map(c => (
+                    <button
+                      key={c.user_id}
+                      type="button"
+                      onClick={() => setActiveContact(c)}
+                      className={cn(
+                        'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors',
+                        activeContact?.user_id === c.user_id ? 'bg-lp-blue/15' : 'hover:bg-white/[0.04]',
                       )}
-                    </div>
-                  </div>
-
-                  {/* Chat area */}
-                  <div className="md:col-span-2 flex flex-col">
-                    {activeContact ? (
-                      <>
-                        <div className="px-4 py-3 border-b border-border flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-sm">
-                            {getInitials(activeContact.full_name)}
-                          </div>
-                          <p className="font-semibold">{activeContact.full_name}</p>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                          {messages.length > 0 ? messages.map(m => {
-                            const isMe = m.sender_id === user?.id;
-                            return (
-                              <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${isMe ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
-                                  <p className="text-sm">{m.content}</p>
-                                  <p className={`text-xs mt-1 text-right ${isMe ? 'opacity-70' : 'text-muted-foreground'}`}>
-                                    {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          }) : (
-                            <div className="h-full flex items-center justify-center text-muted-foreground">
-                              No messages yet. Start a conversation!
-                            </div>
-                          )}
-                          <div ref={messagesEndRef} />
-                        </div>
-                        <div className="p-3 border-t border-border">
-                          <div className="flex gap-2">
-                            <Input placeholder="Type a message..." value={messageText}
-                              onChange={e => setMessageText(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} />
-                            <Button onClick={sendMessage} disabled={!messageText.trim()} size="icon">
-                              <Send className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-muted-foreground">
-                        <MessageSquare className="h-8 w-8 mr-2 opacity-30" />
-                        Select a contact to start messaging
-                      </div>
-                    )}
-                  </div>
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-lp-blue to-[#1E3A8A] text-[12px] font-semibold text-white">
+                        {getInitials(c.full_name)}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-white">{c.full_name}</span>
+                      {(unreadCounts[c.user_id] || 0) > 0 && (
+                        <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-lp-red px-1 text-[11px] font-semibold text-white">
+                          {unreadCounts[c.user_id]}
+                        </span>
+                      )}
+                    </button>
+                  )) : (
+                    <p className="py-10 text-center text-[13.5px] text-lp-mute">No contacts found</p>
+                  )}
                 </div>
-              </Card>
-            </TabsContent>
+              </div>
 
-            {/* ═══════════ ADAPTIVE PROFILE ═══════════ */}
-            <TabsContent value="adaptive">
-              <FeatureGate feature="adaptiveProfile">
-                <AdaptiveLearningProfile />
-              </FeatureGate>
-            </TabsContent>
-
-            {/* ═══════════ QUIZ LIBRARY ═══════════ */}
-            <TabsContent value="quizzes">
-              <FeatureGate feature="quizPractice">
-                {practiceSessionId ? (
-                  <LiveQuizPlayer sessionId={practiceSessionId} onExit={() => setPracticeSessionId(null)} />
+              {/* Chat area */}
+              <div className={cn('min-h-0 flex-col md:col-span-2', activeContact ? 'flex' : 'hidden md:flex')}>
+                {activeContact ? (
+                  <>
+                    <div className="flex items-center gap-3 border-b border-lp-line px-5 py-3.5">
+                      <button type="button" onClick={() => setActiveContact(null)} className="text-[13px] text-lp-sky md:hidden">
+                        ← Back
+                      </button>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-lp-blue to-[#1E3A8A] text-[12px] font-semibold text-white">
+                        {getInitials(activeContact.full_name)}
+                      </span>
+                      <p className="font-medium text-white">{activeContact.full_name}</p>
+                    </div>
+                    <div className="flex-1 space-y-3 overflow-y-auto p-5">
+                      {messages.length > 0 ? messages.map(m => {
+                        const isMe = m.sender_id === user?.id;
+                        return (
+                          <div key={m.id} className={cn('flex', isMe ? 'justify-end' : 'justify-start')}>
+                            <div
+                              className={cn(
+                                'max-w-[75%] rounded-2xl px-4 py-2.5',
+                                isMe ? 'rounded-br-md bg-lp-blue text-white' : 'rounded-bl-md border border-lp-line bg-lp-raised text-lp-text',
+                              )}
+                            >
+                              <p className="text-[14px] leading-relaxed">{m.content}</p>
+                              <p className={cn('mt-1 text-right text-[11px]', isMe ? 'text-white/70' : 'text-lp-mute')}>
+                                {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }) : (
+                        <div className="flex h-full items-center justify-center text-[14px] text-lp-mute">
+                          No messages yet. Start a conversation!
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+                    <div className="border-t border-lp-line p-3">
+                      <div className="flex gap-2">
+                        <input
+                          placeholder="Type a message…"
+                          value={messageText}
+                          onChange={e => setMessageText(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                          className="h-11 flex-1 rounded-xl border border-lp-line bg-lp-bg/60 px-4 text-[14px] text-white placeholder:text-lp-mute outline-none transition focus:border-lp-blue/60"
+                        />
+                        <button
+                          type="button"
+                          onClick={sendMessage}
+                          disabled={!messageText.trim()}
+                          aria-label="Send message"
+                          className="flex h-11 w-11 items-center justify-center rounded-xl bg-lp-blue text-white transition-all hover:bg-[#2F6FE0] disabled:opacity-40"
+                        >
+                          <Send className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 ) : (
-                  <QuizLibrary onStartPractice={(id) => setPracticeSessionId(id)} />
+                  <EmptyState icon={MessageSquare} title="Select a contact" body="Pick someone on the left to start messaging." className="h-full" />
                 )}
-              </FeatureGate>
-            </TabsContent>
-          </Tabs>
-          <PilotFeedbackPrompt context="student" />
-      </div>
-    </div>
-  );
+              </div>
+            </div>
+          </Panel>
+        </TabsContent>
 
-  if (isInSchool) return dashboardContent;
+        {/* ═══════════ ADAPTIVE PROFILE ═══════════ */}
+        <TabsContent value="adaptive" className="mt-6">
+          <div className="lp-fade">
+            <FeatureGate feature="adaptiveProfile">
+              <AdaptiveLearningProfile />
+            </FeatureGate>
+          </div>
+        </TabsContent>
 
-  return (
-    <div className="flex h-screen bg-background">
-      <DashboardSidebar />
-      {dashboardContent}
-    </div>
+        {/* ═══════════ QUIZ LIBRARY ═══════════ */}
+        <TabsContent value="quizzes" className="mt-6">
+          <div className="lp-fade">
+            <FeatureGate feature="quizPractice">
+              {practiceSessionId ? (
+                <LiveQuizPlayer sessionId={practiceSessionId} onExit={() => setPracticeSessionId(null)} />
+              ) : (
+                <QuizLibrary onStartPractice={(id) => setPracticeSessionId(id)} />
+              )}
+            </FeatureGate>
+          </div>
+        </TabsContent>
+      </Tabs>
+      <PilotFeedbackPrompt context="student" />
+    </>,
   );
 };
 
