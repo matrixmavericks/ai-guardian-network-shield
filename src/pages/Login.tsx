@@ -1,72 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertCircle, ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { lovable } from '@/integrations/lovable/index';
-import misLogo from "@/assets/photos/mis-logo.png";
-import BoomerangVideoBg from "@/components/landing/BoomerangVideoBg";
 import { Wordmark } from "@/components/landing/LandingNav";
-import { BG_VIDEO } from "@/components/landing/media";
+import AuthBrandPanel from "@/components/landing/AuthBrandPanel";
 import { GlowSubmit } from "@/components/landing/primitives";
 
 const inputClass =
   "h-12 w-full rounded-xl border border-lp-line bg-lp-surface/70 pl-11 pr-4 text-[15px] text-lp-text placeholder:text-lp-mute outline-none transition-[border-color,background-color,box-shadow] duration-200 focus:border-lp-blue/70 focus:bg-lp-surface focus:shadow-[0_0_0_4px_rgba(59,130,246,0.15)]";
-
-/** Video panel on the left (desktop only). */
-const BrandPanel = () => (
-  <aside className="relative m-3 hidden overflow-hidden rounded-[28px] border border-white/10 lg:flex lg:flex-col">
-    <BoomerangVideoBg
-      src={BG_VIDEO}
-      className="absolute inset-0 h-full w-full"
-      mediaClassName="grayscale contrast-[1.1] brightness-[1.15]"
-    />
-    <div aria-hidden className="absolute inset-0 bg-[#2563EB] opacity-80 mix-blend-color" />
-    <div aria-hidden className="absolute inset-0 bg-[#0B1A45] opacity-30 mix-blend-multiply" />
-    <div
-      aria-hidden
-      className="absolute inset-0"
-      style={{ background: "linear-gradient(180deg, rgba(3,6,15,0.5) 0%, rgba(3,6,15,0) 35%, rgba(3,6,15,0.1) 55%, rgba(3,6,15,0.85) 100%)" }}
-    />
-
-    <div className="relative z-10 flex items-center justify-between p-8">
-      <Link to="/" aria-label="Refyn home" className="text-white">
-        <Wordmark />
-      </Link>
-      <Link to="/" className="flex items-center gap-1.5 text-[13px] font-medium text-white/80 transition-colors hover:text-white">
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to site
-      </Link>
-    </div>
-
-    {/* A glimpse of Guided mode */}
-    <div className="lp-fade relative z-10 mx-8 mt-auto max-w-[360px] rounded-2xl border border-white/15 bg-[#0A1328]/70 p-4 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] backdrop-blur-xl">
-      <p className="ml-auto w-fit rounded-2xl rounded-br-md bg-lp-blue px-3.5 py-2 text-[13.5px] text-white">
-        can you just give me the answer to 7x + 39x
-      </p>
-      <p className="mt-2.5 rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.06] px-3.5 py-2 text-[13.5px] text-white/90">
-        <Sparkles aria-hidden className="mr-1.5 inline h-3.5 w-3.5 -translate-y-px text-lp-cyan" />
-        They're like terms. What do you get when you add 7 and 39?
-      </p>
-    </div>
-
-    <div className="relative z-10 p-8 pt-8">
-      <p className="lp-fade max-w-[26rem] text-[40px] font-normal leading-[0.98] tracking-[-0.045em] text-white" style={{ animationDelay: "80ms", animationFillMode: "both" }}>
-        AI that teaches the thinking,{" "}
-        <span className="bg-gradient-to-r from-[#93C5FD] via-[#BFDBFE] to-lp-cyan bg-clip-text text-transparent">not the answer.</span>
-      </p>
-      <div className="lp-fade mt-6 flex items-center gap-3" style={{ animationDelay: "160ms", animationFillMode: "both" }}>
-        <span className="rounded-lg bg-[#FFFFFF] px-2 py-1.5">
-          <img src={misLogo} alt="" width={239} height={151} className="h-7 w-auto" />
-        </span>
-        <span className="text-[13px] leading-snug text-white/75">
-          Now piloting at
-          <br />
-          <span className="font-medium text-white">Mahindra International School, Pune</span>
-        </span>
-      </div>
-    </div>
-  </aside>
-);
 
 const GoogleIcon = () => (
   <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" aria-hidden><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
@@ -141,7 +84,7 @@ const Login = () => {
 
   return (
     <div className="relative z-[1] grid min-h-screen grid-cols-1 bg-lp-bg font-ui text-lp-text antialiased selection:bg-lp-blue/40 selection:text-white lg:grid-cols-2">
-      <BrandPanel />
+      <AuthBrandPanel />
 
       <main className="relative flex min-h-screen flex-col overflow-hidden px-5 py-6 sm:px-10">
         <div
