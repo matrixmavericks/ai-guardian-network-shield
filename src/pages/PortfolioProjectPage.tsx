@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getPortfolioShareUrl } from "@/lib/publicUrl";
-import DashboardSidebar from "@/components/DashboardSidebar";
+import { StudyShell } from "@/components/subjects/kit";
+import { monogram, themeFor } from "@/components/student/themes";
+
 import PortfolioCollaborators from "@/components/PortfolioCollaborators";
 import {
   ArrowLeft,
@@ -37,6 +39,16 @@ import {
 } from "lucide-react";
 
 import { PORTFOLIO_THEMES, getTheme } from "@/lib/portfolioThemes";
+
+// Navy-friendly header colours for each page theme (the owner view)
+const HEADER_GRADIENTS: Record<string, string> = {
+  midnight: "linear-gradient(135deg, #1E3A8A 0%, #172554 55%, #0B1530 100%)",
+  sunset: "linear-gradient(135deg, #F97316 0%, #E11D48 55%, #4C0519 100%)",
+  forest: "linear-gradient(135deg, #10B981 0%, #0F766E 55%, #022C22 100%)",
+  lavender: "linear-gradient(135deg, #A78BFA 0%, #7C3AED 55%, #2E1065 100%)",
+  minimal: "linear-gradient(135deg, #334155 0%, #1E293B 55%, #0F172A 100%)",
+};
+const niceDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 interface PortfolioProject {
   id: string;
@@ -356,23 +368,29 @@ const PortfolioProjectPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <DashboardSidebar />
-        <div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-      </div>
+      <StudyShell>
+        <div className="mx-auto max-w-[920px]">
+          <div className="lp-skeleton h-56 rounded-3xl" />
+          <div className="lp-skeleton mt-6 h-10 w-2/3 rounded-xl" />
+          <div className="lp-skeleton mt-4 h-40 rounded-3xl" />
+        </div>
+      </StudyShell>
     );
   }
 
   if (!project) return null;
 
   const isOwner = project.user_id === user?.id;
+  const headerGradient = HEADER_GRADIENTS[selectedTheme] ?? themeFor(project.tags[0] ?? project.title).gradient;
 
   return (
-    <div className={`flex min-h-screen ${theme.bg}`}>
-      <DashboardSidebar />
-      <div className="flex-1 max-w-4xl">
+    <StudyShell>
+      <div className="mx-auto max-w-[920px]">
+        <Link to="/portfolio" className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-lp-mute transition-colors hover:text-white">
+          <ArrowLeft className="h-4 w-4" /> Portfolio
+        </Link>
         {/* Cover Image Section */}
-        <div className="relative">
+        <div className="relative overflow-hidden rounded-3xl border border-lp-line">
           {project.cover_image_url ? (
             <div className="relative h-56 md:h-72 overflow-hidden">
               <img
@@ -392,14 +410,17 @@ const PortfolioProjectPage = () => {
                   </Button>
                 </div>
               )}
-              <div className="absolute bottom-4 left-8 right-8">
-                <Button variant="ghost" className="text-white/80 hover:text-white mb-2 pl-0" onClick={() => navigate("/portfolio")}>
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
-                </Button>
-              </div>
             </div>
           ) : (
-            <div className={`h-48 md:h-56 ${theme.headerBg || 'bg-gradient-to-br from-primary/10 to-primary/5'} flex items-end relative`}>
+            <div className="relative flex h-48 items-end overflow-hidden md:h-60" style={{ background: headerGradient }}>
+              <div
+                aria-hidden
+                className="absolute inset-0 opacity-25"
+                style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "28px 28px", maskImage: "radial-gradient(90% 90% at 85% 95%, black, transparent 70%)", WebkitMaskImage: "radial-gradient(90% 90% at 85% 95%, black, transparent 70%)" }}
+              />
+              <span aria-hidden className="absolute -bottom-7 right-6 select-none text-[150px] font-semibold leading-none tracking-[-0.06em] text-white/25 md:text-[190px]">
+                {monogram(project.title)}
+              </span>
               {isOwner && (
                 <div className="absolute top-4 right-4">
                   <Button size="sm" variant="secondary" onClick={() => coverInputRef.current?.click()}>
@@ -408,10 +429,10 @@ const PortfolioProjectPage = () => {
                   </Button>
                 </div>
               )}
-              <div className="p-8 pb-4">
-                <Button variant="ghost" className="pl-0 mb-2" onClick={() => navigate("/portfolio")}>
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
-                </Button>
+              <div className="relative p-6 md:p-8">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm">
+                  {project.capstone_submission_id ? <><Sparkles className="h-3 w-3" /> Capstone project</> : "Portfolio project"}
+                </span>
               </div>
             </div>
           )}
@@ -424,7 +445,7 @@ const PortfolioProjectPage = () => {
           />
         </div>
 
-        <div className="px-8 py-6">
+        <div className="py-6">
           {/* Header with inline editing */}
           <div className="mb-6">
             {isEditing ? (
@@ -451,9 +472,9 @@ const PortfolioProjectPage = () => {
               </div>
             ) : (
               <>
-                <div className="flex items-start justify-between">
-                  <h1 className="text-3xl font-bold">{project.title}</h1>
-                  <div className="flex gap-2 flex-shrink-0">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.03em] text-white md:text-[30px]">{project.title}</h1>
+                  <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
                     {isOwner && (
                       <>
                         <Button variant="ghost" size="icon" onClick={() => setShowThemePicker(!showThemePicker)} title="Change theme">
@@ -468,21 +489,28 @@ const PortfolioProjectPage = () => {
                       <Share2 className="mr-2 h-4 w-4" /> {project.is_published ? "Published" : "Publish"}
                     </Button>
                     {project.is_published && (
-                      <Button variant="outline" size="sm" onClick={copyShareLink}><Copy className="mr-2 h-4 w-4" /> Copy Link</Button>
+                      <Button variant="outline" size="sm" onClick={copyShareLink} aria-label="Copy link"><Copy className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Copy Link</span></Button>
                     )}
                     {isOwner && (
                       <Button variant="ghost" size="icon" className="text-destructive" onClick={handleDelete}><Trash2 className="h-4 w-4" /></Button>
                     )}
                   </div>
                 </div>
-                <p className="text-muted-foreground mt-2 text-base leading-relaxed">{project.description}</p>
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {project.tags.map((tag, i) => <Badge key={i} variant="secondary">{tag}</Badge>)}
+                <p className="mt-3 max-w-[70ch] text-[15px] leading-relaxed text-lp-soft">{project.description}</p>
+                <div className="mt-4 flex flex-wrap items-center gap-1.5">
+                  {project.tags.map((tag, i) => {
+                    const t = themeFor(tag);
+                    return (
+                      <span key={i} className="rounded-full px-2.5 py-1 text-[11.5px] font-medium" style={{ color: t.accent, background: `${t.accent}1A` }}>
+                        {tag}
+                      </span>
+                    );
+                  })}
                 </div>
-                <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                  <Calendar className="h-3 w-3" /> Created {new Date(project.created_at).toLocaleDateString()}
+                <div className="mt-3 flex items-center gap-1.5 text-[12px] text-lp-mute">
+                  <Calendar className="h-3.5 w-3.5" /> Created {niceDate(project.created_at)}
                   {project.updated_at !== project.created_at && (
-                    <span className="ml-2">· Updated {new Date(project.updated_at).toLocaleDateString()}</span>
+                    <span>· Updated {niceDate(project.updated_at)}</span>
                   )}
                 </div>
               </>
@@ -509,7 +537,7 @@ const PortfolioProjectPage = () => {
                           : 'border-border hover:border-primary/50'
                       }`}
                     >
-                      <div className={`h-8 rounded mb-1.5 ${t.headerBg || 'bg-gradient-to-br from-primary/10 to-primary/5'}`} />
+                      <div className="mb-1.5 h-8 rounded" style={{ background: HEADER_GRADIENTS[t.id] ?? themeFor(project.tags[0] ?? project.title).gradient }} />
                       {t.label}
                     </button>
                   ))}
@@ -696,7 +724,7 @@ const PortfolioProjectPage = () => {
           <TeacherComments projectId={project.id} />
         </div>
       </div>
-    </div>
+    </StudyShell>
   );
 };
 

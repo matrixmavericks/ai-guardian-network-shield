@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, X, Save, Trash2, BookOpen, Sparkles, Loader, Wand2, GraduationCap, Upload, FileText, ArrowRight, Star, FileCheck } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import DashboardNav from '@/components/DashboardNav';
-import DashboardSidebar from '@/components/DashboardSidebar';
+import { Link } from 'react-router-dom';
+import { StudyShell, primaryBtn } from '@/components/subjects/kit';
+import { ghostBtn } from '@/components/student/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -357,41 +358,43 @@ const CreateLearningPathPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
-      <DashboardSidebar />
-      <div className="flex-1 flex flex-col">
-        <DashboardNav />
-        <main className="flex-1 p-6">
+    <StudyShell>
           <FeatureGate feature="customLearningPaths">
-          <div className="max-w-5xl mx-auto space-y-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-6 w-6 text-primary" />
-                <h1 className="text-2xl font-bold text-foreground">Create Your Learning Path</h1>
+          <div className="space-y-6">
+            <Link to="/learning-paths" className="inline-flex items-center gap-1.5 text-[13px] text-lp-mute transition-colors hover:text-white">
+              <ArrowRight className="h-4 w-4 rotate-180" /> All learning paths
+            </Link>
+            <header className="lp-fade flex flex-wrap items-end justify-between gap-4" style={{ animationFillMode: 'both' }}>
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-lp-sky">Build your own</p>
+                <h1 className="mt-1.5 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-white sm:text-[34px]">Create a learning path</h1>
+                <p className="mt-1.5 max-w-[560px] text-[14.5px] text-lp-soft">Tell Refyn what you want to learn. It designs the modules, lessons and quizzes, and you can edit everything before you start.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={handleGenerateWithAI} disabled={isGenerating || !title.trim() || !effectiveSubject}>
-                  {isGenerating ? <><Loader className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Wand2 className="mr-2 h-4 w-4" />Generate with AI</>}
-                </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {isSaving ? 'Saving...' : 'Save & Start Learning'}
-                </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" className={ghostBtn} onClick={handleGenerateWithAI} disabled={isGenerating || !title.trim() || !effectiveSubject}>
+                  {isGenerating ? <><Loader className="h-4 w-4 animate-spin" />Generating…</> : <><Wand2 className="h-4 w-4 text-lp-cyan" />Generate with AI</>}
+                </button>
+                <button type="button" className={primaryBtn} onClick={handleSave} disabled={isSaving}>
+                  <Save className="h-4 w-4" />
+                  {isSaving ? 'Saving…' : 'Save & start learning'}
+                </button>
               </div>
-            </div>
+            </header>
 
-            {/* Quick-start hero for students */}
-            <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-accent/10">
-              <CardContent className="flex items-start gap-4 py-6">
-                <GraduationCap className="h-10 w-10 text-primary shrink-0 mt-1" />
-                <div>
-                  <h2 className="text-lg font-semibold">How it works</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    1. Enter what you want to learn &nbsp;→&nbsp; 2. Click <strong>Generate with AI</strong> to build a full curriculum &nbsp;→&nbsp; 3. <strong>Save & Start Learning</strong> — each module has interactive lessons, notes, and quizzes powered by AI.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <ol className="lp-fade grid grid-cols-1 gap-3 md:grid-cols-3" style={{ animationDelay: '60ms', animationFillMode: 'both' }}>
+              {[
+                { n: 1, title: 'Describe the goal', body: 'A title, subject and level. Or paste a syllabus and let Refyn suggest topics.', icon: FileText },
+                { n: 2, title: 'Generate with AI', body: 'Refyn drafts modules with lessons and quizzes. Tweak anything you like.', icon: Wand2 },
+                { n: 3, title: 'Save and start', body: 'Your path appears in Learning paths, with progress tracked as you go.', icon: GraduationCap },
+              ].map((step) => (
+                <li key={step.n} className="relative overflow-hidden rounded-2xl border border-lp-line bg-lp-surface/70 p-4">
+                  <span className="absolute right-3 top-1 select-none text-[56px] font-semibold leading-none text-white/[0.04]">{step.n}</span>
+                  <step.icon className="h-5 w-5 text-lp-sky" />
+                  <p className="mt-2 text-[14px] font-medium text-white">{step.title}</p>
+                  <p className="mt-0.5 text-[12.5px] leading-snug text-lp-mute">{step.body}</p>
+                </li>
+              ))}
+            </ol>
 
             {/* Resource context indicator */}
             {resourceContext && (
@@ -628,9 +631,7 @@ const CreateLearningPathPage = () => {
             </div>
           </div>
           </FeatureGate>
-        </main>
-      </div>
-    </div>
+    </StudyShell>
   );
 };
 

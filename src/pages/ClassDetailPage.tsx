@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { differenceInCalendarDays, format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { StudyShell, primaryBtn } from '@/components/subjects/kit';
+import { Panel, PanelHead, chip, ghostBtn } from '@/components/student/ui';
+import { Field, Modal, inputCls } from '@/components/student/Modal';
+import { monogram, themeFor } from '@/components/student/themes';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -110,6 +116,7 @@ const ClassDetailPage = () => {
   // Live Quiz state
   const [quizView, setQuizView] = useState<'list' | 'create' | 'play' | 'results'>('list');
   const [activeQuizSessionId, setActiveQuizSessionId] = useState<string | null>(null);
+  const [studentFilter, setStudentFilter] = useState<'all' | 'todo' | 'submitted' | 'graded'>('all');
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
@@ -520,43 +527,74 @@ const ClassDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-background">
-        <DashboardSidebar />
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">Loading...</div>
-      </div>
+      <StudyShell wide>
+        <div className="lp-skeleton h-[220px] rounded-3xl" />
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
+          <div className="lp-skeleton h-[320px] rounded-3xl" />
+          <div className="lp-skeleton h-[320px] rounded-3xl" />
+        </div>
+      </StudyShell>
     );
   }
 
   if (!classInfo) return null;
 
+  const theme = themeFor(classInfo.subject || classInfo.name);
   return (
-    <div className="flex h-screen bg-background">
-      <DashboardSidebar />
-      <div className="flex-1 overflow-y-auto">
-        <div className="container py-8 max-w-6xl">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-6">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/classes')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-foreground">{classInfo.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary">{classInfo.subject}</Badge>
-                {isTeacher && <Badge variant="outline">{students.length} students</Badge>}
-                {classInfo.description && (
-                  <span className="text-sm text-muted-foreground">{classInfo.description}</span>
-                )}
+    <StudyShell wide>
+          <Link to="/classes" className="inline-flex items-center gap-1.5 text-[13px] text-lp-mute transition-colors hover:text-white">
+            <ArrowLeft className="h-4 w-4" /> All classes
+          </Link>
+          <section className="lp-fade relative mt-4 overflow-hidden rounded-3xl border border-white/10" style={{ background: theme.gradient, animationFillMode: 'both' }}>
+            <div
+              aria-hidden
+              className="absolute inset-0 opacity-20"
+              style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1px)', backgroundSize: '16px 16px', maskImage: 'linear-gradient(110deg, transparent 35%, black)', WebkitMaskImage: 'linear-gradient(110deg, transparent 35%, black)' }}
+            />
+            <span aria-hidden className="absolute -bottom-10 right-4 select-none text-[150px] font-semibold leading-none tracking-[-0.06em] text-white/15">
+              {monogram(classInfo.name)}
+            </span>
+            <div className="relative flex flex-wrap items-end justify-between gap-6 p-6 sm:p-8">
+              <div className="min-w-0 max-w-[680px]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/75">
+                  {[classInfo.curriculum_type && classInfo.curriculum_type !== 'general' ? classInfo.curriculum_type.toUpperCase().replace('_', ' ') : null, classInfo.subject].filter(Boolean).join(' · ')}
+                </p>
+                <h1 className="mt-2 text-[28px] font-semibold leading-tight tracking-[-0.03em] text-white sm:text-[36px]">{classInfo.name}</h1>
+                {classInfo.description && <p className="mt-2 text-[14.5px] leading-relaxed text-white/80">{classInfo.description}</p>}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {isTeacher ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1 text-[12.5px] text-white backdrop-blur-sm">
+                      <Users className="h-3.5 w-3.5" /> {students.length} students
+                    </span>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1 text-[12.5px] text-white backdrop-blur-sm">
+                        <FileText className="h-3.5 w-3.5" /> {assignments.length} assignments
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1 text-[12.5px] text-white backdrop-blur-sm">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> {assignments.filter(a => getStudentSubmission(a.id)).length} handed in
+                      </span>
+                    </>
+                  )}
+                  {classGradingSystem && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1 text-[12.5px] text-white backdrop-blur-sm">
+                      <GraduationCap className="h-3.5 w-3.5" /> {classGradingSystem.name}
+                    </span>
+                  )}
+                </div>
               </div>
+              {isTeacher && (
+                <button type="button" onClick={copyCode} className="group rounded-2xl border border-white/20 bg-white/15 px-5 py-3 text-left text-white backdrop-blur-md transition-colors hover:bg-white/25">
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/75">
+                    <Copy className="h-3 w-3" /> Join code
+                  </span>
+                  <span className="mt-0.5 block font-mono text-[26px] font-semibold uppercase tracking-[0.12em]">{classInfo.join_code}</span>
+                </button>
+              )}
             </div>
-            {isTeacher && (
-              <Button variant="outline" onClick={copyCode}>
-                <Copy className="h-4 w-4 mr-2" />
-                Code: {classInfo.join_code}
-              </Button>
-            )}
-          </div>
+          </section>
 
+          <div className="mt-6">
           {isTeacher ? (
             <Tabs value={classTab} onValueChange={setClassTab}>
               <TabsList className="mb-6">
@@ -1221,79 +1259,91 @@ const ClassDetailPage = () => {
             </Tabs>
           ) : (
             /* ===== STUDENT VIEW ===== */
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Class Information</CardTitle>
-                  <CardDescription>You are enrolled in this class</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p><strong>Subject:</strong> {classInfo.subject}</p>
-                    {classInfo.description && <p><strong>Description:</strong> {classInfo.description}</p>}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Student sees assignments with submit functionality */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Assignments ({assignments.length})
-                  </CardTitle>
-                  <CardDescription>Click on an assignment to submit your work</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {assignments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">No assignments yet.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {assignments.map(a => {
-                        const sub = getStudentSubmission(a.id);
-                        const isGraded = sub && sub.grade !== null;
-                        const isSubmitted = !!sub;
-                        const overdue = a.due_date ? new Date(a.due_date) < new Date() : false;
-                        return (
-                          <div
-                            key={a.id}
-                            className={`border rounded-lg p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
-                              isGraded ? 'border-green-500/30 bg-green-50/30' :
-                              isSubmitted ? 'border-primary/30 bg-primary/5' :
-                              overdue ? 'border-destructive/30' : ''
-                            }`}
-                            onClick={() => !isGraded && openStudentSubmitDialog(a)}
+            (() => {
+              const rows = assignments.map(a => {
+                const sub = getStudentSubmission(a.id);
+                const graded = !!sub && sub.grade !== null && sub.grade !== undefined;
+                const submitted = !!sub;
+                const overdue = !!a.due_date && new Date(a.due_date) < new Date();
+                const status: 'graded' | 'submitted' | 'overdue' | 'todo' = graded ? 'graded' : submitted ? 'submitted' : overdue ? 'overdue' : 'todo';
+                return { a, sub, status };
+              });
+              const count = (s: string) => rows.filter(r => r.status === s).length;
+              const STATUS = {
+                todo: { label: 'To do', color: '#7CB4FF' },
+                overdue: { label: 'Overdue', color: '#F2706A' },
+                submitted: { label: 'Submitted', color: '#A78BFA' },
+                graded: { label: 'Graded', color: '#34D399' },
+              } as const;
+              const shown = rows.filter(r =>
+                studentFilter === 'all' ? true : studentFilter === 'todo' ? r.status === 'todo' || r.status === 'overdue' : r.status === studentFilter,
+              );
+              return (
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+                  <div className="min-w-0 space-y-4">
+                    <Panel className="p-5">
+                      <PanelHead title="Assignments" icon={FileText} meta={<span>{assignments.length} total</span>} />
+                      {rows.length > 0 && (
+                        <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-lp-line">
+                          {(['graded', 'submitted', 'todo', 'overdue'] as const).map(s => (
+                            <span key={s} className="lp-bar-in h-full" style={{ width: `${(count(s) / rows.length) * 100}%`, background: STATUS[s].color }} />
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-4 flex flex-wrap gap-1.5">
+                        {([
+                          ['all', 'All', rows.length],
+                          ['todo', 'To do', count('todo') + count('overdue')],
+                          ['submitted', 'Submitted', count('submitted')],
+                          ['graded', 'Graded', count('graded')],
+                        ] as const).map(([id, label, n]) => (
+                          <button
+                            key={id}
+                            type="button"
+                            aria-pressed={studentFilter === id}
+                            onClick={() => setStudentFilter(id)}
+                            className={cn(
+                              'flex h-9 items-center gap-2 rounded-full border px-3.5 text-[13px] font-medium',
+                              studentFilter === id ? 'border-lp-sky/50 bg-lp-blue/15 text-white' : 'border-lp-line text-lp-mute hover:text-white',
+                            )}
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <h4 className="font-medium">{a.title}</h4>
+                            {id !== 'all' && <span className="h-2 w-2 rounded-full" style={{ background: STATUS[id === 'todo' ? 'todo' : id].color }} />}
+                            {label} <span className="tabular-nums text-lp-mute">{n}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </Panel>
+
+                    {shown.length === 0 ? (
+                      <div className="rounded-3xl border border-dashed border-lp-line px-6 py-10 text-center text-[13.5px] text-lp-mute">
+                        {assignments.length === 0 ? 'No assignments yet. They will appear here when your teacher sets them.' : 'Nothing here right now.'}
+                      </div>
+                    ) : (
+                      shown.map(({ a, sub, status }, i) => {
+                        const st = STATUS[status];
+                        const pct = sub && sub.max_grade ? (sub.grade / sub.max_grade) * 100 : 0;
+                        const days = a.due_date ? differenceInCalendarDays(new Date(a.due_date), new Date()) : null;
+                        return (
+                          <article
+                            key={a.id}
+                            className="lp-fade relative overflow-hidden rounded-2xl border border-lp-line bg-lp-surface/70 p-4 pl-5"
+                            style={{ animationDelay: `${i * 40}ms`, animationFillMode: 'both' }}
+                          >
+                            <span aria-hidden className="absolute inset-y-0 left-0 w-1" style={{ background: st.color }} />
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h4 className="text-[15px] font-medium text-white">{a.title}</h4>
+                                  <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: st.color, background: `${st.color}1F` }}>
+                                    {st.label}
+                                  </span>
                                   {a.is_group_assignment && (
-                                    <Badge variant="outline" className="text-xs">
-                                      <Users className="mr-1 h-3 w-3" /> Group
-                                    </Badge>
-                                  )}
-                                  {isGraded && (
-                                    <Badge variant="default" className="bg-emerald-600">
-                                      <CheckCircle2 className="mr-1 h-3 w-3" />
-                                      {classGradingSystem
-                                        ? convertPercentageToGrade((sub.grade / sub.max_grade) * 100, classGradingSystem)
-                                        : `${sub.grade}/${sub.max_grade}`}
-                                      {' '}({Math.round((sub.grade / sub.max_grade) * 100)}%)
-                                    </Badge>
-                                  )}
-                                  {isSubmitted && !isGraded && (
-                                    <Badge variant="secondary">
-                                      <Clock className="mr-1 h-3 w-3" /> Submitted
-                                    </Badge>
-                                  )}
-                                  {!isSubmitted && overdue && (
-                                    <Badge variant="destructive">
-                                      <AlertTriangle className="mr-1 h-3 w-3" /> Overdue
-                                    </Badge>
+                                    <span className={chip}>
+                                      <Users className="h-3 w-3" /> Group
+                                    </span>
                                   )}
                                 </div>
-                                {a.description && <p className="text-sm text-muted-foreground mt-1">{a.description}</p>}
+                                {a.description && <p className="mt-1.5 text-[13px] leading-relaxed text-lp-soft">{a.description}</p>}
                                 {a.is_group_assignment && (
                                   <div className="mt-3" onClick={e => e.stopPropagation()}>
                                     <GroupManager
@@ -1307,121 +1357,111 @@ const ClassDetailPage = () => {
                                   </div>
                                 )}
                                 {sub?.feedback && (
-                                  <div className="mt-2 bg-muted rounded-lg p-2 text-sm">
-                                    <span className="font-medium">Feedback:</span> {sub.feedback}
-                                  </div>
+                                  <blockquote className="mt-3 rounded-xl border border-lp-line bg-lp-deep/50 px-3 py-2.5 text-[13px] leading-relaxed text-lp-soft">
+                                    <span className="mb-0.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-lp-mute">Teacher feedback</span>
+                                    {sub.feedback}
+                                  </blockquote>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 ml-4">
-                                {a.due_date && (
-                                  <Badge variant="outline" className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    {new Date(a.due_date).toLocaleDateString()}
-                                  </Badge>
-                                )}
-                                {!isGraded && (
-                                  <Button size="sm" variant={isSubmitted ? 'outline' : 'default'}>
-                                    {isSubmitted ? 'Resubmit' : 'Submit'}
-                                    <Send className="ml-2 h-3 w-3" />
-                                  </Button>
+                              <div className="flex shrink-0 flex-col items-end gap-2">
+                                {status === 'graded' ? (
+                                  <div className="text-right">
+                                    <p className="text-[24px] font-semibold leading-none tabular-nums text-white">
+                                      {classGradingSystem ? convertPercentageToGrade(pct, classGradingSystem) : `${sub.grade}/${sub.max_grade}`}
+                                    </p>
+                                    <p className="mt-1 text-[11.5px] tabular-nums text-lp-mute">
+                                      {sub.grade}/{sub.max_grade} · {Math.round(pct)}%
+                                    </p>
+                                  </div>
+                                ) : a.due_date ? (
+                                  <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]', status === 'overdue' ? 'border-lp-red/40 text-lp-red' : 'border-lp-line text-lp-soft')}>
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {status === 'overdue'
+                                      ? `Overdue ${Math.abs(days ?? 0)}d`
+                                      : days === 0
+                                        ? 'Due today'
+                                        : days === 1
+                                          ? 'Due tomorrow'
+                                          : `Due ${format(new Date(a.due_date), 'd MMM')}`}
+                                  </span>
+                                ) : null}
+                                {status !== 'graded' && (
+                                  <button type="button" onClick={() => openStudentSubmitDialog(a)} className={cn(status === 'submitted' ? ghostBtn : primaryBtn, 'h-9')}>
+                                    {status === 'submitted' ? 'Resubmit' : 'Submit'} <Send className="h-3.5 w-3.5" />
+                                  </button>
                                 )}
                               </div>
                             </div>
-                          </div>
+                          </article>
                         );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                      })
+                    )}
+                  </div>
 
-              {/* Class Resources */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="h-5 w-5" />
-                    Class Resources
-                  </CardTitle>
-                  <CardDescription>Files, notes, and links shared by your teacher</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ClassResourceManager
-                    classId={classInfo.id}
-                    className={classInfo.name}
-                    isTeacher={false}
-                  />
-                </CardContent>
-              </Card>
+                  <div className="min-w-0 space-y-4">
+                    <Panel className="p-5" delay={80}>
+                      <PanelHead title="Class resources" icon={Upload} />
+                      <p className="mt-1 text-[12px] text-lp-mute">Files, notes and links from your teacher.</p>
+                      <div className="mt-3">
+                        <ClassResourceManager classId={classInfo.id} className={classInfo.name} isTeacher={false} />
+                      </div>
+                    </Panel>
 
-              {/* Live Quizzes for students */}
-              {quizView === 'play' && activeQuizSessionId ? (
-                <LiveQuizPlayer sessionId={activeQuizSessionId} onExit={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
-              ) : quizView === 'results' && activeQuizSessionId ? (
-                <QuizResults sessionId={activeQuizSessionId} onBack={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
-              ) : (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5" /> Live Quizzes
-                    </CardTitle>
-                    <CardDescription>Join live quiz games and compete with classmates</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <LiveQuizList
-                      classId={classInfo.id}
-                      isTeacher={false}
-                      onCreateNew={() => {}}
-                      onJoinSession={(id) => { setQuizView('play'); setActiveQuizSessionId(id); }}
-                      onViewResults={(id) => { setQuizView('results'); setActiveQuizSessionId(id); }}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                    {quizView === 'play' && activeQuizSessionId ? (
+                      <LiveQuizPlayer sessionId={activeQuizSessionId} onExit={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
+                    ) : quizView === 'results' && activeQuizSessionId ? (
+                      <QuizResults sessionId={activeQuizSessionId} onBack={() => { setQuizView('list'); setActiveQuizSessionId(null); }} />
+                    ) : (
+                      <Panel className="p-5" delay={140}>
+                        <PanelHead title="Live quizzes" icon={Trophy} />
+                        <p className="mt-1 text-[12px] text-lp-mute">Join a live quiz when your teacher starts one.</p>
+                        <div className="mt-3">
+                          <LiveQuizList
+                            classId={classInfo.id}
+                            isTeacher={false}
+                            onCreateNew={() => {}}
+                            onJoinSession={(id) => { setQuizView('play'); setActiveQuizSessionId(id); }}
+                            onViewResults={(id) => { setQuizView('results'); setActiveQuizSessionId(id); }}
+                          />
+                        </div>
+                      </Panel>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
           )}
+          </div>
 
           {/* Student Submit Dialog */}
-          <Dialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Submit: {selectedSubmitAssignment?.title}</DialogTitle>
-                <DialogDescription>
-                  {selectedSubmitAssignment?.description || 'Write your answer or upload a file.'}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Your Answer</Label>
-                  <Textarea
-                    placeholder="Type your answer here..."
-                    value={submitText}
-                    onChange={e => setSubmitText(e.target.value)}
-                    rows={6}
-                  />
-                </div>
-                <div>
-                  <Label>Attach File (optional)</Label>
-                  <Input
-                    type="file"
-                    onChange={e => setSubmitFile(e.target.files?.[0] || null)}
-                    className="mt-1"
-                  />
-                  {submitFile && (
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      <Upload className="h-3 w-3" /> {submitFile.name}
-                    </p>
-                  )}
-                </div>
-                <Button onClick={handleStudentSubmit} disabled={submitting} className="w-full">
-                  {submitting ? 'Submitting...' : 'Submit Assignment'}
-                  <Send className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-    </div>
+          <Modal
+            open={submitDialogOpen}
+            onClose={() => setSubmitDialogOpen(false)}
+            title={`Submit: ${selectedSubmitAssignment?.title ?? ''}`}
+            description={selectedSubmitAssignment?.description || 'Write your answer or attach a file.'}
+            footer={
+              <>
+                <button type="button" onClick={() => setSubmitDialogOpen(false)} className={ghostBtn}>Cancel</button>
+                <button type="button" onClick={handleStudentSubmit} disabled={submitting} className={primaryBtn}>
+                  {submitting ? 'Submitting…' : 'Submit assignment'} <Send className="h-4 w-4" />
+                </button>
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <Field label="Your answer">
+                <textarea className={cn(inputCls, 'min-h-[160px]')} placeholder="Type your answer here..." value={submitText} onChange={e => setSubmitText(e.target.value)} />
+              </Field>
+              <Field label="Attach a file (optional)">
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-lp-line bg-lp-deep/50 px-4 py-3 text-[13px] text-lp-soft hover:border-lp-sky/50">
+                  <Upload className="h-4 w-4 text-lp-sky" />
+                  <span className="min-w-0 flex-1 truncate">{submitFile ? submitFile.name : 'Choose a file'}</span>
+                  <input type="file" className="sr-only" onChange={e => setSubmitFile(e.target.files?.[0] || null)} />
+                </label>
+              </Field>
+            </div>
+          </Modal>
+    </StudyShell>
   );
 };
 
