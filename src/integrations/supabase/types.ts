@@ -127,6 +127,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_model_availability: {
+        Row: {
+          available: boolean
+          checked_at: string
+          detail: string | null
+          gateway_id: string | null
+          model: string
+        }
+        Insert: {
+          available: boolean
+          checked_at?: string
+          detail?: string | null
+          gateway_id?: string | null
+          model: string
+        }
+        Update: {
+          available?: boolean
+          checked_at?: string
+          detail?: string | null
+          gateway_id?: string | null
+          model?: string
+        }
+        Relationships: []
+      }
       ai_usage_logs: {
         Row: {
           completion_tokens: number
@@ -2642,24 +2666,6 @@ export type Database = {
           },
         ]
       }
-      student_study_state: {
-        Row: {
-          state: Json
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          state?: Json
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          state?: Json
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       student_documents: {
         Row: {
           created_at: string
@@ -2721,6 +2727,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      student_study_state: {
+        Row: {
+          state: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          state?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          state?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       student_topic_mastery: {
         Row: {
