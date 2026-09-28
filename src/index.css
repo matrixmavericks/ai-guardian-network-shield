@@ -313,60 +313,150 @@
 
 /* ============================================================
    Public landing page
-   Fixed paper-and-ink palette (see `lp` colors in tailwind.config.ts)
+   Fixed navy-and-blue palette (see `lp` colors in tailwind.config.ts)
    so the marketing page looks the same whatever app theme is stored.
    ============================================================ */
 @font-face {
-  font-family: "Instrument Serif";
+  font-family: "Inter Tight";
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 900;
   font-display: swap;
-  src: url("./assets/fonts/instrument-serif-latin-400-normal.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Instrument Serif";
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url("./assets/fonts/instrument-serif-latin-400-italic.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Instrument Sans";
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url("./assets/fonts/instrument-sans-latin-wght-normal.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Caveat";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("./assets/fonts/caveat-latin-600-normal.woff2") format("woff2");
+  src: url("./assets/fonts/inter-tight-latin-wght-normal.woff2") format("woff2");
 }
 
 @layer components {
+  /* Scroll reveal: soft blur-in, staggered with inline transition-delay */
   .lp-reveal {
     opacity: 0;
-    transform: translateY(14px);
-    transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+    transform: translateY(18px);
+    filter: blur(6px);
+    transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+      filter 0.8s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .lp-reveal.is-in { opacity: 1; transform: none; }
+  .lp-reveal.is-in { opacity: 1; transform: none; filter: none; }
 
-  /* Hand-drawn pen stroke that draws itself in once */
-  .lp-draw {
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
-    animation: lp-draw 0.9s 0.45s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  /* Glowing call-to-action (adapted from Uiverse.io by Spacious74) */
+  .lp-glow-btn {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    cursor: pointer;
+    border-radius: 16px;
+    padding: 2px;
+    background: radial-gradient(circle 80px at 80% -10%, #ffffff, #181b1b);
+    transition: transform 0.25s ease;
   }
-  @keyframes lp-draw { to { stroke-dashoffset: 0; } }
+  .lp-glow-btn:hover { transform: translateY(-1px); }
+  .lp-glow-btn:active { transform: translateY(0) scale(0.98); }
+  .lp-glow-btn::after {
+    content: "";
+    position: absolute;
+    width: 65%;
+    height: 60%;
+    border-radius: 120px;
+    top: 0;
+    right: 0;
+    box-shadow: 0 0 20px #ffffff38;
+    z-index: -1;
+  }
+  .lp-glow-btn__blob {
+    position: absolute;
+    width: 70px;
+    height: 100%;
+    border-radius: 16px;
+    bottom: 0;
+    left: 0;
+    background: radial-gradient(circle 60px at 0% 100%, #3fe9ff, #0000ff80, transparent);
+    box-shadow: -10px 10px 30px #0051ff2d;
+    transition: width 0.4s ease;
+  }
+  .lp-glow-btn:hover .lp-glow-btn__blob { width: 110px; }
+  .lp-glow-btn__inner {
+    position: relative;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 13px 24px;
+    border-radius: 14px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    background: radial-gradient(circle 80px at 80% -50%, #777777, #0f1111);
+  }
+  .lp-glow-btn__inner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: radial-gradient(circle 60px at 0% 100%, #00e1ff1a, #0000ff11, transparent);
+  }
 
-  .lp-fade { animation: lp-fade 0.35s ease-out; }
+  /* Cursor spotlight for cards — pair with the useSpotlight handler */
+  .lp-spot { position: relative; isolation: isolate; }
+  .lp-spot::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(96, 165, 250, 0.13), transparent 45%);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .lp-spot:hover::before { opacity: 1; }
+
+  /* Red-pen strike that draws across once revealed */
+  .lp-strike {
+    background-image: linear-gradient(theme("colors.lp.red"), theme("colors.lp.red"));
+    background-repeat: no-repeat;
+    background-position: 0 55%;
+    background-size: 0% 2px;
+    transition: background-size 0.9s 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  .is-in .lp-strike, .lp-strike.is-in { background-size: 100% 2px; }
+
+  /* Infinite marquee (content is rendered twice) */
+  .lp-marquee {
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  .lp-marquee__track { animation: lp-marquee 38s linear infinite; }
+  .lp-marquee:hover .lp-marquee__track { animation-play-state: paused; }
+  @keyframes lp-marquee { to { transform: translateX(-50%); } }
+
+  /* A dot of light travelling down a connector line */
+  .lp-flow { position: relative; }
+  .lp-flow::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    border-radius: 9999px;
+    background: theme("colors.lp.sky");
+    box-shadow: 0 0 12px 2px rgba(124, 180, 255, 0.7);
+    animation: lp-flow 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+  @keyframes lp-flow {
+    0% { top: 0; opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { top: calc(100% - 6px); opacity: 0; }
+  }
+
+  /* Progress fill used by the product showcase list */
+  .lp-progress { animation: lp-progress linear forwards; transform-origin: left; }
+  @keyframes lp-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+  .lp-fade { animation: lp-fade 0.4s ease-out; }
   @keyframes lp-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
   @media (prefers-reduced-motion: reduce) {
-    .lp-reveal { opacity: 1; transform: none; transition: none; }
-    .lp-draw { animation: none; stroke-dashoffset: 0; }
-    .lp-fade { animation: none; }
+    .lp-reveal { opacity: 1; transform: none; filter: none; transition: none; }
+    .lp-strike { background-size: 100% 2px; transition: none; }
+    .lp-marquee__track, .lp-flow::after, .lp-progress, .lp-fade { animation: none; }
   }
 }

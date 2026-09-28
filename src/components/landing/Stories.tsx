@@ -1,15 +1,15 @@
 import React from "react";
-import { photos } from "./photos";
-import { Container, Eyebrow, Photo } from "./primitives";
+import { Quote } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Container, Eyebrow, SectionTitle, useSpotlight } from "./primitives";
 
-const featured = {
-  quote:
-    "AI Conditioner transformed how our students interact with AI. The portfolio feature lets them showcase their learning journey beautifully.",
-  author: "Dr. Sarah Hamilton",
-  role: "Principal, Westlake High School",
-};
-
-const more = [
+const testimonials = [
+  {
+    quote:
+      "AI Conditioner transformed how our students interact with AI. The portfolio feature lets them showcase their learning journey beautifully.",
+    author: "Dr. Sarah Hamilton",
+    role: "Principal, Westlake High School",
+  },
   {
     quote:
       "Students love customizing their portfolio themes. The shared links make it easy for parents and colleges to see their best work.",
@@ -32,52 +32,61 @@ const initials = (name: string) =>
     .slice(0, 2)
     .join("");
 
-const Attribution: React.FC<{ author: string; role: string }> = ({ author, role }) => (
-  <figcaption className="flex items-center gap-3">
-    <span aria-hidden className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lp-band font-display text-[18px] text-lp-ink">
-      {initials(author)}
-    </span>
-    <span>
-      <span className="block text-[15px] font-semibold text-lp-ink">{author}</span>
-      <span className="block text-[13.5px] text-lp-mute">{role}</span>
-    </span>
-  </figcaption>
-);
+const StoryCard: React.FC<{ t: (typeof testimonials)[number]; featured?: boolean }> = ({ t, featured }) => {
+  const onMove = useSpotlight();
+  return (
+    <figure
+      onMouseMove={onMove}
+      className={cn(
+        "lp-spot flex h-full flex-col justify-between rounded-3xl border border-lp-line bg-lp-surface/70 p-7 transition-colors duration-300 hover:border-lp-blue/40 sm:p-8",
+        featured && "bg-gradient-to-br from-lp-raised to-lp-surface",
+      )}
+    >
+      <div>
+        <Quote aria-hidden className="h-6 w-6 text-lp-sky" />
+        <blockquote
+          className={cn(
+            "mt-5 tracking-[-0.02em] text-lp-text",
+            featured ? "max-w-[46rem] text-[24px] leading-[1.3] sm:text-[32px]" : "text-[18px] leading-[1.45]",
+          )}
+        >
+          <p>“{t.quote}”</p>
+        </blockquote>
+      </div>
+      <figcaption className="mt-8 flex items-center gap-3">
+        <span
+          aria-hidden
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-lp-blue to-[#1E3A8A] text-[14px] font-semibold text-white"
+        >
+          {initials(t.author)}
+        </span>
+        <span>
+          <span className="block text-[15px] font-medium text-lp-text">{t.author}</span>
+          <span className="block text-[13.5px] text-lp-mute">{t.role}</span>
+        </span>
+      </figcaption>
+    </figure>
+  );
+};
 
 const Stories = () => (
-  <section id="stories" aria-labelledby="stories-title" className="scroll-mt-16">
-    <Container className="py-20 lg:py-28">
-      <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
-        <div className="lp-reveal lg:col-span-7">
-          <h2 id="stories-title" className="sr-only">Stories from schools</h2>
-          <Eyebrow>From the schools using it</Eyebrow>
-          <figure className="mt-10">
-            <span aria-hidden className="block h-12 font-display text-[96px] leading-[0.9] text-lp-pen">
-              “
-            </span>
-            <blockquote className="font-display text-[30px] leading-[1.2] tracking-[-0.01em] text-lp-ink sm:text-[38px] lg:text-[44px]">
-              <p>{featured.quote}</p>
-            </blockquote>
-            <div className="mt-10">
-              <Attribution author={featured.author} role={featured.role} />
-            </div>
-          </figure>
-        </div>
-        <div className="lp-reveal lg:col-span-5">
-          <Photo photo={photos.studyGroup} sizes="(min-width: 1024px) 420px, 100vw" className="aspect-[4/3] rounded-[22px] lg:aspect-[4/5]" />
-        </div>
+  <section id="stories" aria-labelledby="stories-title" className="relative scroll-mt-20 border-t border-lp-line">
+    <Container className="py-24 lg:py-32">
+      <div className="lp-reveal max-w-[44rem]">
+        <Eyebrow>From the schools using it</Eyebrow>
+        <SectionTitle id="stories-title" className="mt-6">
+          Teachers noticed the difference first.
+        </SectionTitle>
       </div>
 
-      <div className="mt-16 grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-12 lg:mt-20">
-        {more.map((t) => (
-          <figure key={t.author} className="lp-reveal border-t border-lp-line pt-8">
-            <blockquote className="font-display text-[23px] leading-[1.35] text-lp-ink">
-              <p>“{t.quote}”</p>
-            </blockquote>
-            <div className="mt-6">
-              <Attribution author={t.author} role={t.role} />
-            </div>
-          </figure>
+      <div className="mt-14 grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <div className="lp-reveal lg:col-span-12">
+          <StoryCard t={testimonials[0]} featured />
+        </div>
+        {testimonials.slice(1).map((t, i) => (
+          <div key={t.author} className="lp-reveal lg:col-span-6" style={{ transitionDelay: `${(i + 1) * 90}ms` }}>
+            <StoryCard t={t} />
+          </div>
         ))}
       </div>
     </Container>

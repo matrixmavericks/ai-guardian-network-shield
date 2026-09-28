@@ -3,7 +3,7 @@ import LandingNav from "@/components/landing/LandingNav";
 import Hero from "@/components/landing/Hero";
 import WhySection from "@/components/landing/WhySection";
 import HowItWorks from "@/components/landing/HowItWorks";
-import ProductTour from "@/components/landing/ProductTour";
+import ProductShowcase from "@/components/landing/ProductShowcase";
 import NetworkSection from "@/components/landing/NetworkSection";
 import Stories from "@/components/landing/Stories";
 import ClosingCta from "@/components/landing/ClosingCta";
@@ -15,13 +15,13 @@ const Index = () => {
 
   return (
     // `relative z-[1]` lifts the page above the app's fixed grain/glow layers
-    <div className="relative z-[1] min-h-screen bg-lp-paper font-ui text-lp-ink antialiased selection:bg-lp-pen/20">
+    <div className="relative z-[1] min-h-screen overflow-x-clip bg-lp-bg font-ui text-lp-text antialiased selection:bg-lp-blue/40 selection:text-white">
       <LandingNav />
       <main>
         <Hero />
         <WhySection />
         <HowItWorks />
-        <ProductTour />
+        <ProductShowcase />
         <NetworkSection />
         <Stories />
         <ClosingCta />
