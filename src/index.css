@@ -310,3 +310,63 @@
   /* Hide legacy sidebar inside scoped school shells */
   [data-school-shell="true"] [data-legacy-dashboard-sidebar="true"] { display: none !important; }
 }
+
+/* ============================================================
+   Public landing page
+   Fixed paper-and-ink palette (see `lp` colors in tailwind.config.ts)
+   so the marketing page looks the same whatever app theme is stored.
+   ============================================================ */
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/instrument-serif-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/instrument-serif-latin-400-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./assets/fonts/instrument-sans-latin-wght-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Caveat";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./assets/fonts/caveat-latin-600-normal.woff2") format("woff2");
+}
+
+@layer components {
+  .lp-reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .lp-reveal.is-in { opacity: 1; transform: none; }
+
+  /* Hand-drawn pen stroke that draws itself in once */
+  .lp-draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: lp-draw 0.9s 0.45s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  }
+  @keyframes lp-draw { to { stroke-dashoffset: 0; } }
+
+  .lp-fade { animation: lp-fade 0.35s ease-out; }
+  @keyframes lp-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lp-reveal { opacity: 1; transform: none; transition: none; }
+    .lp-draw { animation: none; stroke-dashoffset: 0; }
+    .lp-fade { animation: none; }
+  }
+}

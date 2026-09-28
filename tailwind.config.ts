@@ -18,7 +18,28 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				// Public landing page only — the app keeps the system stack
+				display: ['"Instrument Serif"', 'Georgia', '"Times New Roman"', 'serif'],
+				ui: ['"Instrument Sans"', 'ui-sans-serif', 'system-ui', '"Segoe UI"', 'sans-serif'],
+				hand: ['Caveat', '"Segoe Print"', 'cursive'],
+			},
 			colors: {
+				// Fixed landing palette, independent of the app's theme switcher
+				lp: {
+					paper: '#F4EFE6',
+					band: '#ECE5D8',
+					card: '#FFFDF9',
+					ink: '#17191E',
+					soft: '#51545B',
+					mute: '#686862',
+					line: '#DDD5C6',
+					pen: '#C23B22',
+					moss: '#2E5E4E',
+					night: '#15171B',
+					'night-line': '#2B2E35',
+					'night-soft': '#A8A59D',
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
