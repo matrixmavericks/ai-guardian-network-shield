@@ -1,13 +1,14 @@
 // Chat models the app can call through the Lovable AI gateway.
 // KEEP IN SYNC with src/lib/aiModels.ts (the web app's copy).
 //
-// Source: docs.lovable.dev/integrations/ai (Sep 2026). Claude models are only
-// offered to TanStack Start apps and GPT-5.x Pro can't do plain chat, so
-// neither is listed. Prices are rough USD per 1M tokens, used only to estimate
-// usage against quotas.
+// Source: docs.lovable.dev/integrations/ai (Sep 2026). GPT-5.x Pro can't do
+// plain chat, so it isn't listed. The docs say Claude is wired into newer
+// (TanStack) apps; it's listed here and the edge function checks which models
+// the gateway actually serves, hiding any that aren't live. Prices are rough USD
+// per 1M tokens, used only to estimate usage against quotas.
 
 export type Effort = "low" | "medium" | "high";
-export type Provider = "google" | "openai";
+export type Provider = "google" | "openai" | "anthropic";
 
 export interface AiModel {
   /** Gateway model id */
@@ -28,6 +29,8 @@ export interface AiModel {
   isNew?: boolean;
   /** Deprecated by the provider but still callable */
   legacy?: boolean;
+  /** Other gateway ids to try if the main one is rejected */
+  alt?: string[];
   price: { input: number; output: number };
 }
 
@@ -62,6 +65,13 @@ export const AI_MODELS: AiModel[] = [
   { id: "openai/gpt-5.2", name: "GPT-5.2", provider: "openai", blurb: "Analytical reasoning, previous generation.", speed: 3, depth: 4, efforts: ALL, defaultEffort: "medium", memory: 30, legacy: true, price: { input: 1.75, output: 14 } },
   { id: "openai/gpt-5", name: "GPT-5", provider: "openai", blurb: "High-quality reasoning, previous generation.", speed: 3, depth: 4, efforts: ALL, defaultEffort: "medium", memory: 30, legacy: true, price: { input: 1.25, output: 10 } },
   { id: "openai/gpt-5-mini", name: "GPT-5 Mini", provider: "openai", blurb: "Balanced speed and cost, previous generation.", speed: 4, depth: 3, efforts: ALL, defaultEffort: "low", memory: 20, legacy: true, price: { input: 0.25, output: 2 } },
+
+  // Anthropic Claude
+  { id: "anthropic/claude-fable-5.1", alt: ["anthropic/claude-fable-5-1"], name: "Claude Fable 5.1", provider: "anthropic", blurb: "Anthropic's most capable model for demanding, multi-step reasoning.", speed: 1, depth: 5, efforts: ALL, defaultEffort: "medium", memory: 40, premium: true, isNew: true, price: { input: 10, output: 50 } },
+  { id: "anthropic/claude-opus-5.5", alt: ["anthropic/claude-opus-5-5"], name: "Claude Opus 5.5", provider: "anthropic", blurb: "Long, careful reasoning across big pieces of work.", speed: 2, depth: 5, efforts: ALL, defaultEffort: "medium", memory: 40, premium: true, isNew: true, price: { input: 5, output: 25 } },
+  { id: "anthropic/claude-opus-5", name: "Claude Opus 5", provider: "anthropic", blurb: "Deep analysis for complex, multi-step questions.", speed: 2, depth: 5, efforts: ALL, defaultEffort: "medium", memory: 30, premium: true, price: { input: 5, output: 25 } },
+  { id: "anthropic/claude-sonnet-5", name: "Claude Sonnet 5", provider: "anthropic", blurb: "Thoughtful and articulate. Great for writing and feedback.", speed: 4, depth: 4, efforts: ALL, defaultEffort: "low", memory: 30, isNew: true, price: { input: 3, output: 15 } },
+  { id: "anthropic/claude-haiku-4.5", alt: ["anthropic/claude-haiku-4-5"], name: "Claude Haiku 4.5", provider: "anthropic", blurb: "Anthropic's fastest model for quick, clear answers.", speed: 5, depth: 2, efforts: ALL, defaultEffort: "low", memory: 20, price: { input: 1, output: 5 } },
 ];
 
 export const DEFAULT_MODEL = "google/gemini-3.8-flash";
@@ -75,6 +85,9 @@ export const BASIC_PLANS = ["starter", "standard"];
 const ALIASES: Record<string, string> = {
   "google/gemini-3-flash": "google/gemini-3-flash-preview",
   "google/gemini-3.1-flash-lite-preview": "google/gemini-3.1-flash-lite",
+  "anthropic/claude-fable-5-1": "anthropic/claude-fable-5.1",
+  "anthropic/claude-opus-5-5": "anthropic/claude-opus-5.5",
+  "anthropic/claude-haiku-4-5": "anthropic/claude-haiku-4.5",
 };
 
 export const normalizeModel = (id?: string | null) => (id ? ALIASES[id] ?? id : id) || "";
@@ -87,6 +100,7 @@ export const REFYN_PICKS = [
   { key: "core", name: "Refyn Core", model: "google/gemini-3.8-flash", tagline: "Fast, balanced everyday tutoring" },
   { key: "sage", name: "Refyn Sage", model: "openai/gpt-6-sol", tagline: "Deeper analysis for tough calls" },
   { key: "apex", name: "Refyn Apex", model: "google/gemini-3.1-pro-preview", tagline: "Top reasoning for high-stakes work" },
+  { key: "scribe", name: "Refyn Scribe", model: "anthropic/claude-sonnet-5", tagline: "Thoughtful feedback for essays and writing" },
 ];
 
 export const EFFORT_LABELS: Record<Effort, { label: string; hint: string }> = {

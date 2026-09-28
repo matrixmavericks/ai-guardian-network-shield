@@ -195,7 +195,7 @@ const StudentInterface = () => {
           setModelAccess({
             default: data.default || DEFAULT_MODEL,
             schoolRestricted: !!data.schoolRestricted,
-            models: Object.fromEntries((data.models as { id: string; available: boolean; reason?: "school" | "plan" | null }[]).map(m => [m.id, { available: m.available, reason: m.reason ?? null }])),
+            models: Object.fromEntries((data.models as { id: string; available: boolean; reason?: "school" | "plan" | "unavailable" | null }[]).map(m => [m.id, { available: m.available, reason: m.reason ?? null }])),
           });
         } else setModelAccess(local());
       })
@@ -574,7 +574,7 @@ const StudentInterface = () => {
         const m = findModel(pick?.model) ?? AI_MODELS.find(x => a && (x.id.includes(a.replace(/\s+/g, "-")) || x.name.toLowerCase().includes(a)));
         if (!m) { setPrompt("/model "); toast({ title: "Pick a model", description: `Try ${REFYN_PICKS.map(p => p.key).join(", ")}, a model name, or low/medium/high` }); return; }
         if (modelAccess?.models[m.id]?.available === false) {
-          toast({ title: `${m.name} isn't available`, description: modelAccess.models[m.id].reason === "school" ? "Your school hasn't enabled it." : "It needs the Premium plan.", variant: "destructive" });
+          toast({ title: `${m.name} isn't available`, description: modelAccess.models[m.id].reason === "school" ? "Your school hasn't enabled it." : modelAccess.models[m.id].reason === "unavailable" ? "It isn't live on Refyn yet." : "It needs the Premium plan.", variant: "destructive" });
           return;
         }
         done(); setModelChoice({ model: m.id, effort: null }); toast({ title: `Model: ${choiceLabel(m.id)}`, description: m.name });
@@ -942,7 +942,12 @@ const StudentInterface = () => {
               onLocked={(m, reason) =>
                 toast({
                   title: `${m.name} is locked`,
-                  description: reason === "school" ? "Your school hasn't enabled this model. Ask your school admin." : "Premium-priced models come with the Premium plan.",
+                  description:
+                    reason === "school"
+                      ? "Your school hasn't enabled this model. Ask your school admin."
+                      : reason === "unavailable"
+                        ? "The AI gateway doesn't serve this model for Refyn yet. We check again every few hours."
+                        : "Premium-priced models come with the Premium plan.",
                 })
               }
             />
@@ -1200,7 +1205,7 @@ const StudentInterface = () => {
                                           <RotateCcw className="h-4 w-4 text-lp-sky" /> Try again
                                         </button>
                                         <p className="px-3 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-lp-mute">Try with</p>
-                                        {REFYN_PICKS.filter(p => p.model !== (msg.model ?? activeModel)).map(p => {
+                                        {REFYN_PICKS.filter(p => p.model !== (msg.model ?? activeModel) && modelAccess?.models[p.model]?.reason !== "unavailable").map(p => {
                                           const m = findModel(p.model);
                                           const locked = modelAccess?.models[p.model]?.available === false;
                                           return (

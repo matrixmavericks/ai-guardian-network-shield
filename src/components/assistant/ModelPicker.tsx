@@ -9,18 +9,29 @@ export type ModelChoice = { model: string; effort: Effort | null };
 export type ModelAccess = {
   default: string;
   schoolRestricted: boolean;
-  models: Record<string, { available: boolean; reason?: "school" | "plan" | null }>;
+  models: Record<string, { available: boolean; reason?: "school" | "plan" | "unavailable" | null }>;
 };
 
 const PROVIDERS: Record<Provider, { label: string }> = {
   google: { label: "Google Gemini" },
   openai: { label: "OpenAI GPT" },
+  anthropic: { label: "Anthropic Claude" },
 };
 
-/** Small provider marks: a four-point sparkle for Gemini, an aperture for GPT. */
+/** Small provider marks: a sparkle for Gemini, an aperture for GPT, a starburst for Claude. */
 export const ProviderGlyph: React.FC<{ provider?: string; className?: string }> = ({ provider, className }) => {
   const id = useRef(`g${Math.random().toString(36).slice(2, 8)}`).current;
   if (provider === "openai") return <Aperture className={cn("text-[#E8EEF8]", className)} strokeWidth={1.8} aria-hidden />;
+  if (provider === "anthropic")
+    return (
+      <svg viewBox="0 0 24 24" className={className} aria-hidden>
+        <g stroke="#E0876A" strokeWidth="2.4" strokeLinecap="round">
+          {[0, 30, 60, 90, 120, 150].map((a) => (
+            <line key={a} x1="12" y1="3" x2="12" y2="21" transform={`rotate(${a} 12 12)`} />
+          ))}
+        </g>
+      </svg>
+    );
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden>
       <defs>
@@ -61,7 +72,9 @@ const Badge: React.FC<{ tone: "new" | "preview" | "premium" | "legacy" | "defaul
   </span>
 );
 
-const lockLabel = (reason?: string | null) => (reason === "school" ? "Not enabled by your school" : "Premium plan");
+const lockLabel = (reason?: string | null) =>
+  reason === "school" ? "Not enabled by your school" : reason === "unavailable" ? "Not live on Refyn yet" : "Premium plan";
+const lockShort = (reason?: string | null) => (reason === "school" ? "School" : reason === "unavailable" ? "Not live" : "Premium");
 
 export const pickFor = (modelId: string) => REFYN_PICKS.find((p) => p.model === modelId);
 
@@ -77,6 +90,7 @@ export const ModelPicker: React.FC<{
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [showLegacy, setShowLegacy] = useState(false);
+  const [showOffline, setShowOffline] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const model = findModel(value.model) ?? findModel(DEFAULT_MODEL)!;
   const effort = model.efforts.length ? (value.effort && model.efforts.includes(value.effort) ? value.effort : model.defaultEffort ?? model.efforts[0]) : null;
@@ -107,7 +121,9 @@ export const ModelPicker: React.FC<{
     () => AI_MODELS.filter((m) => !q || `${m.name} ${m.blurb} ${m.provider} ${pickFor(m.id)?.name ?? ""}`.toLowerCase().includes(q)),
     [q],
   );
-  const legacyCount = AI_MODELS.filter((m) => m.legacy).length;
+  const offline = (id: string) => access?.models[id]?.reason === "unavailable";
+  const legacyCount = AI_MODELS.filter((m) => m.legacy && !offline(m.id)).length;
+  const offlineModels = AI_MODELS.filter((m) => offline(m.id));
 
   const row = (m: AiModel, pick?: (typeof REFYN_PICKS)[number]) => {
     const s = status(m.id);
@@ -150,7 +166,7 @@ export const ModelPicker: React.FC<{
           <Check className="mt-1 h-4 w-4 shrink-0 text-lp-sky" />
         ) : !s.available ? (
           <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-[10.5px] text-lp-mute" title={lockLabel(s.reason)}>
-            <Lock className="h-3 w-3" /> {s.reason === "school" ? "School" : "Premium"}
+            <Lock className="h-3 w-3" /> {lockShort(s.reason)}
           </span>
         ) : null}
       </button>
@@ -203,14 +219,14 @@ export const ModelPicker: React.FC<{
               {!q && (
                 <div className="mb-1">
                   <p className="px-3 pb-1 pt-1.5 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-lp-mute">Refyn picks</p>
-                  {REFYN_PICKS.map((p) => {
+                  {REFYN_PICKS.filter((p) => !offline(p.model)).map((p) => {
                     const m = findModel(p.model);
                     return m ? row(m, p) : null;
                   })}
                 </div>
               )}
               {(Object.keys(PROVIDERS) as Provider[]).map((prov) => {
-                const list = matches.filter((m) => m.provider === prov && (q || showLegacy || !m.legacy));
+                const list = matches.filter((m) => m.provider === prov && (q || (!offline(m.id) && (showLegacy || !m.legacy))));
                 if (!list.length) return null;
                 return (
                   <div key={prov} className="mt-1">
@@ -225,6 +241,17 @@ export const ModelPicker: React.FC<{
                 <button type="button" onClick={() => setShowLegacy((v) => !v)} className="mx-3 my-2 text-[12px] text-lp-sky hover:underline">
                   {showLegacy ? "Hide older models" : `Show ${legacyCount} older models`}
                 </button>
+              )}
+              {!q && offlineModels.length > 0 && (
+                <div className="mx-1 mb-2 rounded-2xl border border-dashed border-lp-line">
+                  <button type="button" onClick={() => setShowOffline((v) => !v)} className="flex w-full items-center justify-between px-3 py-2.5 text-left text-[12px] text-lp-mute hover:text-white">
+                    <span>
+                      <span className="font-medium text-lp-soft">Not live yet</span> · {offlineModels.length} model{offlineModels.length === 1 ? "" : "s"} the gateway doesn&apos;t serve for Refyn right now
+                    </span>
+                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showOffline && "rotate-180")} />
+                  </button>
+                  {showOffline && <div className="pb-1">{offlineModels.map((m) => row(m))}</div>}
+                </div>
               )}
               {q && matches.length === 0 && <p className="px-3 py-6 text-center text-[13px] text-lp-mute">No models match "{query}"</p>}
               {access?.schoolRestricted && (

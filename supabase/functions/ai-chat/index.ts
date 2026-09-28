@@ -100,16 +100,109 @@ async function getSchoolTrainingExamples(trainingDataIds: string[]): Promise<str
     data.map((d: any) => `- Student asks: "${d.input_prompt}"\n  Ideal response: "${d.ideal_response}"`).join('\n');
 }
 
+// ─── Model availability (learned from the gateway) ──────────────────────
+
+type Availability = Map<string, { available: boolean; gatewayId: string | null; checkedAt: number }>;
+
+const PROBE_EVERY_MS = 6 * 60 * 60 * 1000;
+let availabilityCache: { at: number; map: Availability } | null = null;
+let probing = false;
+
+async function loadAvailability(): Promise<Availability> {
+  if (availabilityCache && Date.now() - availabilityCache.at < 60_000) return availabilityCache.map;
+  const map: Availability = new Map();
+  try {
+    const { data } = await getAdminClient().from('ai_model_availability').select('model, available, gateway_id, checked_at');
+    for (const r of data || []) {
+      map.set(r.model, { available: r.available, gatewayId: r.gateway_id, checkedAt: new Date(r.checked_at).getTime() });
+    }
+  } catch (e) {
+    console.error('Model availability load failed (non-fatal):', e);
+  }
+  availabilityCache = { at: Date.now(), map };
+  return map;
+}
+
+async function recordAvailability(model: string, available: boolean, gatewayId: string | null, detail: string | null) {
+  try {
+    await getAdminClient().from('ai_model_availability').upsert({
+      model,
+      available,
+      gateway_id: gatewayId,
+      detail: detail ? detail.slice(0, 300) : null,
+      checked_at: new Date().toISOString(),
+    });
+    availabilityCache?.map.set(model, { available, gatewayId, checkedAt: Date.now() });
+  } catch (e) {
+    console.error('Model availability write failed (non-fatal):', e);
+  }
+}
+
+/** A 4xx that means "this model id isn't served", not a problem with the request. */
+const modelMissing = (status: number, text: string) =>
+  [400, 404, 422].includes(status) && /model|not found|unsupported|invalid|unknown|does not exist/i.test(text);
+
+/** Check one catalogue model (and its alternate ids) with a tiny request. */
+async function probeModel(apiKey: string, m: AiModel) {
+  let last = '';
+  for (const gatewayId of [m.id, ...(m.alt ?? [])]) {
+    try {
+      const r = await callGateway(apiKey, gatewayId, null, [{ role: 'user', content: 'Reply with the single word OK.' }], 30_000);
+      if (r.ok) return recordAvailability(m.id, true, gatewayId, null);
+      if (!modelMissing(r.status, r.text)) return; // rate limit or outage: inconclusive, check again later
+      last = `${r.status} ${r.text}`;
+    } catch {
+      return; // timeout: inconclusive
+    }
+  }
+  await recordAvailability(m.id, false, null, last);
+}
+
+/** Re-check models whose status is unknown or stale, a few at a time. */
+async function probeStale(apiKey: string) {
+  if (probing) return;
+  probing = true;
+  try {
+    const avail = await loadAvailability();
+    const stale = AI_MODELS.filter((m) => {
+      const a = avail.get(m.id);
+      return !a || Date.now() - a.checkedAt > PROBE_EVERY_MS;
+    });
+    for (let i = 0; i < stale.length; i += 4) {
+      await Promise.all(stale.slice(i, i + 4).map((m) => probeModel(apiKey, m)));
+    }
+  } finally {
+    probing = false;
+  }
+}
+
+/** Keep work running after the response is sent (Supabase Edge Runtime). */
+const runInBackground = (p: Promise<unknown>) => {
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(p);
+  else p.catch(() => undefined);
+};
+
 // ─── Model choice ────────────────────────────────────────────────────────
 
-type Access = { schoolModels: string[] | null; premium: boolean };
+type Access = {
+  schoolModels: string[] | null;
+  premium: boolean;
+  /** Catalogue models the gateway doesn't serve for this app */
+  unavailable: Set<string>;
+  /** Gateway id that answered for a model, when it differs from the catalogue id */
+  gatewayIds: Map<string, string>;
+};
 
-/** Which models this user may pick: the school's allow-list and the plan's tier. */
+/** Which models this user may pick: the school's allow-list, the plan's tier, and what's live. */
 async function getAccess(userId: string | null, schoolSettings: any): Promise<Access> {
   const schoolModels = schoolSettings?.allowed_ai_models?.length > 0
     ? (schoolSettings.allowed_ai_models as string[]).map(normalizeModel)
     : null;
-  if (!userId) return { schoolModels, premium: false };
+  const avail = await loadAvailability();
+  const unavailable = new Set([...avail].filter(([, a]) => !a.available).map(([id]) => id));
+  const gatewayIds = new Map([...avail].filter(([, a]) => a.gatewayId).map(([id, a]) => [id, a.gatewayId as string]));
+  if (!userId) return { schoolModels, premium: false, unavailable, gatewayIds };
   try {
     const { data } = await getAdminClient()
       .from('user_plans')
@@ -117,14 +210,22 @@ async function getAccess(userId: string | null, schoolSettings: any): Promise<Ac
       .eq('user_id', userId)
       .eq('status', 'active')
       .maybeSingle();
-    return { schoolModels, premium: !data || !BASIC_PLANS.includes(data.plan_id) };
+    return { schoolModels, premium: !data || !BASIC_PLANS.includes(data.plan_id), unavailable, gatewayIds };
   } catch {
-    return { schoolModels, premium: false };
+    return { schoolModels, premium: false, unavailable, gatewayIds };
   }
 }
 
-const blockedReason = (m: AiModel, access: Access): 'school' | 'plan' | null =>
-  access.schoolModels && !access.schoolModels.includes(m.id) ? 'school' : m.premium && !access.premium ? 'plan' : null;
+type Blocked = 'school' | 'plan' | 'unavailable' | null;
+
+const blockedReason = (m: AiModel, access: Access): Blocked =>
+  access.unavailable.has(m.id)
+    ? 'unavailable'
+    : access.schoolModels && !access.schoolModels.includes(m.id)
+      ? 'school'
+      : m.premium && !access.premium
+        ? 'plan'
+        : null;
 
 /** The model to use: the requested one if allowed, otherwise the best allowed default. */
 function resolveModel(requested: string | null, access: Access): { id: string; notice: string | null } {
@@ -132,16 +233,19 @@ function resolveModel(requested: string | null, access: Access): { id: string; n
   if (wanted && !blockedReason(wanted, access)) return { id: wanted.id, notice: null };
 
   // School allow-lists may contain ids outside the catalog; keep honouring them.
+  const live = (id: string) => !access.unavailable.has(id);
   const fallback = access.schoolModels
-    ? access.schoolModels.find((id) => findModel(id)) ?? access.schoolModels[0]
-    : DEFAULT_MODEL;
+    ? access.schoolModels.find((id) => findModel(id) && live(id)) ?? access.schoolModels[0]
+    : [DEFAULT_MODEL, ...FALLBACK_MODELS].find(live) ?? FALLBACK_MODELS[FALLBACK_MODELS.length - 1];
   const name = findModel(fallback)?.name ?? fallback;
   const reason = wanted ? blockedReason(wanted, access) : null;
   const notice = !wanted
     ? null
-    : reason === 'school'
-      ? `Your school hasn't enabled ${wanted.name}, so ${name} answered.`
-      : `${wanted.name} needs the Premium plan, so ${name} answered.`;
+    : reason === 'unavailable'
+      ? `${wanted.name} isn't live on Refyn yet, so ${name} answered.`
+      : reason === 'school'
+        ? `Your school hasn't enabled ${wanted.name}, so ${name} answered.`
+        : `${wanted.name} needs the Premium plan, so ${name} answered.`;
   return { id: fallback, notice };
 }
 
@@ -229,6 +333,9 @@ serve(async (req) => {
       try { settings = await getSchoolSettings(userId); } catch { /* no school */ }
     }
     const access = await getAccess(userId, settings);
+    // Refresh what the gateway serves (at most every few hours) without delaying the reply
+    const probeKey = Deno.env.get('LOVABLE_API_KEY');
+    if (probeKey) runInBackground(probeStale(probeKey));
     return json({
       success: true,
       default: resolveModel(null, access).id,
@@ -391,11 +498,12 @@ IMPORTANT: You are in Process Teaching Mode.
   try {
     for (const candidate of candidates) {
       const effort = candidate === usedModel ? usedEffort : null;
-      let result = await callGateway(lovableApiKey, candidate, effort, messages, timeoutMs);
+      const gatewayId = access.gatewayIds.get(candidate) ?? candidate;
+      let result = await callGateway(lovableApiKey, gatewayId, effort, messages, timeoutMs);
 
       // Some models reject reasoning_effort: retry once without it
       if (!result.ok && result.status === 400 && effort && /reason/i.test(result.text)) {
-        result = await callGateway(lovableApiKey, candidate, null, messages, timeoutMs);
+        result = await callGateway(lovableApiKey, gatewayId, null, messages, timeoutMs);
         if (result.ok) usedEffort = null;
       }
 
@@ -407,7 +515,11 @@ IMPORTANT: You are in Process Teaching Mode.
         if (result.status === 402) {
           return json({ success: false, reply: 'AI service requires credits. Please contact your administrator.', error: 'payment_required', meta: null }, 402);
         }
-        if ([400, 404, 422].includes(result.status)) continue; // model not available: try the next one
+        if ([400, 404, 422].includes(result.status)) {
+          // Model not served: remember it so the picker stops offering it, then try the next one
+          if (modelMissing(result.status, result.text)) runInBackground(recordAvailability(candidate, false, null, `${result.status} ${result.text}`));
+          continue;
+        }
         throw new Error(`AI gateway returned ${result.status}`);
       }
 
@@ -417,6 +529,10 @@ IMPORTANT: You are in Process Teaching Mode.
         notice = `${from} isn't available right now, so ${to} answered.`;
         usedModel = candidate;
         usedEffort = null;
+      }
+
+      if (access.unavailable.has(candidate) || !access.gatewayIds.has(candidate)) {
+        runInBackground(recordAvailability(candidate, true, gatewayId, null));
       }
 
       const aiData = result.data;
