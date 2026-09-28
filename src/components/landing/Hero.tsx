@@ -90,8 +90,8 @@ const Hero = () => (
           hints, questions and worked examples.
         </p>
         <div className="flex flex-wrap items-center gap-5">
-          <GlowButton to="/signup">
-            Get started free
+          <GlowButton to="/register">
+            Get started
             <ArrowRight aria-hidden className="h-4 w-4" />
           </GlowButton>
           <Link to="/tour" className="text-sm font-medium text-white transition-opacity hover:opacity-80">

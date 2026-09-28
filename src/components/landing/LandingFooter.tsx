@@ -18,8 +18,7 @@ const columns = [
     title: "Account",
     links: [
       { label: "Log in", to: "/login" },
-      { label: "Get started", to: "/signup" },
-      { label: "Register your school", to: "/register" },
+      { label: "Get started", to: "/register" },
     ],
   },
   {

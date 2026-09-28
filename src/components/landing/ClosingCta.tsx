@@ -20,11 +20,11 @@ const ClosingCta = () => (
         </span>
       </h2>
       <p className="mx-auto mt-7 max-w-[30rem] text-balance text-[17px] leading-[1.65] text-lp-soft">
-        Start free and set up your first class, or walk through the guided tour first.
+        Request access for your class or your whole school, or walk through the guided tour first.
       </p>
       <div className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-4">
-        <GlowButton to="/signup">
-          Get started free
+        <GlowButton to="/register">
+          Get started
           <ArrowRight aria-hidden className="h-4 w-4" />
         </GlowButton>
         <QuietLink to="/tour">

@@ -110,7 +110,7 @@ const LandingNav = () => {
         </div>
 
         <div className="relative z-50 flex items-center gap-3 text-lp-text sm:gap-6">
-          <Link to="/signup" className="hidden items-center gap-2 text-sm font-medium transition-opacity hover:opacity-80 sm:flex">
+          <Link to="/register" className="hidden items-center gap-2 text-sm font-medium transition-opacity hover:opacity-80 sm:flex">
             <UserPlus className="h-4 w-4" />
             Sign up
           </Link>
@@ -186,7 +186,7 @@ const LandingNav = () => {
             )}
             style={{ transitionDelay: menuOpen ? "400ms" : "0ms" }}
           >
-            <Link to="/signup" className="flex items-center gap-2 text-sm font-medium text-lp-soft sm:hidden">
+            <Link to="/register" className="flex items-center gap-2 text-sm font-medium text-lp-soft sm:hidden">
               <UserPlus className="h-4 w-4" />
               Sign up
             </Link>
