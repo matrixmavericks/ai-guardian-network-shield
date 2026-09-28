@@ -140,12 +140,16 @@ const StudentInterface = () => {
     const resTitle = searchParams.get("resourceTitle");
     const resDesc = searchParams.get("resourceDesc");
     const resUrl = searchParams.get("resourceUrl");
-    if (resTitle) {
-      setResourceContext({ title: resTitle, description: resDesc || "", url: resUrl || undefined });
+    const draft = searchParams.get("prompt");
+    if (resTitle || draft) {
+      if (resTitle) setResourceContext({ title: resTitle, description: resDesc || "", url: resUrl || undefined });
+      // A starter message from a study page (e.g. Teach Refyn), left for the student to finish
+      if (draft) setPrompt(draft);
       // Clean URL params
       searchParams.delete("resourceTitle");
       searchParams.delete("resourceDesc");
       searchParams.delete("resourceUrl");
+      searchParams.delete("prompt");
       setSearchParams(searchParams, { replace: true });
     }
   }, []);

@@ -25,7 +25,7 @@ const groups = [
     label: "Core",
     items: [
       { title: "Overview", href: "/student-dashboard", icon: LayoutGrid },
-      { title: "My Courses", href: "/my-courses", icon: GraduationCap },
+      { title: "My Subjects", href: "/my-courses", icon: GraduationCap },
       { title: "Classes", href: "/classes", icon: Users },
       { title: "Grades", href: "/grades", icon: Award },
     ],
@@ -52,6 +52,9 @@ const groups = [
 const SidebarBody: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // Subject and course pages live under My Subjects
+  const inSubjects = /^\/(subjects|course)\//.test(pathname);
   const displayName = user?.fullName || user?.email || "Student";
   const initials = displayName
     .split(" ")
@@ -94,13 +97,15 @@ const SidebarBody: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
                       className={({ isActive }) =>
                         cn(
                           "group relative flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] transition-all duration-200",
-                          isActive
+                          isActive || (inSubjects && item.href === "/my-courses")
                             ? "bg-gradient-to-r from-lp-blue/25 via-lp-blue/10 to-transparent font-medium text-white"
                             : "text-lp-soft hover:bg-white/[0.04] hover:text-white",
                         )
                       }
                     >
-                      {({ isActive }) => (
+                      {({ isActive: exact }) => {
+                        const isActive = exact || (inSubjects && item.href === "/my-courses");
+                        return (
                         <>
                           {isActive && (
                             <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-lp-sky shadow-[0_0_12px_2px_rgba(124,180,255,0.7)]" />
@@ -113,7 +118,8 @@ const SidebarBody: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
                           />
                           <span className="truncate">{item.title}</span>
                         </>
-                      )}
+                        );
+                      }}
                     </NavLink>
                   </li>
                 );

@@ -39,6 +39,10 @@ import ContentLibraryPage from './pages/ContentLibraryPage';
 import MyCoursesPage from './pages/MyCoursesPage';
 import CourseStudyPage from './pages/CourseStudyPage';
 import CreateCoursePage from './pages/CreateCoursePage';
+import SubjectPage from './pages/subjects/SubjectPage';
+import SubjectTool from './pages/subjects/SubjectTool';
+import DocViewer from './pages/subjects/DocViewer';
+import LessonPlayer from './pages/subjects/LessonPlayer';
 import PayPage from './pages/PayPage';
 import CheckoutReturn from './pages/CheckoutReturn';
 import PlatformDocsPage from './pages/PlatformDocsPage';
@@ -173,6 +177,12 @@ function App() {
           <Route path="/my-courses" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><MyCoursesPage /></ProtectedRoute>} />
           <Route path="/course/create" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><CreateCoursePage /></ProtectedRoute>} />
           <Route path="/course/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><CourseStudyPage /></ProtectedRoute>} />
+          <Route path="/subjects" element={<Navigate to="/my-courses" replace />} />
+          <Route path="/subjects/:slug" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><SubjectPage /></ProtectedRoute>} />
+          <Route path="/subjects/:slug/guide/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><DocViewer kind="guide" /></ProtectedRoute>} />
+          <Route path="/subjects/:slug/cheatsheet/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><DocViewer kind="cheatsheet" /></ProtectedRoute>} />
+          <Route path="/subjects/:slug/lesson/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><LessonPlayer /></ProtectedRoute>} />
+          <Route path="/subjects/:slug/:tool" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><SubjectTool /></ProtectedRoute>} />
 
           {/* Refyn Intelligence — revolutionary AI features */}
           <Route path="/intel/thinking-replay" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><ThinkingReplayPage /></ProtectedRoute>} />

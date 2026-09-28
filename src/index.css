@@ -613,3 +613,16 @@
   @keyframes lp-dot { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
   @media (prefers-reduced-motion: reduce) { .lp-dots span { animation: none; opacity: 0.7; } }
 }
+
+/* Built-in study guides (subjects) */
+@layer components {
+  .lp-md-table { overflow-x: auto; margin: 1.1em 0; border: 1px solid #1a2744; border-radius: 14px; }
+  .lp-md-table table { margin: 0; border-style: hidden; min-width: 540px; }
+  .lp-md-table th, .lp-md-table td { overflow-wrap: normal; word-break: normal; }
+  .lp-guide { font-size: 16px; }
+  .lp-guide h2 { font-size: 1.3em; margin-top: 1.9em; padding-top: 1.2em; border-top: 1px solid #1a2744; }
+  .lp-guide > h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .lp-guide h3 { color: #cfe0ff; }
+  .lp-guide blockquote { background: rgba(59, 130, 246, 0.08); border-radius: 0 12px 12px 0; padding: 0.75em 1em; color: #cfe0ff; }
+  .lp-guide td strong, .lp-guide li strong { color: #fff; }
+}
