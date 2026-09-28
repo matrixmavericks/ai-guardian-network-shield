@@ -323,6 +323,13 @@
   font-display: swap;
   src: url("./assets/fonts/inter-tight-latin-wght-normal.woff2") format("woff2");
 }
+@font-face {
+  font-family: "Inter Tight";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/inter-tight-latin-wght-italic.woff2") format("woff2");
+}
 
 @layer components {
   /* Scroll reveal: soft blur-in, staggered with inline transition-delay */

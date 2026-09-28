@@ -78,7 +78,7 @@ const LandingNav = () => {
           <Wordmark />
         </Link>
 
-        <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] py-1 pl-5 pr-1 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md lg:flex">
+        <div className="hidden items-center gap-1 rounded-full border border-white/15 bg-[#0A1328]/55 py-1 pl-5 pr-1 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md lg:flex">
           {navLinks.map((link) => {
             const isActive = active === link.href.slice(1);
             return (

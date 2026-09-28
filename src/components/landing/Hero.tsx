@@ -1,79 +1,84 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 import BoomerangVideoBg from "./BoomerangVideoBg";
-import { GlowButton } from "./primitives";
+import { Container, GlowButton } from "./primitives";
 
 // Hosted by the template this hero came from. Put your own copy on a CDN you
 // control (or in /public) so the hero never depends on someone else's bucket.
 const BG_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260511_131941_d136af49-e243-493a-be14-6ff3f24e09e6.mp4";
 
-const schools = ["Mahindra International", "Cambridge Prep", "Delhi Public", "Lincoln Academy", "St. Xavier's", "Riverside IB"];
+// Drop the school's logo here (transparent PNG or SVG); until then the name shows.
+const MIS_LOGO = "/schools/mis-logo.png";
 
-const TrustMarquee = () => (
-  <div className="relative border-y border-lp-line bg-lp-deep/60">
-    <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-5 py-6 sm:px-8 md:flex-row md:items-center md:gap-10">
-      <p className="shrink-0 text-[12px] font-medium uppercase tracking-[0.18em] text-lp-mute">
-        Trusted across IB, IGCSE &amp; US curricula
-      </p>
-      <div className="lp-marquee relative min-w-0 flex-1 overflow-hidden">
-        <ul className="lp-marquee__track flex w-max items-center">
-          {[...schools, ...schools].map((s, i) => (
-            <li
-              key={`${s}-${i}`}
-              aria-hidden={i >= schools.length}
-              className="flex items-center gap-3 whitespace-nowrap px-6 text-[17px] font-medium tracking-[-0.01em] text-lp-soft transition-colors hover:text-white"
-            >
-              <span aria-hidden className="h-1.5 w-1.5 rotate-45 bg-lp-blue/70" />
-              {s}
-            </li>
-          ))}
-        </ul>
-      </div>
+const PilotBand = () => {
+  const [logoOk, setLogoOk] = useState(true);
+  return (
+    <div className="relative border-y border-lp-line bg-lp-deep">
+      <Container className="lp-reveal flex flex-col items-center gap-8 py-12 text-center md:flex-row md:justify-between md:py-14 md:text-left">
+        <p className="text-[12px] font-medium uppercase tracking-[0.2em] text-lp-mute">Now piloting at</p>
+        <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
+          {logoOk && (
+            <img
+              src={MIS_LOGO}
+              alt="Mahindra International School logo"
+              onError={() => setLogoOk(false)}
+              className="h-20 w-auto object-contain md:h-24"
+            />
+          )}
+          <div>
+            <p className="text-[72px] font-semibold leading-[0.85] tracking-[-0.05em] text-white md:text-[96px]">MIS</p>
+            <p className="mt-3 text-[15px] text-lp-soft">Mahindra International School, Pune</p>
+          </div>
+        </div>
+        <p className="max-w-[16rem] text-[14px] leading-relaxed text-lp-soft md:text-right">
+          Our pilot school, running Refyn in IB Middle Years Programme classrooms.
+        </p>
+      </Container>
     </div>
-  </div>
-);
+  );
+};
 
 const Hero = () => (
   <>
     <section className="relative min-h-[100svh] w-full overflow-hidden bg-lp-deep sm:min-h-[720px] lg:h-screen">
-      {/* Video, pushed into a blue duotone so it always matches the palette */}
+      {/* Video, shifted to blue but kept bright enough to read as footage */}
       <BoomerangVideoBg
         src={BG_VIDEO}
         className="absolute inset-0 h-full w-full"
-        mediaClassName="grayscale contrast-[1.15] brightness-[0.85]"
+        mediaClassName="grayscale contrast-[1.1] brightness-[1.15]"
       />
-      <div aria-hidden className="absolute inset-0 bg-[#1D4ED8] mix-blend-color" />
-      <div aria-hidden className="absolute inset-0 bg-[#0B1A45] mix-blend-multiply" />
-      {/* Fallback glow + legibility gradients */}
+      <div aria-hidden className="absolute inset-0 bg-[#2563EB] opacity-80 mix-blend-color" />
+      <div aria-hidden className="absolute inset-0 bg-[#0B1A45] opacity-25 mix-blend-multiply" />
+      {/* Just enough shade for the text at the top and the CTA at the bottom */}
       <div
         aria-hidden
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(60% 50% at 50% 30%, rgba(59,130,246,0.28), transparent 70%), linear-gradient(180deg, rgba(3,6,15,0.55) 0%, rgba(3,6,15,0.15) 35%, rgba(3,6,15,0.35) 65%, #03060F 100%)",
+            "radial-gradient(ellipse 50% 32% at 50% 36%, rgba(5,12,40,0.55), transparent 75%), linear-gradient(180deg, rgba(3,6,15,0.6) 0%, rgba(3,6,15,0.15) 30%, rgba(3,6,15,0) 55%, rgba(3,6,15,0.45) 85%, #03060F 100%)",
         }}
       />
 
       {/* Hero copy */}
       <div className="relative z-10 flex flex-col items-center px-4 pb-72 pt-32 text-center sm:px-6 sm:pt-36 md:pt-40 lg:pb-0">
-        <p className="lp-reveal inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-[12.5px] font-medium text-lp-soft backdrop-blur-md">
+        <p className="lp-reveal inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[12.5px] font-medium text-white/90 backdrop-blur-md">
           <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-lp-cyan shadow-[0_0_10px_2px_rgba(63,233,255,0.6)]" />
           Ethical AI for schools
         </p>
         <h1
-          className="lp-reveal mt-7 max-w-5xl text-[2.6rem] font-normal leading-[0.95] tracking-[-0.045em] text-white sm:text-6xl md:text-7xl lg:text-[5.25rem] xl:text-[5.75rem]"
+          className="lp-reveal mt-7 max-w-5xl text-[2.6rem] font-normal leading-[0.95] tracking-[-0.045em] text-white [text-shadow:0_2px_30px_rgba(3,6,15,0.35)] sm:text-6xl md:text-7xl lg:text-[5.25rem] xl:text-[5.75rem]"
           style={{ transitionDelay: "80ms" }}
         >
           AI that teaches the thinking,{" "}
           <br className="hidden sm:block" />
-          <span className="bg-gradient-to-r from-lp-sky via-[#A5CCFF] to-lp-cyan bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[#93C5FD] via-[#BFDBFE] to-lp-cyan bg-clip-text text-transparent [filter:drop-shadow(0_2px_24px_rgba(3,6,15,0.45))]">
             not the answer.
           </span>
         </h1>
         <p
-          className="lp-reveal mt-6 max-w-md px-2 text-[15px] leading-relaxed text-lp-soft sm:mt-8 sm:text-base md:text-lg"
+          className="lp-reveal mt-6 max-w-md px-2 text-[15px] leading-relaxed text-white/80 sm:mt-8 sm:text-base md:text-lg"
           style={{ transitionDelay: "160ms" }}
         >
           Refyn turns “just give me the answer” into a guided lesson, and shows teachers how AI is really used in every
@@ -87,7 +92,7 @@ const Hero = () => (
           <Sparkles className="h-4 w-4 text-lp-cyan" />
           <span className="text-sm font-semibold">Guided Mode</span>
         </div>
-        <p className="mb-6 max-w-xs text-[13px] leading-relaxed text-lp-soft">
+        <p className="mb-6 max-w-xs text-[13px] leading-relaxed text-white/75">
           Students keep using AI. Refyn makes sure they still do the thinking: requests for finished work come back as
           hints, questions and worked examples.
         </p>
@@ -113,7 +118,7 @@ const Hero = () => (
         <span className="font-medium">Watch the guided tour</span>
       </Link>
     </section>
-    <TrustMarquee />
+    <PilotBand />
   </>
 );
 

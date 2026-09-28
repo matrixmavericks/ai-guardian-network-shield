@@ -5,7 +5,6 @@ import WhySection from "@/components/landing/WhySection";
 import HowItWorks from "@/components/landing/HowItWorks";
 import ProductShowcase from "@/components/landing/ProductShowcase";
 import NetworkSection from "@/components/landing/NetworkSection";
-import Stories from "@/components/landing/Stories";
 import ClosingCta from "@/components/landing/ClosingCta";
 import LandingFooter from "@/components/landing/LandingFooter";
 import { useReveal } from "@/components/landing/primitives";
@@ -23,7 +22,6 @@ const Index = () => {
         <HowItWorks />
         <ProductShowcase />
         <NetworkSection />
-        <Stories />
         <ClosingCta />
       </main>
       <LandingFooter />
