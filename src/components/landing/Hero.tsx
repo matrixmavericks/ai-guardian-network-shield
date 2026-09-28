@@ -36,23 +36,14 @@ const PilotBand = () => (
 const Hero = () => (
   <>
     <section className="relative min-h-[100svh] w-full overflow-hidden bg-lp-deep sm:min-h-[720px] lg:h-screen">
-      {/* Video, shifted to blue but kept bright enough to read as footage */}
+      {/* Keep the footage's original colors visible. */}
       <BoomerangVideoBg
         src={BG_VIDEO}
         className="absolute inset-0 h-full w-full"
-        mediaClassName="grayscale contrast-[1.1] brightness-[1.15]"
+        mediaClassName="contrast-[1.06] saturate-[1.25]"
       />
-      <div aria-hidden className="absolute inset-0 bg-[#2563EB] opacity-80 mix-blend-color" />
-      <div aria-hidden className="absolute inset-0 bg-[#0B1A45] opacity-25 mix-blend-multiply" />
       {/* Just enough shade for the text at the top and the CTA at the bottom */}
-      <div
-        aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 50% 32% at 50% 36%, rgba(5,12,40,0.55), transparent 75%), linear-gradient(180deg, rgba(3,6,15,0.6) 0%, rgba(3,6,15,0.15) 30%, rgba(3,6,15,0) 55%, rgba(3,6,15,0.45) 85%, #03060F 100%)",
-        }}
-      />
+      <div aria-hidden className="lp-video-shade absolute inset-0" />
 
       {/* Hero copy */}
       <div className="relative z-10 flex flex-col items-center px-4 pb-72 pt-32 text-center sm:px-6 sm:pt-36 md:pt-40 lg:pb-0">
