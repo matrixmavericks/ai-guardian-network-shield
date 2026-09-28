@@ -454,6 +454,33 @@
     100% { top: calc(100% - 6px); opacity: 0; }
   }
 
+  /* Same, travelling left to right along a horizontal connector */
+  .lp-flow-x { position: relative; }
+  .lp-flow-x::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 6px;
+    height: 6px;
+    margin-top: -3px;
+    border-radius: 9999px;
+    background: theme("colors.lp.sky");
+    box-shadow: 0 0 12px 2px rgba(124, 180, 255, 0.7);
+    animation: lp-flow-x 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    animation-delay: var(--flow-delay, 0s);
+  }
+  @keyframes lp-flow-x {
+    0% { left: 0; opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { left: calc(100% - 6px); opacity: 0; }
+  }
+
+  /* Bars that grow once revealed */
+  .lp-grow { transform: scaleX(0); transform-origin: left; transition: transform 1.1s 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+  .is-in .lp-grow { transform: scaleX(1); }
+
   /* Progress fill used by the product showcase list */
   .lp-progress { animation: lp-progress linear forwards; transform-origin: left; }
   @keyframes lp-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
@@ -464,6 +491,7 @@
   @media (prefers-reduced-motion: reduce) {
     .lp-reveal { opacity: 1; transform: none; filter: none; transition: none; }
     .lp-strike { background-size: 100% 2px; transition: none; }
-    .lp-marquee__track, .lp-flow::after, .lp-progress, .lp-fade { animation: none; }
+    .lp-marquee__track, .lp-flow::after, .lp-flow-x::after, .lp-progress, .lp-fade { animation: none; }
+    .lp-grow { transform: none; transition: none; }
   }
 }

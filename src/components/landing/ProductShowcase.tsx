@@ -276,8 +276,9 @@ const VISIBLE_BEHIND = 2;
 
 const ProductShowcase = () => {
   const [active, setActive] = useState(0);
-  const [auto, setAuto] = useState(true);
+  const [cycle, setCycle] = useState(0);
   const [hold, setHold] = useState(false);
+  const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const [inView, setInView] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -292,17 +293,17 @@ const ProductShowcase = () => {
     return () => io.disconnect();
   }, []);
 
-  // Advance on a timer until the visitor picks a chip themselves
+  // Keeps advancing on its own; picking a chip jumps there and restarts the timer
+  const running = inView && !hold && !reduced;
   useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!auto || hold || !inView || reduced) return;
+    if (!running) return;
     const t = window.setTimeout(() => setActive((a) => (a + 1) % n), AUTO_ADVANCE_MS);
     return () => window.clearTimeout(t);
-  }, [active, auto, hold, inView, n]);
+  }, [active, cycle, running, n]);
 
   const choose = (i: number) => {
-    setAuto(false);
     setActive(i);
+    setCycle((c) => c + 1);
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -354,13 +355,22 @@ const ProductShowcase = () => {
                   tabIndex={selected ? 0 : -1}
                   onClick={() => choose(i)}
                   className={cn(
-                    "rounded-full border px-5 py-2.5 text-[15px] transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lp-sky",
+                    "relative overflow-hidden rounded-full border px-5 py-2.5 text-[15px] transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lp-sky",
                     selected
                       ? "border-white bg-[#FFFFFF] font-medium text-lp-bg shadow-[0_8px_30px_-10px_rgba(124,180,255,0.6)]"
                       : "border-white/15 text-lp-soft hover:border-white/35 hover:text-white",
                   )}
                 >
                   {f.chip}
+                  {/* Time left before the next card, restarts on every change */}
+                  {selected && !reduced && (
+                    <span
+                      key={`${active}-${cycle}`}
+                      aria-hidden
+                      className="lp-progress absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-lp-blue to-lp-cyan"
+                      style={{ animationDuration: `${AUTO_ADVANCE_MS}ms`, animationPlayState: running ? "running" : "paused" }}
+                    />
+                  )}
                 </button>
               );
             })}
@@ -378,13 +388,28 @@ const ProductShowcase = () => {
             id="product-stack"
             role="tabpanel"
             aria-labelledby={`chip-${current.id}`}
-            className="relative h-[540px] overflow-hidden rounded-[32px] bg-gradient-to-br from-[#5173F0] via-[#4263EB] to-[#3451D1] shadow-[0_40px_120px_-40px_rgba(66,99,235,0.7)] sm:h-[600px] lg:h-[640px] lg:rounded-l-[40px] lg:rounded-r-none"
+            className="relative h-[540px] overflow-hidden rounded-[32px] border border-white/10 shadow-[0_40px_120px_-40px_rgba(37,99,235,0.55)] sm:h-[600px] lg:h-[640px] lg:rounded-l-[40px] lg:rounded-r-none lg:border-r-0"
+            style={{
+              background:
+                "radial-gradient(90% 70% at 15% 0%, rgba(80,120,255,0.55), transparent 60%), radial-gradient(60% 60% at 100% 100%, rgba(63,233,255,0.14), transparent 70%), linear-gradient(160deg, #1B3A9E 0%, #122766 45%, #0A1535 100%)",
+            }}
           >
+            {/* Faint dot grid, like the network section */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 opacity-60"
+              style={{
+                backgroundImage: "radial-gradient(rgba(165,200,255,0.16) 1px, transparent 1px)",
+                backgroundSize: "26px 26px",
+                maskImage: "linear-gradient(180deg, #000 0%, transparent 70%)",
+                WebkitMaskImage: "linear-gradient(180deg, #000 0%, transparent 70%)",
+              }}
+            />
             {/* Watermark word */}
             <p
               key={current.word}
               aria-hidden
-              className="lp-fade pointer-events-none absolute -left-2 -top-6 select-none whitespace-nowrap text-[120px] font-bold italic leading-none tracking-[-0.06em] text-white/[0.12] sm:-top-8 sm:text-[180px] lg:left-6 lg:text-[210px]"
+              className="lp-fade pointer-events-none absolute -left-2 -top-6 select-none whitespace-nowrap bg-gradient-to-r from-white/[0.14] to-lp-sky/[0.05] bg-clip-text pr-[0.1em] text-[120px] font-bold italic leading-none tracking-[-0.06em] text-transparent sm:-top-8 sm:text-[180px] lg:left-6 lg:text-[210px]"
             >
               {current.word}
             </p>
@@ -402,8 +427,8 @@ const ProductShowcase = () => {
                     className={cn(
                       "absolute left-4 top-0 h-[370px] w-[calc(100%-2rem-2*var(--dx))] max-w-[480px] overflow-hidden rounded-[26px] transition-[transform,opacity,background-color,box-shadow] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:left-10 sm:h-[400px] lg:left-14 lg:h-[420px]",
                       slot === 0
-                        ? "bg-[#FFFFFF] shadow-[0_40px_80px_-30px_rgba(15,23,42,0.55)]"
-                        : "pointer-events-none bg-[#E9EDFB] shadow-[0_20px_50px_-30px_rgba(15,23,42,0.5)]",
+                        ? "bg-[#FFFFFF] shadow-[0_40px_90px_-30px_rgba(2,6,23,0.8),0_0_0_1px_rgba(255,255,255,0.6)]"
+                        : "pointer-events-none bg-[#DDE5FA] shadow-[0_20px_50px_-30px_rgba(2,6,23,0.7)]",
                     )}
                     style={{
                       zIndex: 10 - slot,
