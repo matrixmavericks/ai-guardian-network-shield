@@ -26,12 +26,10 @@ import {
 } from 'lucide-react';
 import SchoolEnrollmentManager from '@/components/SchoolEnrollmentManager';
 import { ADMIN_PLANS, calcAdminMonthlyCost, type AdminPlanConfig } from '@/lib/planConfigs';
+import { AI_MODELS as CHAT_MODELS, findModel, normalizeModel } from '@/lib/aiModels';
 
-const AI_MODELS = [
-  'google/gemini-2.5-pro', 'google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite',
-  'google/gemini-3-flash-preview', 'google/gemini-3.1-pro-preview',
-  'openai/gpt-5', 'openai/gpt-5-mini', 'openai/gpt-5-nano', 'openai/gpt-5.2',
-];
+// Every chat model students can use (see src/lib/aiModels.ts)
+const AI_MODELS = CHAT_MODELS.map(m => m.id);
 
 interface SchoolData {
   id: string; name: string; description: string; logo_url: string | null;
@@ -795,7 +793,9 @@ function SchoolDetail({ school, onBack, userId, planFeatures, adminPlanId, billi
   const toggleModel = (model: string) => {
     if (!aiSettings) return;
     const current = aiSettings.allowed_ai_models || [];
-    updateAISettings({ allowed_ai_models: current.includes(model) ? current.filter(m => m !== model) : [...current, model] });
+    // Older saved ids (e.g. "google/gemini-3-flash") count as their current name
+    const has = current.some(m => normalizeModel(m) === model);
+    updateAISettings({ allowed_ai_models: has ? current.filter(m => normalizeModel(m) !== model) : [...current, model] });
   };
 
   const deleteSchool = async () => {
@@ -1145,13 +1145,18 @@ function SchoolDetail({ school, onBack, userId, planFeatures, adminPlanId, billi
             <CardContent>
               <div className="space-y-3">
                 {AI_MODELS.map(model => {
-                  const isEnabled = aiSettings?.allowed_ai_models?.includes(model);
-                  const [provider, name] = model.split('/');
+                  const isEnabled = aiSettings?.allowed_ai_models?.some(m => normalizeModel(m) === model);
+                  const info = findModel(model);
+                  const provider = model.split('/')[0];
                   return (
                     <div key={model} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
                       <div>
-                        <div className="font-medium text-sm">{name}</div>
-                        <div className="text-xs text-muted-foreground capitalize">{provider}</div>
+                        <div className="font-medium text-sm">
+                          {info?.name ?? model}
+                          {info?.premium && <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-600">Premium</span>}
+                          {info?.legacy && <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground">Older</span>}
+                        </div>
+                        <div className="text-xs text-muted-foreground"><span className="capitalize">{provider}</span> · {info?.blurb}</div>
                       </div>
                       <Switch checked={isEnabled} onCheckedChange={() => toggleModel(model)} />
                     </div>

@@ -23,6 +23,7 @@ export const COMMANDS: Command[] = [
   { name: "guided", description: "Guided mode: help me work it out", group: "Mode" },
   { name: "direct", description: "Direct mode: clear, detailed explanations", group: "Mode" },
   { name: "subject", args: "<general|math|writing|languages|science>", description: "Switch the subject", group: "Mode", takesInput: true },
+  { name: "model", args: "<swift|core|sage|apex|name|low|medium|high>", description: "Switch the AI model or reasoning level", group: "Mode", takesInput: true },
   { name: "help", description: "List every command", group: "Mode" },
   { name: "dashboard", description: "Go to your dashboard", group: "Go to" },
   { name: "paths", description: "Go to your learning paths", group: "Go to" },

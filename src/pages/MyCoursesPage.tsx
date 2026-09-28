@@ -5,6 +5,8 @@ import {
   BookOpen,
   Check,
   Clock,
+  Cloud,
+  CloudOff,
   Flame,
   GraduationCap,
   Library,
@@ -25,7 +27,7 @@ import { cn } from "@/lib/utils";
 import { SUBJECTS, topicsOf, type Subject } from "@/content/myp";
 import { Bar, EmptyState, chip, ghostBtn, useCountUp } from "@/components/student/ui";
 import { StudyShell, SubjectGlyph, StatusIcon, primaryBtn } from "@/components/subjects/kit";
-import { mySubjects, streak, subjectSummary, topicStatus, useStudy, type StudyState } from "@/components/subjects/store";
+import { mySubjects, streak, subjectSummary, topicStatus, useStudy, useSyncStatus, type StudyState } from "@/components/subjects/store";
 
 type Course = Tables<"courses">;
 type EnrolledCourse = Course & {
@@ -445,6 +447,23 @@ const CourseLibrary: React.FC = () => {
 
 /* ---------- Page ---------- */
 
+const SyncBadge: React.FC = () => {
+  const status = useSyncStatus();
+  const label = {
+    synced: "Progress saved to your account",
+    syncing: "Saving to your account…",
+    offline: "Saved on this device · syncs when you're back online",
+    local: "Progress saved on this device",
+  }[status];
+  const Icon = status === "offline" || status === "local" ? CloudOff : Cloud;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[12.5px] text-lp-mute" role="status">
+      <Icon className={cn("h-3.5 w-3.5", status === "synced" ? "text-lp-green" : status === "syncing" ? "animate-pulse text-lp-sky" : "text-lp-mute")} />
+      {label}
+    </span>
+  );
+};
+
 const Stat: React.FC<{ icon: React.ElementType; label: string; value: number; suffix?: string; tone?: string }> = ({ icon: Icon, label, value, suffix, tone = "text-lp-sky" }) => {
   const shown = useCountUp(value);
   return (
@@ -548,7 +567,7 @@ const MyCoursesPage = () => {
           <h2 className="flex items-center gap-2 text-[15px] font-medium text-white">
             <BookOpen className="h-4 w-4 text-lp-sky" /> {list.length} subject{list.length === 1 ? "" : "s"}
           </h2>
-          <span className="text-[12.5px] text-lp-mute">Progress saves on this device</span>
+          <SyncBadge />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {list.map((s, i) => (

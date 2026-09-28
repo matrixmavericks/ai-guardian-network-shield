@@ -1,10 +1,13 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { SUBJECTS, topicsOf, type Subject, type Topic } from "@/content/myp";
 
-// Study progress for the built-in MYP subjects, kept per user in this browser.
-// One small external store so every component on a page (and other tabs) stays
-// in sync. Storage can be unavailable, so reads and writes are guarded.
+// Study progress for the built-in MYP subjects. One small external store keeps
+// every component (and other tabs) in sync. It saves to this browser straight
+// away and to the student's account (student_study_state) a moment later, so
+// progress follows them between devices and still works offline.
 
 export type Attempt = { ok: boolean; choice: number; at: number };
 export type SavedKind = "topic" | "question" | "term" | "cheatsheet";
@@ -27,9 +30,11 @@ export type StudyState = {
   /** Actions per day (YYYY-MM-DD), for the streak. */
   activity: Record<string, number>;
   recent: Recent | null;
+  /** When settings-like fields (subjects, cards, saved, plans) last changed here. The newer copy wins those. */
+  settingsAt: number;
 };
 
-const EMPTY: StudyState = { subjects: null, attempts: {}, read: {}, cards: {}, saved: [], plans: {}, activity: {}, recent: null };
+const EMPTY: StudyState = { subjects: null, attempts: {}, read: {}, cards: {}, saved: [], plans: {}, activity: {}, recent: null, settingsAt: 0 };
 
 const cache = new Map<string, StudyState>();
 const listeners = new Set<() => void>();
@@ -49,7 +54,7 @@ const load = (key: string): StudyState => {
   return state;
 };
 
-const save = (key: string, state: StudyState) => {
+const writeLocal = (key: string, state: StudyState) => {
   cache.set(key, state);
   try {
     localStorage.setItem(key, JSON.stringify(state));
@@ -57,6 +62,145 @@ const save = (key: string, state: StudyState) => {
     /* storage unavailable */
   }
   emit();
+};
+
+/* ---------- Account sync ---------- */
+
+export type SyncStatus = "local" | "syncing" | "synced" | "offline";
+
+let syncStatus: SyncStatus = "local";
+const statusListeners = new Set<() => void>();
+const setStatus = (s: SyncStatus) => {
+  if (s === syncStatus) return;
+  syncStatus = s;
+  statusListeners.forEach((l) => l());
+};
+
+/** Whether progress is saved to the account ("synced") or only on this device. */
+export const useSyncStatus = () =>
+  useSyncExternalStore(
+    (l) => {
+      statusListeners.add(l);
+      return () => statusListeners.delete(l);
+    },
+    () => syncStatus,
+  );
+
+const userOf = (key: string) => {
+  const id = key.split(":")[1];
+  return id && id !== "guest" ? id : null;
+};
+
+const pulled = new Map<string, Promise<void>>();
+const timers = new Map<string, number>();
+/** Accounts where the table is unavailable (e.g. not migrated yet): stay local-only. */
+const disabled = new Set<string>();
+
+const mergeAttempts = (a: StudyState["attempts"], b: StudyState["attempts"]) => {
+  const out: StudyState["attempts"] = { ...a };
+  for (const [q, list] of Object.entries(b)) {
+    const seen = new Set((out[q] || []).map((x) => `${x.at}:${x.choice}`));
+    out[q] = [...(out[q] || []), ...list.filter((x) => !seen.has(`${x.at}:${x.choice}`))].sort((x, y) => x.at - y.at).slice(-6);
+  }
+  return out;
+};
+
+const maxRecord = (a: Record<string, number>, b: Record<string, number>) => {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) out[k] = Math.max(out[k] || 0, v);
+  return out;
+};
+
+/**
+ * Combine this device's copy with the account's. Answers, read guides and
+ * streak days are merged; settings-like fields come from the newer copy so a
+ * removal on one device isn't undone by another.
+ */
+export const mergeStates = (local: StudyState, remote: Partial<StudyState>): StudyState => {
+  const r: StudyState = { ...EMPTY, ...remote };
+  const [newer, older] = r.settingsAt > local.settingsAt ? [r, local] : [local, r];
+  const recent = !local.recent ? r.recent : !r.recent ? local.recent : local.recent.at >= r.recent.at ? local.recent : r.recent;
+  return {
+    subjects: newer.subjects,
+    cards: { ...older.cards, ...newer.cards },
+    saved: newer.saved,
+    plans: newer.plans,
+    attempts: mergeAttempts(local.attempts, r.attempts),
+    read: maxRecord(local.read, r.read),
+    activity: maxRecord(local.activity, r.activity),
+    recent,
+    settingsAt: Math.max(local.settingsAt, r.settingsAt),
+  };
+};
+
+const missingTable = (e: { code?: string; message?: string } | null) =>
+  !!e && (e.code === "PGRST205" || e.code === "42P01" || /student_study_state/.test(e.message || ""));
+
+const push = async (key: string) => {
+  const userId = userOf(key);
+  if (!userId || disabled.has(key)) return;
+  setStatus("syncing");
+  const { error } = await supabase
+    .from("student_study_state")
+    .upsert({ user_id: userId, state: load(key) as unknown as Json, updated_at: new Date().toISOString() });
+  if (missingTable(error)) disabled.add(key);
+  setStatus(error ? (missingTable(error) ? "local" : "offline") : "synced");
+};
+
+const schedulePush = (key: string) => {
+  if (!userOf(key) || disabled.has(key)) return;
+  window.clearTimeout(timers.get(key));
+  timers.set(key, window.setTimeout(() => {
+    timers.delete(key);
+    push(key);
+  }, 1500));
+};
+
+/** Save anything still waiting when the tab is hidden or closed. */
+if (typeof window !== "undefined") {
+  const flush = () => {
+    for (const [key, t] of timers) {
+      window.clearTimeout(t);
+      timers.delete(key);
+      push(key);
+    }
+  };
+  window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && flush());
+}
+
+/** Load the account copy once per session and merge it in. */
+const pull = (key: string) => {
+  const userId = userOf(key);
+  if (!userId) return Promise.resolve();
+  if (!pulled.has(key)) {
+    pulled.set(
+      key,
+      (async () => {
+        setStatus("syncing");
+        const { data, error } = await supabase.from("student_study_state").select("state").eq("user_id", userId).maybeSingle();
+        if (error) {
+          if (missingTable(error)) disabled.add(key);
+          pulled.delete(key); // try again next visit
+          setStatus(missingTable(error) ? "local" : "offline");
+          return;
+        }
+        const local = load(key);
+        const remote = (data?.state ?? null) as Partial<StudyState> | null;
+        const merged = remote ? mergeStates(local, remote) : local;
+        if (remote) writeLocal(key, merged);
+        // Upload if this device had anything the account didn't.
+        if (!remote || JSON.stringify(merged) !== JSON.stringify({ ...EMPTY, ...remote })) await push(key);
+        else setStatus("synced");
+      })(),
+    );
+  }
+  return pulled.get(key)!;
+};
+
+const save = (key: string, state: StudyState) => {
+  writeLocal(key, state);
+  schedulePush(key);
 };
 
 const subscribe = (l: () => void) => {
@@ -79,6 +223,9 @@ export const today = (d = new Date()) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
+/** Mark a settings-like change so it wins over older copies when merging. */
+const touch = (s: StudyState): StudyState => ({ ...s, settingsAt: Date.now() });
+
 const bump = (s: StudyState): StudyState => {
   const d = today();
   return { ...s, activity: { ...s.activity, [d]: (s.activity[d] || 0) + 1 } };
@@ -88,6 +235,9 @@ export const useStudy = () => {
   const { user } = useAuth();
   const key = `refyn:${user?.id ?? "guest"}:study`;
   const state = useSyncExternalStore(subscribe, () => load(key));
+  useEffect(() => {
+    pull(key);
+  }, [key]);
   const update = useCallback((fn: (s: StudyState) => StudyState) => save(key, fn(load(key))), [key]);
 
   const actions = {
@@ -100,25 +250,25 @@ export const useStudy = () => {
         else delete next[topicId];
         return read ? bump({ ...s, read: next }) : { ...s, read: next };
       }),
-    rateCard: (cardId: string, known: boolean) => update((s) => bump({ ...s, cards: { ...s.cards, [cardId]: known } })),
+    rateCard: (cardId: string, known: boolean) => update((s) => touch(bump({ ...s, cards: { ...s.cards, [cardId]: known } }))),
     resetCards: (cardIds: string[]) =>
       update((s) => {
         const cards = { ...s.cards };
         cardIds.forEach((id) => delete cards[id]);
-        return { ...s, cards };
+        return touch({ ...s, cards });
       }),
     toggleSaved: (item: Omit<SavedItem, "at">) =>
       update((s) => {
         const exists = s.saved.some((x) => x.kind === item.kind && x.id === item.id);
-        return { ...s, saved: exists ? s.saved.filter((x) => !(x.kind === item.kind && x.id === item.id)) : [{ ...item, at: Date.now() }, ...s.saved] };
+        return touch({ ...s, saved: exists ? s.saved.filter((x) => !(x.kind === item.kind && x.id === item.id)) : [{ ...item, at: Date.now() }, ...s.saved] });
       }),
-    setSubjects: (slugs: string[]) => update((s) => ({ ...s, subjects: slugs })),
+    setSubjects: (slugs: string[]) => update((s) => touch({ ...s, subjects: slugs })),
     setPlan: (slug: string, plan: StudyPlan | null) =>
       update((s) => {
         const plans = { ...s.plans };
         if (plan) plans[slug] = plan;
         else delete plans[slug];
-        return { ...s, plans };
+        return touch({ ...s, plans });
       }),
     togglePlanTask: (slug: string, date: string, taskId: string) =>
       update((s) => {
@@ -127,7 +277,7 @@ export const useStudy = () => {
         const days = plan.days.map((d) =>
           d.date !== date ? d : { ...d, tasks: d.tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)) },
         );
-        return { ...s, plans: { ...s.plans, [slug]: { ...plan, days } } };
+        return touch({ ...s, plans: { ...s.plans, [slug]: { ...plan, days } } });
       }),
     visit: (recent: Omit<Recent, "at">) =>
       update((s) => (s.recent?.path === recent.path ? s : { ...s, recent: { ...recent, at: Date.now() } })),

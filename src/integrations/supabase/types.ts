@@ -2642,6 +2642,24 @@ export type Database = {
           },
         ]
       }
+      student_study_state: {
+        Row: {
+          state: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          state?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          state?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       student_documents: {
         Row: {
           created_at: string

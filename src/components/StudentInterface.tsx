@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Archive, ArrowUp, Beaker, BookMarked, BookOpen, Calculator, Check, ChevronDown, Copy, FileText, Languages,
   LayoutGrid, Lightbulb, Loader2, LogOut, Menu, MessageSquare, PanelLeftClose, PanelLeftOpen, PenTool, Plus,
-  Puzzle, Route, Search, Sparkles, Terminal, Users, X, Briefcase, Layers,
+  Puzzle, Route, Search, Sparkles, Terminal, Users, X, Briefcase, Layers, RotateCcw,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import FeatureGate from "@/components/FeatureGate";
@@ -21,6 +21,8 @@ import { NotebookEntry, downloadMarkdown, slugify, useStoredState } from "@/comp
 import {
   ArchivedPanel, CommandsPanel, NotebookPanel, SkillsPanel,
 } from "@/components/assistant/panels";
+import { ModelPicker, PoweredBy, choiceLabel, type ModelAccess, type ModelChoice } from "@/components/assistant/ModelPicker";
+import { AI_MODELS, BASIC_PLANS, DEFAULT_MODEL, REFYN_PICKS, findModel } from "@/lib/aiModels";
 
 // The chat tables aren't in the generated Supabase types yet
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,6 +35,11 @@ interface ChatMessage {
   timestamp: Date;
   /** Skills that shaped this message (only known for messages sent in this visit) */
   skills?: string[];
+  /** The model that wrote an assistant reply, and at what reasoning level */
+  model?: string;
+  effort?: string | null;
+  /** Set when a different model answered than the one chosen */
+  notice?: string;
 }
 
 interface ChatSession {
@@ -135,6 +142,12 @@ const StudentInterface = () => {
   const [highlight, setHighlight] = useState(0);
   const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
 
+  // Model choice (per student, this browser) and what their school/plan allows
+  const [modelChoice, setModelChoice] = useStoredState<ModelChoice>(storeKey && `${storeKey}:model`, { model: DEFAULT_MODEL, effort: null });
+  const [modelAccess, setModelAccess] = useState<ModelAccess | null>(null);
+  const [retryMenu, setRetryMenu] = useState(false);
+  const [pendingModel, setPendingModel] = useState<string | null>(null);
+
   // Pick up resource context from URL params (from "Use in AI" button)
   useEffect(() => {
     const resTitle = searchParams.get("resourceTitle");
@@ -162,6 +175,38 @@ const StudentInterface = () => {
   useEffect(() => {
     if (user) loadSessions();
   }, [user]);
+
+  // Which models this student can pick. If the server can't say (older
+  // deployment, offline), fall back to the plan: premium models need Premium.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const planLocked = !!plan && BASIC_PLANS.includes(plan.plan_id);
+    const local = (): ModelAccess => ({
+      default: DEFAULT_MODEL,
+      schoolRestricted: false,
+      models: Object.fromEntries(AI_MODELS.map(m => [m.id, { available: !(m.premium && planLocked), reason: m.premium && planLocked ? "plan" as const : null }])),
+    });
+    supabase.functions
+      .invoke("ai-chat", { body: { action: "models" } })
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (Array.isArray(data?.models)) {
+          setModelAccess({
+            default: data.default || DEFAULT_MODEL,
+            schoolRestricted: !!data.schoolRestricted,
+            models: Object.fromEntries((data.models as { id: string; available: boolean; reason?: "school" | "plan" | null }[]).map(m => [m.id, { available: m.available, reason: m.reason ?? null }])),
+          });
+        } else setModelAccess(local());
+      })
+      .catch(() => !cancelled && setModelAccess(local()));
+    return () => { cancelled = true; };
+  }, [user, plan?.plan_id]);
+
+  // The model actually sent: the student's choice if they may use it, else the default
+  const activeModel = modelAccess && modelAccess.models[modelChoice.model]?.available === false
+    ? modelAccess.default
+    : findModel(modelChoice.model)?.id ?? DEFAULT_MODEL;
 
   useEffect(() => {
     try { localStorage.setItem("refyn-chat-sidebar", collapsed ? "collapsed" : "open"); } catch { /* storage unavailable */ }
@@ -196,16 +241,20 @@ const StudentInterface = () => {
     setCompact(null);
     const { data } = await db
       .from('ai_chat_messages')
-      .select('id, role, content, created_at')
+      .select('id, role, content, created_at, metadata')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true });
 
     if (data) {
-      setMessages(data.map((m: { id: string; role: string; content: string; created_at: string }) => ({
+      type Row = { id: string; role: string; content: string; created_at: string; metadata: { model?: string; effort?: string | null; notice?: string } | null };
+      setMessages(data.map((m: Row) => ({
         id: m.id,
         role: m.role as "user" | "assistant",
         content: m.content,
         timestamp: new Date(m.created_at),
+        model: m.metadata?.model,
+        effort: m.metadata?.effort ?? null,
+        notice: m.metadata?.notice,
       })));
     }
     const session = sessions.find(s => s.id === sessionId);
@@ -244,13 +293,13 @@ const StudentInterface = () => {
   const currentTitle = sessions.find(s => s.id === currentSessionId)?.title || "New chat";
 
   /** Prior turns sent for context; after /compact, earlier turns are replaced by the summary. */
-  const buildHistory = () => {
-    const turns = (list: ChatMessage[]) => list.map(m => ({ role: m.role, content: m.content }));
-    if (!compact) return turns(messages);
+  const buildHistory = (list: ChatMessage[] = messages) => {
+    const turns = (l: ChatMessage[]) => l.map(m => ({ role: m.role, content: m.content }));
+    if (!compact) return turns(list);
     return [
       { role: "user" as const, content: "Here is a summary of our conversation so far." },
       { role: "assistant" as const, content: compact.summary },
-      ...turns(messages.slice(compact.index)),
+      ...turns(list.slice(compact.index)),
     ];
   };
 
@@ -265,8 +314,21 @@ const StudentInterface = () => {
     return entry.id;
   };
 
-  const sendPrompt = async (text: string, opts: { saveAs?: string } = {}) => {
+  /**
+   * Send a message. `retry` re-asks the last question (the student's message is
+   * already on screen and saved), optionally with a different `model`.
+   */
+  const sendPrompt = async (
+    text: string,
+    opts: { saveAs?: string; retry?: boolean; model?: string; base?: ChatMessage[] } = {},
+  ) => {
     if (!text.trim() || chatState === "sending") return;
+    const base = opts.base ?? messages;
+    const model = opts.model ?? activeModel;
+    const info = findModel(model);
+    const effort = info?.efforts.length
+      ? (modelChoice.effort && info.efforts.includes(modelChoice.effort) && model === activeModel ? modelChoice.effort : info.defaultEffort ?? null)
+      : null;
 
     if (plan && !canUseTokens(1)) {
       toast({
@@ -285,9 +347,10 @@ const StudentInterface = () => {
       skills: activeSkills.map(s => s.name),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    if (!opts.retry) setMessages(prev => [...prev, userMessage]);
     const sentPrompt = text.trim();
-    setPrompt("");
+    if (!opts.retry) setPrompt("");
+    setPendingModel(model);
     setChatState("sending");
 
     try {
@@ -298,17 +361,17 @@ const StudentInterface = () => {
         if (!sessionId) throw new Error("Could not create chat session");
       }
 
-      // Save user message
-      await saveMessage(sessionId, 'user', sentPrompt);
+      // Save user message (a retry re-uses the one already saved)
+      if (!opts.retry) await saveMessage(sessionId, 'user', sentPrompt);
 
       // Update session title on first message
-      if (messages.length === 0) {
+      if (base.length === 0 && !opts.retry) {
         const title = sentPrompt.length > 50 ? sentPrompt.substring(0, 50) + '...' : sentPrompt;
         await db.from('ai_chat_sessions').update({ title }).eq('id', sessionId);
       }
 
       // Build conversation history (prior turns) to send for context
-      const history = buildHistory();
+      const history = buildHistory(base);
 
       // Class resource + any skills, sent as extra context for this reply
       const context = [resourceText(), skillContext(activeSkills)].filter(Boolean).join("\n\n") || null;
@@ -323,6 +386,8 @@ const StudentInterface = () => {
           sessionId,
           history,
           resourceContext: context,
+          model,
+          effort,
         },
       });
 
@@ -341,6 +406,10 @@ const StudentInterface = () => {
         role: "assistant",
         content: reply,
         timestamp: new Date(),
+        // Only what the server reports: never claim a model that didn't answer
+        model: typeof meta.model === "string" ? meta.model : undefined,
+        effort: typeof meta.effort === "string" ? meta.effort : null,
+        notice: typeof meta.notice === "string" ? meta.notice : undefined,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -371,6 +440,17 @@ const StudentInterface = () => {
       });
       setChatState("error");
     }
+  };
+
+  /** Replace the last reply with a fresh one, optionally from another model. */
+  const regenerate = (model?: string) => {
+    setRetryMenu(false);
+    const last = messages.length - 1;
+    if (last < 1 || messages[last].role !== "assistant" || chatState === "sending") return;
+    const userIndex = messages.slice(0, last).map(m => m.role).lastIndexOf("user");
+    if (userIndex < 0) return;
+    setMessages(messages.slice(0, last));
+    sendPrompt(messages[userIndex].content, { retry: true, model, base: messages.slice(0, userIndex) });
   };
 
   const clearChat = () => {
@@ -478,6 +558,26 @@ const StudentInterface = () => {
         const s = SUBJECTS.find(x => x.id === arg.toLowerCase() || x.name.toLowerCase() === arg.toLowerCase());
         if (!s) { setPrompt("/subject "); toast({ title: "Pick a subject", description: SUBJECTS.map(x => x.id).join(", ") }); return; }
         done(); setActiveSubject(s.id); toast({ title: `Subject: ${s.name}` });
+        break;
+      }
+      case "model": {
+        // "/model apex", "/model gpt-6 sol", "/model high"
+        const a = arg.toLowerCase().trim();
+        const effort = (["low", "medium", "high"] as const).find(e => a === e);
+        if (effort) {
+          const m = findModel(activeModel);
+          if (!m?.efforts.includes(effort)) { toast({ title: `${m?.name ?? "This model"} doesn't take a reasoning level` }); return; }
+          done(); setModelChoice({ model: activeModel, effort }); toast({ title: `Reasoning: ${effort}` });
+          break;
+        }
+        const pick = REFYN_PICKS.find(p => a && (p.key === a || p.name.toLowerCase().includes(a)));
+        const m = findModel(pick?.model) ?? AI_MODELS.find(x => a && (x.id.includes(a.replace(/\s+/g, "-")) || x.name.toLowerCase().includes(a)));
+        if (!m) { setPrompt("/model "); toast({ title: "Pick a model", description: `Try ${REFYN_PICKS.map(p => p.key).join(", ")}, a model name, or low/medium/high` }); return; }
+        if (modelAccess?.models[m.id]?.available === false) {
+          toast({ title: `${m.name} isn't available`, description: modelAccess.models[m.id].reason === "school" ? "Your school hasn't enabled it." : "It needs the Premium plan.", variant: "destructive" });
+          return;
+        }
+        done(); setModelChoice({ model: m.id, effort: null }); toast({ title: `Model: ${choiceLabel(m.id)}`, description: m.name });
         break;
       }
       case "dashboard": navigate(user?.role === "teacher" ? "/dashboard" : "/student-dashboard"); break;
@@ -834,6 +934,19 @@ const StudentInterface = () => {
               )}
             </div>
 
+            {/* Model + reasoning level */}
+            <ModelPicker
+              value={{ model: activeModel, effort: modelChoice.effort }}
+              onChange={setModelChoice}
+              access={modelAccess}
+              onLocked={(m, reason) =>
+                toast({
+                  title: `${m.name} is locked`,
+                  description: reason === "school" ? "Your school hasn't enabled this model. Ask your school admin." : "Premium-priced models come with the Premium plan.",
+                })
+              }
+            />
+
             {/* Guided mode (process teaching) */}
             <button
               type="button"
@@ -1054,23 +1167,76 @@ const StudentInterface = () => {
                           <div className="lp-md">
                             <ReactMarkdown>{msg.content}</ReactMarkdown>
                           </div>
-                          <div className="mt-2 flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-                            <button
-                              type="button"
-                              onClick={() => copyMessage(msg)}
-                              className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-[12px] text-lp-mute hover:bg-white/[0.06] hover:text-white"
-                            >
-                              {copiedId === msg.id ? <Check className="h-3.5 w-3.5 text-lp-green" /> : <Copy className="h-3.5 w-3.5" />}
-                              {copiedId === msg.id ? "Copied" : "Copy"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => saveMessageToNotebook(msg)}
-                              className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-[12px] text-lp-mute hover:bg-white/[0.06] hover:text-white"
-                            >
-                              <BookMarked className="h-3.5 w-3.5" /> Save to notebook
-                            </button>
+                          <div className="mt-2.5 flex flex-wrap items-center gap-x-1 gap-y-1">
+                            <div className={cn("flex items-center gap-0.5 transition-opacity focus-within:opacity-100 group-hover:opacity-100", i === messages.length - 1 ? "opacity-100" : "opacity-0")}>
+                              <button
+                                type="button"
+                                onClick={() => copyMessage(msg)}
+                                title={copiedId === msg.id ? "Copied" : "Copy"}
+                                aria-label="Copy reply"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-lp-mute hover:bg-white/[0.06] hover:text-white"
+                              >
+                                {copiedId === msg.id ? <Check className="h-4 w-4 text-lp-green" /> : <Copy className="h-4 w-4" />}
+                              </button>
+                              {i === messages.length - 1 && (
+                                <div className="relative">
+                                  <button
+                                    type="button"
+                                    onClick={() => setRetryMenu(v => !v)}
+                                    disabled={chatState === "sending"}
+                                    title="Try again"
+                                    aria-label="Try again"
+                                    aria-haspopup="menu"
+                                    aria-expanded={retryMenu}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-lp-mute hover:bg-white/[0.06] hover:text-white disabled:opacity-40"
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </button>
+                                  {retryMenu && (
+                                    <>
+                                      <div className="fixed inset-0 z-10" onClick={() => setRetryMenu(false)} />
+                                      <div role="menu" className="lp-fade absolute bottom-10 left-0 z-20 w-64 rounded-2xl border border-lp-line bg-lp-deep p-1.5 shadow-2xl">
+                                        <button type="button" role="menuitem" onClick={() => regenerate()} className="flex h-9 w-full items-center gap-2.5 rounded-xl px-3 text-left text-[13.5px] text-white hover:bg-white/[0.05]">
+                                          <RotateCcw className="h-4 w-4 text-lp-sky" /> Try again
+                                        </button>
+                                        <p className="px-3 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-lp-mute">Try with</p>
+                                        {REFYN_PICKS.filter(p => p.model !== (msg.model ?? activeModel)).map(p => {
+                                          const m = findModel(p.model);
+                                          const locked = modelAccess?.models[p.model]?.available === false;
+                                          return (
+                                            <button
+                                              key={p.key}
+                                              type="button"
+                                              role="menuitem"
+                                              disabled={locked}
+                                              onClick={() => regenerate(p.model)}
+                                              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-45"
+                                            >
+                                              <span className="min-w-0 flex-1">
+                                                <span className="block text-[13px] text-white">{p.name}</span>
+                                                <span className="block text-[11.5px] text-lp-mute">{m?.name}{locked ? " · locked" : ""}</span>
+                                              </span>
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => saveMessageToNotebook(msg)}
+                                title="Save to notebook"
+                                aria-label="Save to notebook"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-lp-mute hover:bg-white/[0.06] hover:text-white"
+                              >
+                                <BookMarked className="h-4 w-4" />
+                              </button>
+                            </div>
+                            {msg.model && <PoweredBy model={msg.model} effort={msg.effort} className="ml-1" />}
                           </div>
+                          {msg.notice && <p className="mt-1 text-[12px] text-[#FBBF24]/90">{msg.notice}</p>}
                         </div>
                       </div>
                     )}
@@ -1082,7 +1248,9 @@ const StudentInterface = () => {
                     <RefynMark className="h-9 w-9" />
                     <div className="flex items-center gap-3 text-[14px] text-lp-soft">
                       <span className="lp-dots flex items-center gap-1"><span /><span /><span /></span>
-                      {compacting ? "Summarising this chat…" : isProcessTeaching ? "Thinking about how to guide you…" : "Thinking…"}
+                      {compacting
+                        ? "Summarising this chat…"
+                        : `${findModel(pendingModel ?? activeModel)?.name ?? "Refyn"} is ${isProcessTeaching ? "working out how to guide you" : "thinking"}…`}
                     </div>
                   </div>
                 )}
