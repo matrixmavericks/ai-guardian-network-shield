@@ -1,5 +1,6 @@
 import React from "react";
 import { Sparkles } from "lucide-react";
+import studentAi from "@/assets/photos/student-ai.jpg";
 import { Container, Eyebrow, SectionTitle, useSpotlight } from "./primitives";
 
 const rewrites = [
@@ -108,7 +109,24 @@ const WhySection = () => (
 
       <div className="lg:col-span-5">
         <div className="lg:sticky lg:top-28">
-          <GuidedCard />
+          {/* Before: a student asking ChatGPT. After: the same kind of request, guided. */}
+          <figure className="lp-reveal group relative overflow-hidden rounded-3xl border border-lp-line">
+            <img
+              src={studentAi}
+              alt="A student using ChatGPT on a laptop in class"
+              width={830}
+              height={468}
+              loading="lazy"
+              className="aspect-[16/10] w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+            />
+            <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-lp-bg/80 via-lp-bg/10 to-transparent" />
+            <figcaption className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/50 px-3 py-1 text-[12px] font-medium text-white backdrop-blur-md">
+              Without Refyn: the AI writes it for them
+            </figcaption>
+          </figure>
+          <div className="relative -mt-16 px-4 sm:-mt-20 sm:px-8 lg:-ml-10 lg:-mt-12 lg:mr-6 lg:px-0">
+            <GuidedCard />
+          </div>
         </div>
       </div>
     </Container>

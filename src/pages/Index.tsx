@@ -3,6 +3,7 @@ import LandingNav from "@/components/landing/LandingNav";
 import Hero from "@/components/landing/Hero";
 import WhySection from "@/components/landing/WhySection";
 import HowItWorks from "@/components/landing/HowItWorks";
+import ClassroomSection from "@/components/landing/ClassroomSection";
 import ProductShowcase from "@/components/landing/ProductShowcase";
 import NetworkSection from "@/components/landing/NetworkSection";
 import ClosingCta from "@/components/landing/ClosingCta";
@@ -20,6 +21,7 @@ const Index = () => {
         <Hero />
         <WhySection />
         <HowItWorks />
+        <ClassroomSection />
         <ProductShowcase />
         <NetworkSection />
         <ClosingCta />

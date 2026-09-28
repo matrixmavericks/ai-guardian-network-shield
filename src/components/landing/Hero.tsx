@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
+import misLogo from "@/assets/photos/mis-logo.png";
 import BoomerangVideoBg from "./BoomerangVideoBg";
 import { Container, GlowButton } from "./primitives";
 
@@ -9,36 +10,31 @@ import { Container, GlowButton } from "./primitives";
 const BG_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260511_131941_d136af49-e243-493a-be14-6ff3f24e09e6.mp4";
 
-// Drop the school's logo here (transparent PNG or SVG); until then the name shows.
-const MIS_LOGO = "/schools/mis-logo.png";
-
-const PilotBand = () => {
-  const [logoOk, setLogoOk] = useState(true);
-  return (
-    <div className="relative border-y border-lp-line bg-lp-deep">
-      <Container className="lp-reveal flex flex-col items-center gap-8 py-12 text-center md:flex-row md:justify-between md:py-14 md:text-left">
-        <p className="text-[12px] font-medium uppercase tracking-[0.2em] text-lp-mute">Now piloting at</p>
-        <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
-          {logoOk && (
-            <img
-              src={MIS_LOGO}
-              alt="Mahindra International School logo"
-              onError={() => setLogoOk(false)}
-              className="h-20 w-auto object-contain md:h-24"
-            />
-          )}
-          <div>
-            <p className="text-[72px] font-semibold leading-[0.85] tracking-[-0.05em] text-white md:text-[96px]">MIS</p>
-            <p className="mt-3 text-[15px] text-lp-soft">Mahindra International School, Pune</p>
-          </div>
+const PilotBand = () => (
+  <div className="relative overflow-hidden border-y border-lp-line bg-lp-deep">
+    <div
+      aria-hidden
+      className="pointer-events-none absolute left-1/2 top-1/2 h-[300px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-[100px]"
+      style={{ background: "radial-gradient(closest-side, rgba(59,130,246,0.5), transparent)" }}
+    />
+    <Container className="lp-reveal relative flex flex-col items-center gap-8 py-12 text-center md:flex-row md:justify-between md:py-14 md:text-left">
+      <p className="text-[12px] font-medium uppercase tracking-[0.2em] text-lp-mute">Now piloting at</p>
+      <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
+        {/* The logo has a white background, so it sits on its own white tile */}
+        <div className="rounded-2xl bg-[#FFFFFF] px-4 py-3 shadow-[0_20px_50px_-20px_rgba(59,130,246,0.6)] ring-1 ring-white/20 transition-transform duration-500 hover:-rotate-1 hover:scale-[1.03]">
+          <img src={misLogo} alt="Mahindra International School" width={239} height={151} className="h-20 w-auto md:h-24" />
         </div>
-        <p className="max-w-[16rem] text-[14px] leading-relaxed text-lp-soft md:text-right">
-          Our pilot school, running Refyn in IB Middle Years Programme classrooms.
-        </p>
-      </Container>
-    </div>
-  );
-};
+        <div>
+          <p className="text-[72px] font-semibold leading-[0.85] tracking-[-0.05em] text-white md:text-[96px]">MIS</p>
+          <p className="mt-3 text-[15px] text-lp-soft">Mahindra International School · Pune</p>
+        </div>
+      </div>
+      <p className="max-w-[16rem] text-[14px] leading-relaxed text-lp-soft md:text-right">
+        Our pilot school, running Refyn in IB Middle Years Programme classrooms.
+      </p>
+    </Container>
+  </div>
+);
 
 const Hero = () => (
   <>
