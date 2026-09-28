@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  ArrowUp, Beaker, BookOpen, Calculator, Check, ChevronDown, Copy, FileText, Languages, LayoutGrid,
-  Lightbulb, Loader2, LogOut, Menu, MessageSquare, PanelLeftClose, PanelLeftOpen, PenTool, Plus,
-  Route, Search, Sparkles, Users, X, Briefcase,
+  Archive, ArrowUp, Beaker, BookMarked, BookOpen, Calculator, Check, ChevronDown, Copy, FileText, Languages,
+  LayoutGrid, Lightbulb, Loader2, LogOut, Menu, MessageSquare, PanelLeftClose, PanelLeftOpen, PenTool, Plus,
+  Puzzle, Route, Search, Sparkles, Terminal, Users, X, Briefcase, Layers,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import FeatureGate from "@/components/FeatureGate";
@@ -13,8 +13,14 @@ import { Link, NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import { useStudentPlan } from "@/hooks/useStudentPlan";
 import { useSchoolCheck } from "@/hooks/useSchoolCheck";
 import { cn } from "@/lib/utils";
-import { isToday, isYesterday, differenceInCalendarDays } from "date-fns";
+import { format, isToday, isYesterday, differenceInCalendarDays } from "date-fns";
 import { Wordmark } from "@/components/landing/LandingNav";
+import { COMMANDS, Command, parseCommand } from "@/components/assistant/commands";
+import { MAX_INSTALLED, SKILLS, skillContext, skillsForMessage } from "@/components/assistant/skills";
+import { NotebookEntry, downloadMarkdown, slugify, useStoredState } from "@/components/assistant/storage";
+import {
+  ArchivedPanel, CommandsPanel, NotebookPanel, SkillsPanel,
+} from "@/components/assistant/panels";
 
 // The chat tables aren't in the generated Supabase types yet
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,6 +31,8 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  /** Skills that shaped this message (only known for messages sent in this visit) */
+  skills?: string[];
 }
 
 interface ChatSession {
@@ -49,7 +57,12 @@ const STARTERS = [
   { title: "Quiz me", body: "Ask me questions to test what I know before a test.", subject: "science", icon: Sparkles },
 ];
 
+const NOTES_PROMPT =
+  "Turn what we've covered in this chat into concise study notes: a short summary, the key ideas under clear headings, any formulas or definitions, and three questions I should be able to answer.";
+
 type ChatState = "idle" | "sending" | "error";
+type Panel = "skills" | "notebook" | "commands" | "archived" | null;
+type Suggestion = { key: string; label: string; hint: string; kind: "command" | "skill"; value: string; command?: Command };
 
 const groupSessions = (sessions: ChatSession[]) => {
   const groups: { label: string; items: ChatSession[] }[] = [
@@ -79,6 +92,9 @@ const RefynMark: React.FC<{ className?: string }> = ({ className }) => (
   </span>
 );
 
+const iconBtn =
+  "relative flex h-9 w-9 items-center justify-center rounded-xl border border-lp-line bg-lp-surface/70 text-lp-soft transition-colors hover:border-lp-blue/50 hover:text-white";
+
 const StudentInterface = () => {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -105,6 +121,19 @@ const StudentInterface = () => {
   const [chatSearch, setChatSearch] = useState("");
   const [subjectMenu, setSubjectMenu] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Suite: skills, notebook, archive, commands, compaction
+  const storeKey = user ? `refyn:${user.id}` : null;
+  const [installedSkills, setInstalledSkills] = useStoredState<string[]>(storeKey && `${storeKey}:skills`, []);
+  const [notebook, setNotebook] = useStoredState<NotebookEntry[]>(storeKey && `${storeKey}:notebook`, []);
+  const [archived, setArchived] = useStoredState<string[]>(storeKey && `${storeKey}:archived`, []);
+  const [panel, setPanel] = useState<Panel>(null);
+  const [notebookFocus, setNotebookFocus] = useState<string | null>(null);
+  const [compact, setCompact] = useState<{ index: number; summary: string } | null>(null);
+  const [compacting, setCompacting] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
 
   // Pick up resource context from URL params (from "Use in AI" button)
   useEffect(() => {
@@ -142,6 +171,11 @@ const StudentInterface = () => {
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [prompt]);
 
+  useEffect(() => {
+    setSuggestionsDismissed(false);
+    setHighlight(0);
+  }, [prompt]);
+
   const loadSessions = async () => {
     if (!user) return;
     const { data } = await db
@@ -155,6 +189,7 @@ const StudentInterface = () => {
 
   const loadSession = async (sessionId: string) => {
     setCurrentSessionId(sessionId);
+    setCompact(null);
     const { data } = await db
       .from('ai_chat_messages')
       .select('id, role, content, created_at')
@@ -202,9 +237,32 @@ const StudentInterface = () => {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim() || chatState === "sending") return;
+  const currentTitle = sessions.find(s => s.id === currentSessionId)?.title || "New chat";
+
+  /** Prior turns sent for context; after /compact, earlier turns are replaced by the summary. */
+  const buildHistory = () => {
+    const turns = (list: ChatMessage[]) => list.map(m => ({ role: m.role, content: m.content }));
+    if (!compact) return turns(messages);
+    return [
+      { role: "user" as const, content: "Here is a summary of our conversation so far." },
+      { role: "assistant" as const, content: compact.summary },
+      ...turns(messages.slice(compact.index)),
+    ];
+  };
+
+  const resourceText = () =>
+    resourceContext
+      ? `Title: ${resourceContext.title}\nDescription: ${resourceContext.description}${resourceContext.url ? `\nURL: ${resourceContext.url}` : ""}`
+      : null;
+
+  const saveToNotebook = (content: string, title: string) => {
+    const entry: NotebookEntry = { id: crypto.randomUUID(), title, content, source: currentTitle, createdAt: new Date().toISOString() };
+    setNotebook(prev => [entry, ...prev].slice(0, 100));
+    return entry.id;
+  };
+
+  const sendPrompt = async (text: string, opts: { saveAs?: string } = {}) => {
+    if (!text.trim() || chatState === "sending") return;
 
     if (plan && !canUseTokens(1)) {
       toast({
@@ -214,15 +272,17 @@ const StudentInterface = () => {
       });
       return;
     }
+    const activeSkills = skillsForMessage(text, installedSkills);
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: prompt.trim(),
+      content: text.trim(),
       timestamp: new Date(),
+      skills: activeSkills.map(s => s.name),
     };
 
     setMessages(prev => [...prev, userMessage]);
-    const sentPrompt = prompt.trim();
+    const sentPrompt = text.trim();
     setPrompt("");
     setChatState("sending");
 
@@ -244,7 +304,10 @@ const StudentInterface = () => {
       }
 
       // Build conversation history (prior turns) to send for context
-      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const history = buildHistory();
+
+      // Class resource + any skills, sent as extra context for this reply
+      const context = [resourceText(), skillContext(activeSkills)].filter(Boolean).join("\n\n") || null;
 
       // Call AI
       const { data, error } = await supabase.functions.invoke("ai-chat", {
@@ -255,9 +318,7 @@ const StudentInterface = () => {
           processTeaching: isProcessTeaching,
           sessionId,
           history,
-          resourceContext: resourceContext
-            ? `Title: ${resourceContext.title}\nDescription: ${resourceContext.description}${resourceContext.url ? `\nURL: ${resourceContext.url}` : ""}`
-            : null,
+          resourceContext: context,
         },
       });
 
@@ -282,6 +343,11 @@ const StudentInterface = () => {
       await saveMessage(sessionId, 'assistant', reply, meta);
       setChatState("idle");
       loadSessions(); // refresh sidebar
+
+      if (opts.saveAs && data?.success !== false) {
+        saveToNotebook(reply, opts.saveAs);
+        toast({ title: "Saved to your Notebook", description: opts.saveAs });
+      }
     } catch (error: unknown) {
       console.error("AI Chat error:", error);
 
@@ -303,18 +369,174 @@ const StudentInterface = () => {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-  };
-
   const clearChat = () => {
     setMessages([]);
     setCurrentSessionId(null);
     setChatState("idle");
+    setCompact(null);
     setDrawerOpen(false);
+  };
+
+  /** /compact: ask for a summary and use it in place of the earlier turns. */
+  const compactChat = async () => {
+    if (messages.length < 4) {
+      toast({ title: "Not much to compact yet", description: "Compacting helps once a chat gets long." });
+      return;
+    }
+    if (plan && !canUseTokens(1)) {
+      toast({ title: "Token limit reached", description: "You've used all your tokens this month.", variant: "destructive" });
+      return;
+    }
+    setCompacting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-chat", {
+        body: {
+          prompt: "Summarise our conversation so far in under 150 words: what I'm working on, what I've understood, and what's still open. Write it as notes, not as a reply to me.",
+          subject: activeSubject,
+          gradeLevel: "high-school",
+          processTeaching: false,
+          sessionId: currentSessionId,
+          history: buildHistory(),
+          resourceContext: resourceText(),
+        },
+      });
+      const summary = data?.reply || data?.response;
+      if (error || !summary) throw new Error(error?.message || "Couldn't summarise this chat");
+      setCompact({ index: messages.length, summary });
+      setShowSummary(false);
+      toast({ title: "Chat compacted", description: "Earlier messages are summarised, so replies stay focused." });
+    } catch (e: unknown) {
+      toast({ title: "Couldn't compact", description: (e as { message?: string } | null)?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setCompacting(false);
+    }
+  };
+
+  const exportChat = () => {
+    if (messages.length === 0) {
+      toast({ title: "Nothing to export yet" });
+      return;
+    }
+    const body = messages.map(m => `**${m.role === "user" ? "You" : "Refyn"}:**\n\n${m.content}`).join("\n\n---\n\n");
+    downloadMarkdown(`${slugify(currentTitle)}.md`, `# ${currentTitle}\n\n_Exported from Refyn on ${format(new Date(), "d MMMM yyyy, p")}_\n\n${body}\n`);
+  };
+
+  const runCommand = async (cmd: Command, arg: string) => {
+    const done = () => setPrompt("");
+    const needsChat = () => {
+      if (messages.length > 0) return false;
+      toast({ title: "Start a chat first", description: `/${cmd.name} works once you've asked something.` });
+      return true;
+    };
+    switch (cmd.name) {
+      case "new": done(); clearChat(); break;
+      case "rename":
+        if (!currentSessionId) { toast({ title: "Nothing to rename yet", description: "Send a message first." }); return; }
+        if (!arg) { setPrompt("/rename "); textareaRef.current?.focus(); return; }
+        await db.from('ai_chat_sessions').update({ title: arg.slice(0, 80) }).eq('id', currentSessionId);
+        done(); loadSessions(); toast({ title: "Chat renamed", description: arg.slice(0, 80) });
+        break;
+      case "export": done(); exportChat(); break;
+      case "archive":
+        if (!currentSessionId) { toast({ title: "Nothing to archive yet" }); return; }
+        setArchived(prev => (prev.includes(currentSessionId) ? prev : [...prev, currentSessionId]));
+        done(); clearChat(); toast({ title: "Chat archived", description: "Find it under Archived in the sidebar." });
+        break;
+      case "compact": done(); await compactChat(); break;
+      case "notes":
+        if (needsChat()) return;
+        await sendPrompt(NOTES_PROMPT, { saveAs: `Study notes: ${currentTitle}` });
+        break;
+      case "quiz":
+        if (!arg && messages.length === 0) {
+          setPrompt("/quiz ");
+          toast({ title: "What should I quiz you on?", description: "Add a topic, e.g. /quiz photosynthesis" });
+          return;
+        }
+        await sendPrompt(
+          `Quiz me on ${arg || "what we've covered in this chat"}. Ask one question at a time and wait for my answer before the next.`,
+        );
+        break;
+      case "hint":
+        if (needsChat()) return;
+        await sendPrompt("Give me just the next hint for what I'm working on: one small step, nothing more.");
+        break;
+      case "explain":
+        if (!arg) { setPrompt("/explain "); textareaRef.current?.focus(); return; }
+        await sendPrompt(`Explain ${arg} in plain words, step by step, then check I've understood with one question.`);
+        break;
+      case "skills": done(); setPanel("skills"); break;
+      case "notebook": done(); setNotebookFocus(null); setPanel("notebook"); break;
+      case "help": done(); setPanel("commands"); break;
+      case "guided": done(); setIsProcessTeaching(true); toast({ title: "Guided mode on", description: "Refyn will help you work it out." }); break;
+      case "direct": done(); setIsProcessTeaching(false); toast({ title: "Direct mode on", description: "Refyn will explain things clearly and directly." }); break;
+      case "subject": {
+        const s = SUBJECTS.find(x => x.id === arg.toLowerCase() || x.name.toLowerCase() === arg.toLowerCase());
+        if (!s) { setPrompt("/subject "); toast({ title: "Pick a subject", description: SUBJECTS.map(x => x.id).join(", ") }); return; }
+        done(); setActiveSubject(s.id); toast({ title: `Subject: ${s.name}` });
+        break;
+      }
+      case "dashboard": navigate(user?.role === "teacher" ? "/dashboard" : "/student-dashboard"); break;
+      case "paths": navigate("/learning-paths"); break;
+      case "portfolio": navigate("/portfolio"); break;
+      case "grades": navigate("/grades"); break;
+      case "messages": navigate("/messages"); break;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = prompt.trim();
+    if (!text) return;
+    if (text.startsWith("/")) {
+      const parsed = parseCommand(text);
+      if (parsed) await runCommand(parsed.cmd, parsed.arg);
+      else toast({ title: "Unknown command", description: "Type /help to see every command." });
+      return;
+    }
+    await sendPrompt(text);
+  };
+
+  // ─── / and @ suggestions ─────────────────────────────────────────────
+  const atMatch = prompt.match(/(^|\s)@([a-z0-9-]*)$/i);
+  const suggestions: Suggestion[] = suggestionsDismissed
+    ? []
+    : prompt.startsWith("/") && !/\s/.test(prompt)
+      ? COMMANDS.filter(c => c.name.startsWith(prompt.slice(1).toLowerCase())).map(c => ({
+          key: c.name, label: `/${c.name}${c.args ? ` ${c.args}` : ""}`, hint: c.description, kind: "command" as const, value: c.name, command: c,
+        }))
+      : atMatch
+        ? SKILLS.filter(s => s.slug.startsWith(atMatch[2].toLowerCase()) || s.name.toLowerCase().startsWith(atMatch[2].toLowerCase())).map(s => ({
+            key: s.slug, label: `@${s.slug}`, hint: `${s.name} · ${s.description}`, kind: "skill" as const, value: s.slug,
+          }))
+        : [];
+  const hi = Math.min(highlight, Math.max(0, suggestions.length - 1));
+
+  const pickSuggestion = (s: Suggestion) => {
+    if (s.kind === "command" && s.command) {
+      if (s.command.takesInput) {
+        setPrompt(`/${s.command.name} `);
+        textareaRef.current?.focus();
+      } else {
+        runCommand(s.command, "");
+      }
+    } else {
+      setPrompt(prompt.replace(/@([a-z0-9-]*)$/i, `@${s.value} `));
+      textareaRef.current?.focus();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (suggestions.length > 0) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((hi + 1) % suggestions.length); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setHighlight((hi - 1 + suggestions.length) % suggestions.length); return; }
+      if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) { e.preventDefault(); pickSuggestion(suggestions[hi]); return; }
+      if (e.key === "Escape") { e.preventDefault(); setSuggestionsDismissed(true); return; }
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
   };
 
   const applyStarter = (text: string, subject: string) => {
@@ -331,12 +553,24 @@ const StudentInterface = () => {
     } catch { /* clipboard unavailable */ }
   };
 
+  const saveMessageToNotebook = (m: ChatMessage) => {
+    const heading = m.content.match(/^#{1,3}\s+(.+)$/m)?.[1];
+    const id = saveToNotebook(m.content, heading ? heading.slice(0, 80) : `From “${currentTitle}”`);
+    setNotebookFocus(id);
+    toast({ title: "Saved to your Notebook", description: "Open it from the notebook icon at the top." });
+  };
+
+  const toggleSkill = (slug: string) =>
+    setInstalledSkills(prev => (prev.includes(slug) ? prev.filter(s => s !== slug) : prev.length >= MAX_INSTALLED ? prev : [...prev, slug]));
+
   const activeSubjectData = SUBJECTS.find(s => s.id === activeSubject)!;
   const SubjectIcon = activeSubjectData.icon;
   const firstName = (user?.fullName || user?.email?.split("@")[0] || "there").split(" ")[0];
-  const currentTitle = sessions.find(s => s.id === currentSessionId)?.title || "New chat";
-  const filteredSessions = sessions.filter(s => (s.title || "Untitled").toLowerCase().includes(chatSearch.toLowerCase()));
+  const visibleSessions = sessions.filter(s => !archived.includes(s.id));
+  const archivedSessions = sessions.filter(s => archived.includes(s.id));
+  const filteredSessions = visibleSessions.filter(s => (s.title || "Untitled").toLowerCase().includes(chatSearch.toLowerCase()));
   const grouped = groupSessions(filteredSessions);
+  const previewSkills = prompt && !prompt.startsWith("/") ? skillsForMessage(prompt, installedSkills) : [];
   const isTeacher = user?.role === "teacher";
   const workspace = isTeacher
     ? [
@@ -351,6 +585,11 @@ const StudentInterface = () => {
         { title: "Portfolio", href: "/portfolio", icon: Briefcase },
         { title: "Messages", href: "/messages", icon: MessageSquare },
       ];
+  const tools = [
+    { title: "Notebook", icon: BookMarked, count: notebook.length, onClick: () => { setNotebookFocus(null); setPanel("notebook"); } },
+    { title: "Skills", icon: Puzzle, count: installedSkills.length, onClick: () => setPanel("skills") },
+    { title: "Commands", icon: Terminal, onClick: () => setPanel("commands") },
+  ];
   const initials = (user?.fullName || user?.email || "U").split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
 
   // ─── Chat sidebar ────────────────────────────────────────────────────
@@ -394,58 +633,89 @@ const StudentInterface = () => {
         </div>
       </div>
 
-      {!isInSchool && (
-        <div className="mt-5 px-3">
-          <p className="mb-1.5 px-3 text-[10.5px] font-medium uppercase tracking-[0.2em] text-lp-mute">Workspace</p>
-          {workspace.map(w => {
-            const Icon = w.icon;
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+        <div className="mt-5">
+          <p className="mb-1.5 px-3 text-[10.5px] font-medium uppercase tracking-[0.2em] text-lp-mute">Tools</p>
+          {tools.map(t => {
+            const Icon = t.icon;
             return (
-              <NavLink
-                key={w.href}
-                to={w.href}
-                className="flex h-9 items-center gap-2.5 rounded-xl px-3 text-[13.5px] text-lp-soft transition-colors hover:bg-white/[0.04] hover:text-white"
+              <button
+                key={t.title}
+                type="button"
+                onClick={() => { t.onClick(); setDrawerOpen(false); }}
+                className="flex h-9 w-full items-center gap-2.5 rounded-xl px-3 text-[13.5px] text-lp-soft transition-colors hover:bg-white/[0.04] hover:text-white"
               >
-                <Icon className="h-4 w-4 text-lp-mute" /> {w.title}
-              </NavLink>
+                <Icon className="h-4 w-4 text-lp-mute" /> {t.title}
+                {!!t.count && <span className="ml-auto rounded-full bg-lp-blue/15 px-2 text-[11px] tabular-nums text-lp-sky">{t.count}</span>}
+              </button>
             );
           })}
         </div>
-      )}
 
-      <div className="mt-5 min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-        <p className="mb-1.5 px-3 text-[10.5px] font-medium uppercase tracking-[0.2em] text-lp-mute">Chats</p>
-        {grouped.length === 0 ? (
-          <p className="px-3 py-2 text-[13px] leading-relaxed text-lp-mute">
-            {chatSearch ? "No chats match that search." : "No chats yet. Ask Refyn anything and it shows up here."}
-          </p>
-        ) : (
-          grouped.map(g => (
-            <div key={g.label} className="mb-3">
-              <p className="px-3 pb-1 pt-2 text-[11.5px] text-lp-mute">{g.label}</p>
-              {g.items.map(s => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => loadSession(s.id)}
-                  title={s.title || "Untitled"}
-                  className={cn(
-                    "group flex h-9 w-full items-center gap-2 rounded-xl px-3 text-left text-[13.5px] transition-colors",
-                    currentSessionId === s.id
-                      ? "bg-gradient-to-r from-lp-blue/25 to-transparent text-white"
-                      : "text-lp-soft hover:bg-white/[0.04] hover:text-white",
-                  )}
+        {!isInSchool && (
+          <div className="mt-4">
+            <p className="mb-1.5 px-3 text-[10.5px] font-medium uppercase tracking-[0.2em] text-lp-mute">Workspace</p>
+            {workspace.map(w => {
+              const Icon = w.icon;
+              return (
+                <NavLink
+                  key={w.href}
+                  to={w.href}
+                  className="flex h-9 items-center gap-2.5 rounded-xl px-3 text-[13.5px] text-lp-soft transition-colors hover:bg-white/[0.04] hover:text-white"
                 >
-                  <MessageSquare className={cn("h-3.5 w-3.5 shrink-0", currentSessionId === s.id ? "text-lp-sky" : "text-lp-mute")} />
-                  <span className="truncate">{s.title || "Untitled"}</span>
-                </button>
-              ))}
-            </div>
-          ))
+                  <Icon className="h-4 w-4 text-lp-mute" /> {w.title}
+                </NavLink>
+              );
+            })}
+          </div>
         )}
+
+        <div className="mt-4">
+          <p className="mb-1.5 px-3 text-[10.5px] font-medium uppercase tracking-[0.2em] text-lp-mute">Chats</p>
+          {grouped.length === 0 ? (
+            <p className="px-3 py-2 text-[13px] leading-relaxed text-lp-mute">
+              {chatSearch ? "No chats match that search." : "No chats yet. Ask Refyn anything and it shows up here."}
+            </p>
+          ) : (
+            grouped.map(g => (
+              <div key={g.label} className="mb-3">
+                <p className="px-3 pb-1 pt-2 text-[11.5px] text-lp-mute">{g.label}</p>
+                {g.items.map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => loadSession(s.id)}
+                    title={s.title || "Untitled"}
+                    className={cn(
+                      "group flex h-9 w-full items-center gap-2 rounded-xl px-3 text-left text-[13.5px] transition-colors",
+                      currentSessionId === s.id
+                        ? "bg-gradient-to-r from-lp-blue/25 to-transparent text-white"
+                        : "text-lp-soft hover:bg-white/[0.04] hover:text-white",
+                    )}
+                  >
+                    <MessageSquare className={cn("h-3.5 w-3.5 shrink-0", currentSessionId === s.id ? "text-lp-sky" : "text-lp-mute")} />
+                    <span className="truncate">{s.title || "Untitled"}</span>
+                  </button>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-lp-line px-3 pt-2">
+        <button
+          type="button"
+          onClick={() => { setPanel("archived"); setDrawerOpen(false); }}
+          className="flex h-9 w-full items-center gap-2.5 rounded-xl px-3 text-[13.5px] text-lp-soft transition-colors hover:bg-white/[0.04] hover:text-white"
+        >
+          <Archive className="h-4 w-4 text-lp-mute" /> Archived
+          {archivedSessions.length > 0 && <span className="ml-auto text-[12px] tabular-nums text-lp-mute">{archivedSessions.length}</span>}
+        </button>
       </div>
 
       {!isInSchool && (
-        <div className="border-t border-lp-line p-3">
+        <div className="p-3 pt-1">
           <div className="flex items-center gap-3 rounded-xl p-1.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-lp-blue to-[#1E3A8A] text-[12px] font-semibold text-white ring-2 ring-lp-blue/30">
               {initials}
@@ -471,7 +741,30 @@ const StudentInterface = () => {
 
   // ─── Composer ────────────────────────────────────────────────────────
   const composer = (
-    <form onSubmit={handleSubmit} className="mx-auto w-full max-w-[800px]">
+    <form onSubmit={handleSubmit} className="relative mx-auto w-full max-w-[800px]">
+      {suggestions.length > 0 && (
+        <div role="listbox" aria-label={suggestions[0].kind === "command" ? "Commands" : "Skills"} className="lp-fade absolute bottom-full left-0 right-0 z-20 mb-2 max-h-[320px] overflow-y-auto rounded-2xl border border-lp-line bg-lp-deep/95 p-1.5 shadow-2xl backdrop-blur-xl">
+          <p className="px-3 pb-1 pt-1.5 text-[10.5px] font-medium uppercase tracking-[0.2em] text-lp-mute">
+            {suggestions[0].kind === "command" ? "Commands" : "Skills"}
+          </p>
+          {suggestions.map((s, i) => (
+            <button
+              key={s.key}
+              type="button"
+              role="option"
+              aria-selected={i === hi}
+              onMouseEnter={() => setHighlight(i)}
+              onMouseDown={e => { e.preventDefault(); pickSuggestion(s); }}
+              className={cn("flex w-full items-baseline gap-3 rounded-xl px-3 py-2 text-left", i === hi ? "bg-lp-blue/15" : "hover:bg-white/[0.04]")}
+            >
+              <code className="shrink-0 text-[13px] text-lp-sky">{s.label}</code>
+              <span className="truncate text-[13px] text-lp-soft">{s.hint}</span>
+            </button>
+          ))}
+          <p className="px-3 pb-1 pt-1.5 text-[11px] text-lp-mute">↑↓ to move · Enter or Tab to pick · Esc to close</p>
+        </div>
+      )}
+
       <div className="rounded-[26px] border border-lp-line bg-lp-surface/90 p-2 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl transition-[border-color,box-shadow] focus-within:border-lp-blue/60 focus-within:shadow-[0_0_0_4px_rgba(59,130,246,0.12),0_20px_60px_-30px_rgba(0,0,0,0.9)]">
         {resourceContext && (
           <div className="m-1.5 flex items-center gap-2 rounded-2xl border border-lp-blue/30 bg-lp-blue/10 px-3 py-2 text-[13px] text-lp-soft">
@@ -491,7 +784,7 @@ const StudentInterface = () => {
           onKeyDown={handleKeyDown}
           rows={1}
           aria-label="Message Refyn"
-          placeholder={resourceContext ? `Ask about "${resourceContext.title}"…` : `Ask Refyn about ${activeSubjectData.name.toLowerCase()}…`}
+          placeholder={resourceContext ? `Ask about "${resourceContext.title}"…` : `Ask Refyn about ${activeSubjectData.name.toLowerCase()}, or type / for commands`}
           className="block max-h-[200px] min-h-[48px] w-full resize-none bg-transparent px-3.5 pb-1 pt-3 text-[15.5px] leading-relaxed text-white placeholder:text-lp-mute outline-none"
         />
         <div className="flex items-center justify-between gap-2 px-1.5 pb-1 pt-1">
@@ -506,7 +799,7 @@ const StudentInterface = () => {
                 className="flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-lp-soft transition-colors hover:bg-white/[0.06] hover:text-white"
               >
                 <SubjectIcon className="h-4 w-4 text-lp-sky" />
-                {activeSubjectData.name}
+                <span className="hidden sm:inline">{activeSubjectData.name}</span>
                 <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", subjectMenu && "rotate-180")} />
               </button>
               {subjectMenu && (
@@ -554,29 +847,50 @@ const StudentInterface = () => {
               </span>
               <span className="hidden sm:inline">{isProcessTeaching ? "Guided" : "Direct"}</span>
             </button>
+
+            {/* Skills that will shape this message */}
+            {previewSkills.map(s => (
+              <span key={s.slug} className="lp-fade hidden items-center gap-1 rounded-full border border-lp-cyan/30 bg-lp-cyan/10 px-2.5 py-1 text-[12px] text-lp-cyan md:flex" title={s.description}>
+                <Puzzle className="h-3 w-3" /> {s.name}
+              </span>
+            ))}
           </div>
 
           <button
             type="submit"
-            disabled={chatState === "sending" || !prompt.trim()}
+            disabled={chatState === "sending" || compacting || !prompt.trim()}
             aria-label="Send"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lp-blue text-white shadow-[0_8px_24px_-8px_rgba(59,130,246,0.9)] transition-all hover:bg-[#2F6FE0] disabled:bg-lp-raised disabled:text-lp-mute disabled:shadow-none"
           >
-            {chatState === "sending" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-[18px] w-[18px]" />}
+            {chatState === "sending" || compacting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-[18px] w-[18px]" />}
           </button>
         </div>
       </div>
       <p className="mt-2.5 text-center text-[12px] text-lp-mute">
-        {isProcessTeaching
-          ? "Guided mode is on: Refyn helps you work it out instead of handing over the answer."
-          : "Direct mode: clear, detailed explanations."}{" "}
-        <span className="hidden sm:inline">Enter to send, Shift+Enter for a new line. AI can make mistakes, so double-check.</span>
+        {isProcessTeaching ? "Guided mode is on: Refyn helps you work it out." : "Direct mode: clear, detailed explanations."}{" "}
+        Type <code className="text-lp-sky">/</code> for commands and <code className="text-lp-sky">@</code> for skills.
+        <span className="hidden sm:inline"> AI can make mistakes, so double-check.</span>
       </p>
     </form>
   );
 
+  const compactDivider = compact && (
+    <div className="lp-fade rounded-2xl border border-lp-line bg-lp-surface/60 p-4">
+      <button type="button" onClick={() => setShowSummary(v => !v)} className="flex w-full items-center gap-2 text-left text-[13px] text-lp-soft">
+        <Layers className="h-4 w-4 text-lp-sky" />
+        Earlier messages summarised to keep replies focused
+        <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", showSummary && "rotate-180")} />
+      </button>
+      {showSummary && (
+        <div className="lp-md mt-3 border-t border-lp-line pt-3 text-[14px]">
+          <ReactMarkdown>{compact.summary}</ReactMarkdown>
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className={cn("lp-app relative z-[1] flex bg-lp-bg font-ui antialiased selection:bg-lp-blue/40 selection:text-white", "h-screen")}>
+    <div className="lp-app relative z-[1] flex h-screen bg-lp-bg font-ui antialiased selection:bg-lp-blue/40 selection:text-white">
       {/* Desktop chat sidebar */}
       <aside
         className={cn(
@@ -625,11 +939,24 @@ const StudentInterface = () => {
             </div>
             <div className="flex items-center gap-2">
               {plan && Number.isFinite(tokensRemaining) && (
-                <span className="hidden items-center gap-1.5 rounded-full border border-lp-line bg-lp-surface/70 px-3 py-1 text-[12px] text-lp-soft sm:flex" title="Tokens left this month">
+                <span className="hidden items-center gap-1.5 rounded-full border border-lp-line bg-lp-surface/70 px-3 py-1 text-[12px] text-lp-soft xl:flex" title="Tokens left this month">
                   <Sparkles className="h-3.5 w-3.5 text-lp-cyan" />
                   {tokensRemaining.toLocaleString()} tokens left
                 </span>
               )}
+              {tools.map(t => {
+                const Icon = t.icon;
+                return (
+                  <button key={t.title} type="button" onClick={t.onClick} className={cn(iconBtn, "hidden sm:flex")} title={t.title} aria-label={t.title}>
+                    <Icon className="h-4 w-4" />
+                    {!!t.count && (
+                      <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lp-blue px-1 text-[10px] font-semibold text-white">
+                        {t.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
               {messages.length > 0 && (
                 <button type="button" onClick={clearChat} className="flex h-9 items-center gap-1.5 rounded-xl border border-lp-line bg-lp-surface/70 px-3 text-[13px] font-medium text-white transition-colors hover:border-lp-blue/50">
                   <Plus className="h-4 w-4" /> <span className="hidden sm:inline">New chat</span>
@@ -673,46 +1000,85 @@ const StudentInterface = () => {
                     );
                   })}
                 </div>
+
+                <div className="lp-fade mt-6 flex flex-wrap items-center gap-2 text-[12.5px] text-lp-mute" style={{ animationDelay: "380ms", animationFillMode: "both" }}>
+                  <span>Try</span>
+                  {[
+                    { label: "/quiz photosynthesis", run: () => setPrompt("/quiz photosynthesis") },
+                    { label: "@essay-coach", run: () => setPrompt("@essay-coach ") },
+                    { label: "Browse skills", run: () => setPanel("skills") },
+                  ].map(c => (
+                    <button
+                      key={c.label}
+                      type="button"
+                      onClick={() => { c.run(); textareaRef.current?.focus(); }}
+                      className="rounded-full border border-lp-line bg-lp-surface/60 px-3 py-1 text-lp-soft transition-colors hover:border-lp-blue/50 hover:text-white"
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
             /* ─── Conversation ─── */
             <div className="relative min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">
               <div className="mx-auto w-full max-w-[800px] space-y-8 py-6">
-                {messages.map(msg =>
-                  msg.role === "user" ? (
-                    <div key={msg.id} className="lp-fade flex justify-end">
-                      <p className="max-w-[85%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-lp-blue px-5 py-3 text-[15px] leading-relaxed text-white shadow-[0_10px_30px_-12px_rgba(59,130,246,0.8)]">
-                        {msg.content}
-                      </p>
-                    </div>
-                  ) : (
-                    <div key={msg.id} className="lp-fade group flex gap-4">
-                      <RefynMark className="mt-0.5 h-9 w-9" />
-                      <div className="min-w-0 flex-1">
-                        <div className="lp-md">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
-                        </div>
-                        <div className="mt-2 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                          <button
-                            type="button"
-                            onClick={() => copyMessage(msg)}
-                            className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-[12px] text-lp-mute hover:bg-white/[0.06] hover:text-white"
-                          >
-                            {copiedId === msg.id ? <Check className="h-3.5 w-3.5 text-lp-green" /> : <Copy className="h-3.5 w-3.5" />}
-                            {copiedId === msg.id ? "Copied" : "Copy"}
-                          </button>
+                {messages.map((msg, i) => (
+                  <React.Fragment key={msg.id}>
+                    {compact && compact.index === i && compactDivider}
+                    {msg.role === "user" ? (
+                      <div className="lp-fade flex flex-col items-end gap-1.5">
+                        <p className="max-w-[85%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-lp-blue px-5 py-3 text-[15px] leading-relaxed text-white shadow-[0_10px_30px_-12px_rgba(59,130,246,0.8)]">
+                          {msg.content}
+                        </p>
+                        {msg.skills && msg.skills.length > 0 && (
+                          <p className="flex flex-wrap justify-end gap-1.5 text-[11.5px] text-lp-mute">
+                            Using
+                            {msg.skills.map(s => (
+                              <span key={s} className="inline-flex items-center gap-1 rounded-full border border-lp-cyan/30 bg-lp-cyan/10 px-2 text-lp-cyan">
+                                <Puzzle className="h-3 w-3" /> {s}
+                              </span>
+                            ))}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="lp-fade group flex gap-4">
+                        <RefynMark className="mt-0.5 h-9 w-9" />
+                        <div className="min-w-0 flex-1">
+                          <div className="lp-md">
+                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          </div>
+                          <div className="mt-2 flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                            <button
+                              type="button"
+                              onClick={() => copyMessage(msg)}
+                              className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-[12px] text-lp-mute hover:bg-white/[0.06] hover:text-white"
+                            >
+                              {copiedId === msg.id ? <Check className="h-3.5 w-3.5 text-lp-green" /> : <Copy className="h-3.5 w-3.5" />}
+                              {copiedId === msg.id ? "Copied" : "Copy"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => saveMessageToNotebook(msg)}
+                              className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-[12px] text-lp-mute hover:bg-white/[0.06] hover:text-white"
+                            >
+                              <BookMarked className="h-3.5 w-3.5" /> Save to notebook
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ),
-                )}
-                {chatState === "sending" && (
+                    )}
+                  </React.Fragment>
+                ))}
+                {compact && compact.index >= messages.length && compactDivider}
+                {(chatState === "sending" || compacting) && (
                   <div className="lp-fade flex items-center gap-4">
                     <RefynMark className="h-9 w-9" />
                     <div className="flex items-center gap-3 text-[14px] text-lp-soft">
                       <span className="lp-dots flex items-center gap-1"><span /><span /><span /></span>
-                      {isProcessTeaching ? "Thinking about how to guide you…" : "Thinking…"}
+                      {compacting ? "Summarising this chat…" : isProcessTeaching ? "Thinking about how to guide you…" : "Thinking…"}
                     </div>
                   </div>
                 )}
@@ -724,6 +1090,27 @@ const StudentInterface = () => {
           <div className="relative shrink-0 px-4 pb-4 pt-2 sm:px-6 sm:pb-5">{composer}</div>
         </main>
       </FeatureGate>
+
+      <SkillsPanel open={panel === "skills"} onClose={() => setPanel(null)} installed={installedSkills} onToggle={toggleSkill} />
+      <NotebookPanel
+        open={panel === "notebook"}
+        onClose={() => setPanel(null)}
+        entries={notebook}
+        focusId={notebookFocus}
+        onDelete={id => setNotebook(prev => prev.filter(e => e.id !== id))}
+      />
+      <CommandsPanel
+        open={panel === "commands"}
+        onClose={() => setPanel(null)}
+        onPick={c => { setPanel(null); setPrompt(`/${c.name}${c.takesInput ? " " : ""}`); textareaRef.current?.focus(); }}
+      />
+      <ArchivedPanel
+        open={panel === "archived"}
+        onClose={() => setPanel(null)}
+        sessions={archivedSessions}
+        onRestore={id => setArchived(prev => prev.filter(x => x !== id))}
+        onOpen={id => { setPanel(null); loadSession(id); }}
+      />
     </div>
   );
 };
