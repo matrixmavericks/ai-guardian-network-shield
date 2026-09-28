@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 const testimonials = [
   {
     quote: "AI Conditioner transformed how our students interact with AI. The portfolio feature lets them showcase their learning journey beautifully.",
-    author: "Dr. Sarah Johnson",
+    author: "Dr. Sarah Hamilton",
     role: "Principal, Westlake High School",
   },
   {
