@@ -12,15 +12,9 @@ const AuthBrandPanel = () => (
     <BoomerangVideoBg
       src={BG_VIDEO}
       className="absolute inset-0 h-full w-full"
-      mediaClassName="grayscale contrast-[1.1] brightness-[1.15]"
+      mediaClassName="contrast-[1.06] saturate-[1.25]"
     />
-    <div aria-hidden className="absolute inset-0 bg-[#2563EB] opacity-80 mix-blend-color" />
-    <div aria-hidden className="absolute inset-0 bg-[#0B1A45] opacity-30 mix-blend-multiply" />
-    <div
-      aria-hidden
-      className="absolute inset-0"
-      style={{ background: "linear-gradient(180deg, rgba(3,6,15,0.5) 0%, rgba(3,6,15,0) 35%, rgba(3,6,15,0.1) 55%, rgba(3,6,15,0.85) 100%)" }}
-    />
+    <div aria-hidden className="lp-video-panel-shade absolute inset-0" />
 
     <div className="relative z-10 flex items-center justify-between p-8">
       <Link to="/" aria-label="Refyn home" className="text-white">

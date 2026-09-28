@@ -317,6 +317,17 @@
    Fixed navy-and-blue palette (see `lp` colors in tailwind.config.ts)
    so the marketing page looks the same whatever app theme is stored.
    ============================================================ */
+.lp-video-shade,
+.lp-video-panel-shade {
+  --lp-video-ink: 150 12% 3%;
+}
+.lp-video-shade {
+  background: radial-gradient(ellipse 50% 32% at 50% 36%, hsl(var(--lp-video-ink) / 0.45), transparent 75%),
+    linear-gradient(180deg, hsl(var(--lp-video-ink) / 0.58) 0%, hsl(var(--lp-video-ink) / 0.12) 30%, transparent 55%, hsl(var(--lp-video-ink) / 0.5) 85%, hsl(var(--lp-video-ink)) 100%);
+}
+.lp-video-panel-shade {
+  background: linear-gradient(180deg, hsl(var(--lp-video-ink) / 0.5) 0%, transparent 35%, hsl(var(--lp-video-ink) / 0.1) 55%, hsl(var(--lp-video-ink) / 0.85) 100%);
+}
 @font-face {
   font-family: "Inter Tight";
   font-style: normal;
