@@ -52,6 +52,20 @@ export const GlowButton: React.FC<{ to: string; className?: string; children: Re
   </Link>
 );
 
+/** The glowing button as a real <button>, for forms. */
+export const GlowSubmit: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className, children, ...rest }) => (
+  <button
+    {...rest}
+    className={cn(
+      "lp-glow-btn w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lp-sky disabled:cursor-wait disabled:opacity-80",
+      className,
+    )}
+  >
+    <span aria-hidden className="lp-glow-btn__blob" />
+    <span className="lp-glow-btn__inner w-full justify-center">{children}</span>
+  </button>
+);
+
 export const QuietLink: React.FC<{ to: string; className?: string; children: React.ReactNode }> = ({
   to,
   className,
@@ -77,8 +91,11 @@ export const useSpotlight = () =>
     el.style.setProperty("--my", `${e.clientY - r.top}px`);
   }, []);
 
-/** Blur-fades `.lp-reveal` elements in as they scroll into view. */
-export const useReveal = () => {
+/**
+ * Blur-fades `.lp-reveal` elements in as they scroll into view. Pass a value
+ * that changes when new content mounts (e.g. a loading flag) to pick it up.
+ */
+export const useReveal = (key?: unknown) => {
   useEffect(() => {
     const els = Array.from(document.querySelectorAll<HTMLElement>(".lp-reveal"));
     if (!("IntersectionObserver" in window)) {
@@ -98,5 +115,5 @@ export const useReveal = () => {
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
-  }, []);
+  }, [key]);
 };

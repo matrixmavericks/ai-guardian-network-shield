@@ -3,12 +3,9 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 import misLogo from "@/assets/photos/mis-logo.png";
 import BoomerangVideoBg from "./BoomerangVideoBg";
+import { BG_VIDEO } from "./media";
 import { Container, GlowButton } from "./primitives";
 
-// Hosted by the template this hero came from. Put your own copy on a CDN you
-// control (or in /public) so the hero never depends on someone else's bucket.
-const BG_VIDEO =
-  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260511_131941_d136af49-e243-493a-be14-6ff3f24e09e6.mp4";
 
 const PilotBand = () => (
   <div className="relative overflow-hidden border-y border-lp-line bg-lp-deep">
