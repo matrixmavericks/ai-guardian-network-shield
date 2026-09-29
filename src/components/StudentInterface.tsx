@@ -23,6 +23,7 @@ import {
 } from "@/components/assistant/panels";
 import { ModelPicker, PoweredBy, choiceLabel, type ModelAccess, type ModelChoice } from "@/components/assistant/ModelPicker";
 import { AI_MODELS, BASIC_PLANS, DEFAULT_MODEL, REFYN_PICKS, findModel } from "@/lib/aiModels";
+import AppearanceToggle from "@/components/student/AppearanceToggle";
 
 // The chat tables aren't in the generated Supabase types yet
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -828,6 +829,7 @@ const StudentInterface = () => {
               <p className="truncate text-[13.5px] font-medium text-white">{user?.fullName || user?.email}</p>
               <p className="truncate text-[11.5px] capitalize text-lp-mute">{user?.role}</p>
             </div>
+            <AppearanceToggle />
             <button
               type="button"
               onClick={async () => { await logout(); navigate("/login"); }}
@@ -869,7 +871,7 @@ const StudentInterface = () => {
         </div>
       )}
 
-      <div className="rounded-[26px] border border-lp-line bg-lp-surface/90 p-2 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl transition-[border-color,box-shadow] focus-within:border-lp-blue/60 focus-within:shadow-[0_0_0_4px_rgba(59,130,246,0.12),0_20px_60px_-30px_rgba(0,0,0,0.9)]">
+      <div className="lp-pop rounded-[26px] border border-lp-line bg-lp-surface/90 p-2 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl transition-[border-color,box-shadow] focus-within:border-lp-blue/60 focus-within:shadow-[0_0_0_4px_rgba(59,130,246,0.12),0_20px_60px_-30px_rgba(0,0,0,0.9)]">
         {resourceContext && (
           <div className="m-1.5 flex items-center gap-2 rounded-2xl border border-lp-blue/30 bg-lp-blue/10 px-3 py-2 text-[13px] text-lp-soft">
             <FileText className="h-4 w-4 shrink-0 text-lp-sky" />
@@ -1016,7 +1018,7 @@ const StudentInterface = () => {
       {/* Desktop chat sidebar */}
       <aside
         className={cn(
-          "hidden shrink-0 border-r border-lp-line bg-lp-deep transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:block",
+          "lp-chrome hidden shrink-0 border-r border-lp-line bg-lp-deep transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:block",
           collapsed ? "w-0 overflow-hidden border-r-0" : "w-[280px]",
         )}
       >
@@ -1031,7 +1033,7 @@ const StudentInterface = () => {
       <aside
         aria-hidden={!drawerOpen}
         className={cn(
-          "fixed bottom-0 left-0 top-0 z-50 w-[86%] max-w-[300px] border-r border-lp-line bg-lp-deep shadow-2xl transition-[transform,visibility] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden",
+          "lp-chrome fixed bottom-0 left-0 top-0 z-50 w-[86%] max-w-[300px] border-r border-lp-line bg-lp-deep shadow-2xl transition-[transform,visibility] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden",
           drawerOpen ? "translate-x-0" : "invisible -translate-x-full",
         )}
       >

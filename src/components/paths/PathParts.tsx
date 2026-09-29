@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { toggleBookmark, type LearningPath } from "@/services/learningPathService";
 import { themeFor } from "@/components/student/themes";
+import { tone } from "@/lib/portalAppearance";
 
 /**
  * A winding trail with one stop per module; stops fill in as modules are done.
@@ -44,7 +45,7 @@ export const PathTrail: React.FC<{ stops: number; done: number; accent: string; 
         return (
           <g key={i}>
             {isNext && <circle cx={x} cy={y} r="9" fill={accent} opacity="0.25" />}
-            <circle cx={x} cy={y} r={isNext ? 6 : 4.5} fill={isDone ? accent : "#0A1328"} stroke={isDone || isNext ? accent : "rgba(255,255,255,0.35)"} strokeWidth="2" />
+            <circle cx={x} cy={y} r={isNext ? 6 : 4.5} fill={isDone ? accent : "rgb(var(--lp-surface))"} stroke={isDone || isNext ? accent : "rgb(var(--lp-white, 255 255 255) / 0.35)"} strokeWidth="2" />
           </g>
         );
       })}
@@ -63,7 +64,7 @@ export const DifficultyChip: React.FC<{ level: string; onDark?: boolean }> = ({ 
   return (
     <span
       className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em]", onDark ? "bg-black/25 text-white/90 backdrop-blur-sm" : "")}
-      style={onDark ? undefined : { color: d.color, background: `${d.color}1F` }}
+      style={onDark ? undefined : { color: tone(d.color), background: `${d.color}1F` }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ background: d.color }} />
       {d.label}
@@ -114,7 +115,7 @@ export const PathCard: React.FC<{
       className="lp-fade group flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-lp-line bg-lp-surface text-left transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_24px_60px_-28px_rgba(59,130,246,0.6)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-lp-sky"
       style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
     >
-      <div className={cn("relative overflow-hidden px-4 pt-4", large ? "h-40" : "h-32")} style={{ background: theme.gradient }}>
+      <div className={cn("lp-keep relative overflow-hidden px-4 pt-4", large ? "h-40" : "h-32")} style={{ background: theme.gradient }}>
         <div className="relative flex items-start justify-between gap-2">
           <div className="flex flex-wrap gap-1.5">
             <DifficultyChip level={path.difficulty} onDark />

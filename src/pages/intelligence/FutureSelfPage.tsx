@@ -6,6 +6,7 @@ import { StudyShell, Markdown } from "@/components/subjects/kit";
 import { EmptyState, Panel, PanelHead } from "@/components/student/ui";
 import { useStoredState } from "@/components/assistant/storage";
 import { Inline, IntelHeader, ReportSkeleton, RunButton, findSection, itemsOf, parseSections, splitLabel, useIntelReport } from "@/components/intelligence/intel";
+import { tone } from "@/lib/portalAppearance";
 
 const FIELDS: { name: string; color: string; careers: string[] }[] = [
   { name: "Science & health", color: "#34D399", careers: ["Doctor", "Bioengineer", "Environmental Scientist", "Psychologist"] },
@@ -141,7 +142,7 @@ const FutureSelfPage = () => {
         ) : (
           <div className="space-y-4">
             {/* Headline */}
-            <div className="lp-fade relative overflow-hidden rounded-3xl border border-lp-cyan/25 p-6" style={{ background: "linear-gradient(120deg, rgba(63,233,255,0.14), rgba(59,130,246,0.1) 45%, rgba(10,19,40,0.9))", animationFillMode: "both" }}>
+            <div className="lp-fade relative overflow-hidden rounded-3xl border border-lp-cyan/25 p-6" style={{ background: "linear-gradient(120deg, rgba(63,233,255,0.14), rgba(59,130,246,0.1) 45%, rgb(var(--lp-surface) / 0.9))", animationFillMode: "both" }}>
               <Rocket aria-hidden className="absolute -right-4 -top-4 h-32 w-32 rotate-12 text-white/[0.05]" />
               <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-lp-cyan">Your future self</p>
               <h2 className="mt-1 text-[28px] font-semibold tracking-[-0.03em] text-white">{title}</h2>
@@ -160,12 +161,12 @@ const FutureSelfPage = () => {
                 return (
                   <Panel key={y.key} className="relative p-5" delay={80 + yi * 60}>
                     <div className="flex items-center gap-3">
-                      <span className="relative z-[1] flex h-10 w-10 items-center justify-center rounded-full text-[13px] font-semibold text-lp-deep" style={{ background: y.color }}>
+                      <span className="relative z-[1] flex h-10 w-10 items-center justify-center rounded-full text-[13px] font-semibold text-[#03060F]" style={{ background: y.color }}>
                         {yi + 1}
                       </span>
                       <div>
                         <p className="text-[15px] font-semibold text-white">{y.label}</p>
-                        <p className="text-[12px]" style={{ color: y.color }}>
+                        <p className="text-[12px]" style={{ color: tone(y.color) }}>
                           {y.section?.title.split(":").slice(1).join(":").trim() || y.sub}
                         </p>
                       </div>

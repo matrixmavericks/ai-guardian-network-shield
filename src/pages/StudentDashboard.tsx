@@ -416,7 +416,7 @@ const StudentDashboard = () => {
     );
     if (isInSchool) return content;
     return (
-      <div className="flex h-screen bg-lp-bg">
+      <div className="lp-chrome flex h-screen bg-lp-bg">
         <DashboardSidebar />
         {content}
       </div>
@@ -631,7 +631,7 @@ const StudentDashboard = () => {
                         </defs>
                         <XAxis dataKey="date" hide />
                         <YAxis domain={[0, 100]} hide />
-                        <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#1A2744' }} />
+                        <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgb(var(--lp-line))' }} />
                         <Area type="monotone" dataKey="score" stroke="#7CB4FF" strokeWidth={2.5} fill="url(#gradeFill)" name="Grade" />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -759,11 +759,11 @@ const StudentDashboard = () => {
                           <stop offset="100%" stopColor="#3FE9FF" />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid vertical={false} stroke="#1A2744" />
-                      <XAxis dataKey="date" tick={{ fill: '#7688A6', fontSize: 12 }} axisLine={false} tickLine={false} />
-                      <YAxis domain={[0, 100]} tick={{ fill: '#7688A6', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <CartesianGrid vertical={false} stroke="rgb(var(--lp-line))" />
+                      <XAxis dataKey="date" tick={{ fill: 'rgb(var(--lp-mute))', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis domain={[0, 100]} tick={{ fill: 'rgb(var(--lp-mute))', fontSize: 12 }} axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#2A3A5E' }} />
-                      <Area type="monotone" dataKey="score" stroke="url(#perfStroke)" strokeWidth={2.5} fill="url(#perfFill)" name="Grade %" activeDot={{ r: 5, fill: '#3FE9FF', stroke: '#050A18', strokeWidth: 2 }} />
+                      <Area type="monotone" dataKey="score" stroke="url(#perfStroke)" strokeWidth={2.5} fill="url(#perfFill)" name="Grade %" activeDot={{ r: 5, fill: '#3FE9FF', stroke: 'rgb(var(--lp-bg))', strokeWidth: 2 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -907,9 +907,9 @@ const StudentDashboard = () => {
                         <stop offset="100%" stopColor="#3B82F6" />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} stroke="#1A2744" />
-                    <XAxis dataKey="name" tick={{ fill: '#7688A6', fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} tick={{ fill: '#7688A6', fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <CartesianGrid vertical={false} stroke="rgb(var(--lp-line))" />
+                    <XAxis dataKey="name" tick={{ fill: 'rgb(var(--lp-mute))', fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fill: 'rgb(var(--lp-mute))', fontSize: 12 }} axisLine={false} tickLine={false} />
                     <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(124,180,255,0.06)' }} />
                     <ReBar dataKey="average" name="Average Grade %" radius={[8, 8, 0, 0]} maxBarSize={56}>
                       {subjectStats.map(s => <Cell key={s.subject} fill="url(#barFill)" />)}

@@ -109,7 +109,7 @@ const ClassCard: React.FC<{
       className="lp-fade group flex flex-col overflow-hidden rounded-3xl border border-lp-line bg-lp-surface transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_24px_60px_-28px_rgba(59,130,246,0.6)]"
       style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
     >
-      <div className="relative h-28 overflow-hidden" style={{ background: theme.gradient }}>
+      <div className="lp-keep relative h-28 overflow-hidden" style={{ background: theme.gradient }}>
         <div
           aria-hidden
           className="absolute inset-0 opacity-20"

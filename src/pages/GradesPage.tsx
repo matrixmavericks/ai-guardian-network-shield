@@ -44,6 +44,7 @@ import {
   type GradedWork,
   type Upcoming,
 } from "@/components/grades/stats";
+import { tone } from "@/lib/portalAppearance";
 
 const SYSTEM_SHORT: Record<string, string> = { ib: "MYP 1–7", percentage: "Percent", igcse: "IGCSE", us_letter: "US GPA" };
 
@@ -158,7 +159,7 @@ const GoalPlanner: React.FC<{
         <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-lp-mute">What if</p>
         <p className="mt-1.5 text-[13px] text-lp-soft">
           If your next piece scores <span className="font-semibold text-white">{next}%</span>, your average becomes{" "}
-          <span className="font-semibold" style={{ color: toneHex[toneOf(whatIf)] }}>
+          <span className="font-semibold" style={{ color: tone(toneHex[toneOf(whatIf)]) }}>
             {whatIf.toFixed(1)}%
           </span>{" "}
           ({gradeIn(whatIf, system)}), {whatIf >= current ? "up" : "down"} {Math.abs(whatIf - current).toFixed(1)} pts.
@@ -555,7 +556,7 @@ const GradesPage = () => {
                 {system?.code === "ib" ? `Grade ${gradeIn(overall, system)} of 7` : `${gradeIn(overall, system)} average`}
               </h2>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="rounded-full px-2.5 py-0.5 text-[12px] font-semibold" style={{ color: toneHex[st.tone], background: `${toneHex[st.tone]}1F` }}>
+                <span className="rounded-full px-2.5 py-0.5 text-[12px] font-semibold" style={{ color: tone(toneHex[st.tone]), background: `${toneHex[st.tone]}1F` }}>
                   {st.label}
                 </span>
                 <TrendChip delta={trend} />

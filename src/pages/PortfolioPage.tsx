@@ -12,6 +12,7 @@ import { EmptyState, ghostBtn } from "@/components/student/ui";
 import { StudyShell, primaryBtn } from "@/components/subjects/kit";
 import { Field, Modal, inputCls } from "@/components/student/Modal";
 import { monogram, themeFor } from "@/components/student/themes";
+import { tone } from "@/lib/portalAppearance";
 
 interface PortfolioProject {
   id: string;
@@ -32,14 +33,14 @@ const Cover: React.FC<{ p: PortfolioProject; tall?: boolean }> = ({ p, tall }) =
   const theme = themeFor(p.tags[0] ?? p.title);
   if (p.cover_image_url) {
     return (
-      <div className={cn("relative overflow-hidden", tall ? "h-64 lg:h-full lg:min-h-[300px]" : "h-44")}>
+      <div className={cn("lp-keep relative overflow-hidden", tall ? "h-64 lg:h-full lg:min-h-[300px]" : "h-44")}>
         <img src={p.cover_image_url} alt="" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" />
         <div className="absolute inset-0 bg-gradient-to-t from-lp-bg/80 via-transparent to-transparent" />
       </div>
     );
   }
   return (
-    <div className={cn("relative overflow-hidden", tall ? "h-64 lg:h-full lg:min-h-[300px]" : "h-44")} style={{ background: theme.gradient }}>
+    <div className={cn("lp-keep relative overflow-hidden", tall ? "h-64 lg:h-full lg:min-h-[300px]" : "h-44")} style={{ background: theme.gradient }}>
       <div
         aria-hidden
         className="absolute inset-0 opacity-25"
@@ -233,7 +234,7 @@ const PortfolioPage = () => {
                   tagFilter === t ? "border-lp-sky/50 bg-lp-blue/15 text-white" : "border-lp-line text-lp-mute hover:text-white",
                 )}
               >
-                <Tag className="h-3 w-3" style={{ color: themeFor(t).accent }} /> {t} <span className="text-lp-mute">{n}</span>
+                <Tag className="h-3 w-3" style={{ color: tone(themeFor(t).accent) }} /> {t} <span className="text-lp-mute">{n}</span>
               </button>
             ))}
           </div>
@@ -283,7 +284,7 @@ const PortfolioPage = () => {
                     <p className="mt-2 line-clamp-5 text-[14px] leading-relaxed text-lp-soft">{lead.description || "No description yet."}</p>
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {lead.tags.slice(0, 5).map((t) => (
-                        <span key={t} className="rounded-full px-2.5 py-0.5 text-[11.5px]" style={{ color: themeFor(t).accent, background: `${themeFor(t).accent}1A` }}>
+                        <span key={t} className="rounded-full px-2.5 py-0.5 text-[11.5px]" style={{ color: tone(themeFor(t).accent), background: `${themeFor(t).accent}1A` }}>
                           {t}
                         </span>
                       ))}
@@ -317,7 +318,7 @@ const PortfolioPage = () => {
                         <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-lp-soft">{p.description || "No description yet."}</p>
                         <div className="mt-2.5 flex flex-wrap gap-1.5">
                           {p.tags.slice(0, 3).map((t) => (
-                            <span key={t} className="rounded-full px-2 py-0.5 text-[11px]" style={{ color: themeFor(t).accent, background: `${themeFor(t).accent}1A` }}>
+                            <span key={t} className="rounded-full px-2 py-0.5 text-[11px]" style={{ color: tone(themeFor(t).accent), background: `${themeFor(t).accent}1A` }}>
                               {t}
                             </span>
                           ))}

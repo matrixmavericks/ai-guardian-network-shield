@@ -5,6 +5,7 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import { cn } from "@/lib/utils";
 import type { Subject } from "@/content/myp";
 import { STATUS_META, type Status } from "./store";
+import { tone } from "@/lib/portalAppearance";
 
 /** Sidebar + navy content area used by every subject page. */
 export const StudyShell: React.FC<{ children: React.ReactNode; wide?: boolean }> = ({ children, wide }) => {
@@ -14,7 +15,7 @@ export const StudyShell: React.FC<{ children: React.ReactNode; wide?: boolean }>
     scroller.current?.scrollTo(0, 0);
   }, [pathname]);
   return (
-  <div className="flex h-screen bg-lp-bg">
+  <div className="lp-chrome flex h-screen bg-lp-bg">
     <DashboardSidebar />
     <div ref={scroller} className="lp-app relative z-[1] min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-lp-bg font-ui antialiased selection:bg-lp-blue/40 selection:text-white">
       <div
@@ -41,7 +42,7 @@ export const SubjectGlyph: React.FC<{ subject: Subject; className?: string }> = 
 export const SubjectBadge: React.FC<{ subject: Subject; size?: "sm" | "md" }> = ({ subject, size = "md" }) => (
   <span
     className={cn(
-      "flex shrink-0 items-center justify-center text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]",
+      "lp-keep flex shrink-0 items-center justify-center text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]",
       size === "sm" ? "h-8 w-8 rounded-lg" : "h-11 w-11 rounded-xl",
     )}
     style={{ background: subject.theme.gradient }}
@@ -80,7 +81,7 @@ export const ToolHeader: React.FC<{
     <Crumbs items={[{ label: "My subjects", to: "/my-courses" }, { label: subject.name, to: `/subjects/${subject.slug}` }, { label: title }]} />
     <div className="lp-fade mt-4 flex flex-wrap items-end justify-between gap-4" style={{ animationFillMode: "both" }}>
       <div className="flex min-w-0 items-center gap-4">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ring-inset ring-white/5" style={{ background: `${accent}1F`, color: accent }}>
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ring-inset ring-white/5" style={{ background: `${accent}1F`, color: tone(accent) }}>
           <Icon className="h-6 w-6" />
         </span>
         <div className="min-w-0">
@@ -113,7 +114,7 @@ export const StatusIcon: React.FC<{ status: Status; size?: number; className?: s
   const c = 2 * Math.PI * r;
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" className={cn("shrink-0", className)} role="img" aria-label={m.label}>
-      <circle cx="9" cy="9" r={r} fill="none" stroke={status === "unseen" ? "#33415C" : `${m.color}40`} strokeWidth="2" strokeDasharray={status === "unseen" ? "2.2 2.2" : undefined} />
+      <circle cx="9" cy="9" r={r} fill="none" stroke={status === "unseen" ? "rgb(var(--lp-mute) / 0.55)" : `${m.color}40`} strokeWidth="2" strokeDasharray={status === "unseen" ? "2.2 2.2" : undefined} />
       {m.fill > 0 && m.fill < 1 && (
         <circle cx="9" cy="9" r={r} fill="none" stroke={m.color} strokeWidth="2" strokeLinecap="round" strokeDasharray={`${c * m.fill} ${c}`} transform="rotate(-90 9 9)" />
       )}

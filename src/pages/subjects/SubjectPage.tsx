@@ -40,6 +40,7 @@ import {
   type StudyPlan,
   type StudyState,
 } from "@/components/subjects/store";
+import { tone } from "@/lib/portalAppearance";
 
 type TabId = "resources" | "topics" | "plan" | "saved";
 
@@ -71,7 +72,7 @@ const SubjectHero: React.FC<{ subject: Subject; state: StudyState }> = ({ subjec
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: subject.theme.gradient }} />
       <div className="relative flex flex-wrap items-center justify-between gap-6">
         <div className="flex min-w-0 items-center gap-4">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl" style={{ background: subject.theme.gradient }}>
+          <span className="lp-keep flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl" style={{ background: subject.theme.gradient }}>
             <SubjectGlyph subject={subject} className="h-7 w-7 text-white" />
           </span>
           <div className="min-w-0">
@@ -117,7 +118,7 @@ const ResourceCard: React.FC<{
     className="lp-fade group relative flex items-start gap-4 rounded-2xl border border-lp-line bg-lp-surface/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20 hover:bg-lp-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lp-sky"
     style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
   >
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ring-white/5" style={{ background: `${accent}1F`, color: accent }}>
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ring-white/5" style={{ background: `${accent}1F`, color: tone(accent) }}>
       <Icon className="h-5 w-5" />
     </span>
     <div className="min-w-0 pr-5">
@@ -235,7 +236,7 @@ const TopicsProgress: React.FC<{ subject: Subject; state: StudyState }> = ({ sub
                     <span className="hidden shrink-0 text-[12px] tabular-nums text-lp-mute sm:inline" title="Correct on latest attempt">
                       {sc.correct}/{sc.total}
                     </span>
-                    <span className="hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium md:inline" style={{ color: STATUS_META[st].color, background: `${STATUS_META[st].color}18` }}>
+                    <span className="hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium md:inline" style={{ color: tone(STATUS_META[st].color), background: `${STATUS_META[st].color}18` }}>
                       {STATUS_META[st].label}
                     </span>
                     <div className="flex shrink-0 gap-1">

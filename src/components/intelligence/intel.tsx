@@ -108,7 +108,7 @@ export const Inline: React.FC<{ text: string; className?: string }> = ({ text, c
 
 export const IntelHeader: React.FC<{ icon: React.ElementType; gradient: string; title: string; body: string; badge?: string }> = ({ icon: Icon, gradient, title, body, badge }) => (
   <header className="lp-fade flex flex-wrap items-center gap-5" style={{ animationFillMode: "both" }}>
-    <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-white shadow-[0_18px_50px_-18px_rgba(59,130,246,0.9)]" style={{ background: gradient }}>
+    <span className="lp-keep flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-white shadow-[0_18px_50px_-18px_rgba(59,130,246,0.9)]" style={{ background: gradient }}>
       <Icon className="h-7 w-7" />
     </span>
     <div className="min-w-0 flex-1">

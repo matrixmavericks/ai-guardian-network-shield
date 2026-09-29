@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 
 import { PORTFOLIO_THEMES, getTheme } from "@/lib/portfolioThemes";
+import { tone } from "@/lib/portalAppearance";
 
 // Navy-friendly header colours for each page theme (the owner view)
 const HEADER_GRADIENTS: Record<string, string> = {
@@ -392,7 +393,7 @@ const PortfolioProjectPage = () => {
         {/* Cover Image Section */}
         <div className="relative overflow-hidden rounded-3xl border border-lp-line">
           {project.cover_image_url ? (
-            <div className="relative h-56 md:h-72 overflow-hidden">
+            <div className="lp-keep relative h-56 md:h-72 overflow-hidden">
               <img
                 src={project.cover_image_url}
                 alt={project.title}
@@ -412,7 +413,7 @@ const PortfolioProjectPage = () => {
               )}
             </div>
           ) : (
-            <div className="relative flex h-48 items-end overflow-hidden md:h-60" style={{ background: headerGradient }}>
+            <div className="lp-keep relative flex h-48 items-end overflow-hidden md:h-60" style={{ background: headerGradient }}>
               <div
                 aria-hidden
                 className="absolute inset-0 opacity-25"
@@ -501,7 +502,7 @@ const PortfolioProjectPage = () => {
                   {project.tags.map((tag, i) => {
                     const t = themeFor(tag);
                     return (
-                      <span key={i} className="rounded-full px-2.5 py-1 text-[11.5px] font-medium" style={{ color: t.accent, background: `${t.accent}1A` }}>
+                      <span key={i} className="rounded-full px-2.5 py-1 text-[11.5px] font-medium" style={{ color: tone(t.accent), background: `${t.accent}1A` }}>
                         {tag}
                       </span>
                     );

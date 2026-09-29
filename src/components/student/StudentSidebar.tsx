@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import AppearanceToggle from "@/components/student/AppearanceToggle";
 import { Wordmark } from "@/components/landing/LandingNav";
 
 const groups = [
@@ -160,6 +161,7 @@ const SidebarBody: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
             <p className="truncate text-[13.5px] font-medium text-white">{displayName}</p>
             <p className="truncate text-[11.5px] text-lp-mute">{user?.email}</p>
           </div>
+          <AppearanceToggle />
           <button
             type="button"
             onClick={handleLogout}
@@ -200,7 +202,7 @@ const StudentSidebar = () => {
     <>
       <aside
         data-legacy-dashboard-sidebar="true"
-        className="relative z-[1] hidden h-screen w-[264px] shrink-0 self-start border-r border-lp-line bg-lp-deep font-ui lg:sticky lg:top-0 lg:block"
+        className="lp-chrome relative z-[1] hidden h-screen w-[264px] shrink-0 self-start border-r border-lp-line bg-lp-deep font-ui lg:sticky lg:top-0 lg:block"
       >
         <SidebarBody />
       </aside>
@@ -212,13 +214,13 @@ const StudentSidebar = () => {
         aria-label="Open menu"
         aria-expanded={open}
         aria-controls="student-drawer"
-        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-lp-blue text-white shadow-[0_12px_40px_-8px_rgba(59,130,246,0.8)] transition-transform active:scale-95 lg:hidden"
+        className="lp-chrome fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-lp-blue text-white shadow-[0_12px_40px_-8px_rgba(59,130,246,0.8)] transition-transform active:scale-95 lg:hidden"
       >
         <Menu className="h-6 w-6" />
       </button>
       <div
         className={cn(
-          "fixed inset-0 z-50 bg-lp-deep/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden",
+          "lp-chrome fixed inset-0 z-50 bg-lp-deep/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden",
           open ? "opacity-100" : "pointer-events-none opacity-0",
         )}
         onClick={() => setOpen(false)}
@@ -227,7 +229,7 @@ const StudentSidebar = () => {
         id="student-drawer"
         aria-hidden={!open}
         className={cn(
-          "fixed bottom-0 left-0 top-0 z-50 w-[86%] max-w-[300px] border-r border-lp-line bg-lp-deep font-ui shadow-2xl transition-[transform,visibility] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden",
+          "lp-chrome fixed bottom-0 left-0 top-0 z-50 w-[86%] max-w-[300px] border-r border-lp-line bg-lp-deep font-ui shadow-2xl transition-[transform,visibility] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden",
           open ? "translate-x-0" : "invisible -translate-x-full",
         )}
       >

@@ -7,6 +7,7 @@ import { StudyShell, Markdown, primaryBtn } from "@/components/subjects/kit";
 import { EmptyState, Panel, PanelHead, ghostBtn } from "@/components/student/ui";
 import { themeFor } from "@/components/student/themes";
 import { Inline, IntelHeader, ReportSkeleton, RunButton, findSection, itemsOf, parseSections, splitLabel, useIntelReport } from "@/components/intelligence/intel";
+import { tone } from "@/lib/portalAppearance";
 
 /** Turn phrases like "top 20%", "73rd percentile" or "upper half" into a 0–100 position. */
 const percentileOf = (text: string): number | null => {
@@ -37,7 +38,7 @@ const StandingRow: React.FC<{ text: string; delay: number }> = ({ text, delay })
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-[14px] font-semibold text-white">{label || "Overall"}</p>
         {z && (
-          <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: z.color, background: `${z.color}1F` }}>
+          <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: tone(z.color), background: `${z.color}1F` }}>
             {z.label}
           </span>
         )}

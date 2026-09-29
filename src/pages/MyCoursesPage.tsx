@@ -59,7 +59,7 @@ const SubjectCard: React.FC<{ subject: Subject; state: StudyState; index: number
       className="lp-fade group relative flex flex-col overflow-hidden rounded-3xl border border-lp-line bg-lp-surface transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_24px_60px_-24px_rgba(59,130,246,0.55)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lp-sky"
       style={{ animationDelay: `${80 + index * 55}ms`, animationFillMode: "both" }}
     >
-      <div className="relative h-[124px] overflow-hidden" style={{ background: subject.theme.gradient }}>
+      <div className="lp-keep relative h-[124px] overflow-hidden" style={{ background: subject.theme.gradient }}>
         <div
           aria-hidden
           className="absolute inset-0 opacity-[0.18]"
@@ -157,7 +157,7 @@ const SubjectPicker: React.FC<{ current: string[]; onClose: () => void; onSave: 
                   on ? "border-lp-sky/50 bg-lp-blue/10" : "border-lp-line bg-lp-deep/40 hover:border-white/20",
                 )}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white" style={{ background: s.theme.gradient }}>
+                <span className="lp-keep flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white" style={{ background: s.theme.gradient }}>
                   <SubjectGlyph subject={s} className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1 text-[13.5px] font-medium text-white">{s.name}</span>

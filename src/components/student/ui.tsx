@@ -99,7 +99,7 @@ export const Ring: React.FC<{
             <stop offset="100%" stopColor={stops[tone][1]} />
           </linearGradient>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1A2744" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgb(var(--lp-line))" strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}

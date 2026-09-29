@@ -8,6 +8,7 @@ import { EmptyState, ghostBtn } from "@/components/student/ui";
 import { StudyShell, primaryBtn, selectCls } from "@/components/subjects/kit";
 import { PathCard, PathTrail } from "@/components/paths/PathParts";
 import { themeFor } from "@/components/student/themes";
+import { tone } from "@/lib/portalAppearance";
 
 type SortOption = "recommended" | "rating" | "newest" | "popular" | "duration";
 type DifficultyFilter = "all" | "beginner" | "intermediate" | "advanced";
@@ -167,7 +168,7 @@ const LearningPathsPage = () => {
                       <span className="text-lp-mute">Next: </span>
                       {nextModule?.title ?? "Capstone"}
                     </p>
-                    <span className="shrink-0 text-[12.5px] font-semibold tabular-nums" style={{ color: theme.accent }}>
+                    <span className="shrink-0 text-[12.5px] font-semibold tabular-nums" style={{ color: tone(theme.accent) }}>
                       {item.progress}%
                     </span>
                   </div>

@@ -427,7 +427,7 @@
 
   /* Red-pen strike that draws across once revealed */
   .lp-strike {
-    background-image: linear-gradient(theme("colors.lp.red"), theme("colors.lp.red"));
+    background-image: linear-gradient(rgb(var(--lp-red)), rgb(var(--lp-red)));
     background-repeat: no-repeat;
     background-position: 0 55%;
     background-size: 0% 2px;
@@ -455,7 +455,7 @@
     height: 6px;
     margin-left: -3px;
     border-radius: 9999px;
-    background: theme("colors.lp.sky");
+    background: rgb(var(--lp-sky));
     box-shadow: 0 0 12px 2px rgba(124, 180, 255, 0.7);
     animation: lp-flow 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   }
@@ -477,7 +477,7 @@
     height: 6px;
     margin-top: -3px;
     border-radius: 9999px;
-    background: theme("colors.lp.sky");
+    background: rgb(var(--lp-sky));
     box-shadow: 0 0 12px 2px rgba(124, 180, 255, 0.7);
     animation: lp-flow-x 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
     animation-delay: var(--flow-delay, 0s);
@@ -496,7 +496,7 @@
     width: 100%;
     height: 6px;
     border-radius: 9999px;
-    background: linear-gradient(90deg, #3b82f6, #3fe9ff) no-repeat, #1a2744;
+    background: linear-gradient(90deg, #3b82f6, #3fe9ff) no-repeat, rgb(var(--lp-line));
     background-size: var(--fill, 50%) 100%;
     cursor: pointer;
   }
@@ -541,6 +541,34 @@
 }
 
 /* ============================================================
+   Portal palette
+   The `lp-*` Tailwind colours read these channels. Dark (navy) values are
+   the defaults everywhere, including the public landing page.
+   ============================================================ */
+:root {
+  --lp-bg: 5 10 24;
+  --lp-deep: 3 6 15;
+  --lp-surface: 10 19 40;
+  --lp-raised: 15 27 54;
+  --lp-line: 26 39 68;
+  --lp-text: 232 238 248;
+  --lp-soft: 165 180 203;
+  --lp-mute: 118 136 166;
+  --lp-blue: 59 130 246;
+  --lp-sky: 124 180 255;
+  --lp-cyan: 63 233 255;
+  --lp-red: 242 112 106;
+  --lp-green: 52 211 153;
+  --lp-amber: 251 191 36;
+  --lp-violet: 167 139 250;
+  --lp-glow: 165 204 255;
+  --lp-tint: 16 36 74;
+  --lp-md: 221 230 243;
+  --lp-code: 191 219 254;
+  --lp-accent-soft: 207 224 255;
+}
+
+/* ============================================================
    Student portal
    `.lp-app` re-points the app's theme tokens at the navy landing palette,
    so shadcn-based components rendered inside it match the new design
@@ -572,6 +600,94 @@
   color: hsl(var(--foreground));
 }
 
+/* ============================================================
+   Student portal, light appearance
+   `lp-light` on <html> (src/lib/portalAppearance.ts) switches it on. It only
+   reaches the portal itself (`.lp-app`), the student sidebar (`.lp-chrome`)
+   and pop-ups opened from a portal page, so the landing page, school shell and
+   staff tools keep their own look. Dark values above stay untouched.
+   ============================================================ */
+html.lp-light :is(.lp-app, .lp-chrome),
+html.lp-light body:has(.lp-app) > :not(#root) {
+  --lp-bg: 244 247 252;
+  --lp-deep: 236 241 248;
+  --lp-surface: 255 255 255;
+  --lp-raised: 241 245 251;
+  --lp-line: 222 229 240;
+  --lp-text: 15 23 42;
+  --lp-soft: 51 65 85;
+  --lp-mute: 100 116 139;
+  --lp-blue: 37 99 235;
+  --lp-sky: 37 99 235;
+  --lp-cyan: 8 145 178;
+  --lp-red: 220 38 38;
+  --lp-green: 5 150 105;
+  --lp-amber: 180 83 9;
+  --lp-violet: 109 40 217;
+  --lp-glow: 79 70 229;
+  --lp-tint: 232 240 254;
+  --lp-md: 51 65 85;
+  --lp-code: 29 78 216;
+  --lp-accent-soft: 30 64 175;
+  /* "white" text becomes ink; accents passed through tone() darken for contrast */
+  --lp-white: 11 18 38;
+  --lp-tone: 36%;
+  color-scheme: light;
+}
+
+/* shadcn tokens inside the portal and its pop-ups (menus, dialogs, toasts mount outside #root) */
+html.lp-light .lp-app,
+html.lp-light body:has(.lp-app) > :not(#root) {
+  --background: 220 60% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 221 83% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 216 50% 95%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 216 50% 95%;
+  --muted-foreground: 215 19% 40%;
+  --accent: 214 80% 95%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 161 94% 30%;
+  --warning: 32 95% 40%;
+  --border: 216 33% 90%;
+  --input: 216 33% 88%;
+  --ring: 221 83% 53%;
+}
+
+/* Coloured surfaces (buttons, covers, avatars, gradient heroes) keep white text */
+html.lp-light :is(
+  .lp-keep, .bg-lp-blue, .bg-lp-red, .bg-lp-green, .from-lp-blue, .bg-primary, .bg-destructive,
+  .hover\:bg-lp-blue:hover, .group:hover .group-hover\:bg-lp-blue,
+  .data-\[state\=active\]\:bg-lp-blue[data-state="active"]
+) {
+  --lp-white: 255 255 255;
+}
+
+/* Cards lift off the page with a soft shadow instead of a glow */
+html.lp-light .lp-app :is(.bg-lp-surface, .from-lp-surface, [class~="bg-lp-surface/70"], [class~="bg-lp-surface/60"], [class~="bg-lp-surface/50"]):is(.rounded-2xl, .rounded-3xl, .rounded-xl) {
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 10px 30px -18px rgb(15 23 42 / 0.16);
+}
+/* A white sidebar reads cleaner than a tinted rail */
+html.lp-light aside.lp-chrome.bg-lp-deep { background-color: rgb(255 255 255); }
+/* Pastel accents written as arbitrary hex (tuned for navy) get readable light-mode inks */
+html.lp-light :is(.lp-app, .lp-chrome) :is(.text-\[\#FBBF24\], .text-\[\#FCD34D\], .text-\[\#FDE68A\]) { color: rgb(180 83 9); }
+html.lp-light :is(.lp-app, .lp-chrome) .text-\[\#FBBF24\]\/90 { color: rgb(180 83 9 / 0.9); }
+html.lp-light :is(.lp-app, .lp-chrome) :is(.text-\[\#C4B5FD\], .text-\[\#A78BFA\]) { color: rgb(109 40 217); }
+html.lp-light :is(.lp-app, .lp-chrome) .text-\[\#A78BFA\]\/25 { color: rgb(109 40 217 / 0.2); }
+html.lp-light :is(.lp-app, .lp-chrome) .text-\[\#A7F3D0\] { color: rgb(4 120 87); }
+html.lp-light :is(.lp-app, .lp-chrome) .text-\[\#E8EEF8\] { color: rgb(var(--lp-text)); }
+html.lp-light :is(.lp-app, .lp-chrome) .from-\[\#10244A\] { --tw-gradient-from: rgb(var(--lp-tint)) var(--tw-gradient-from-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html.lp-light :is(.lp-app, .lp-chrome) .via-\[\#A5CCFF\] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--lp-glow)) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+/* Menus and popovers: soft slate shadow instead of the black drop used in dark */
+html.lp-light :is(.lp-app, .lp-chrome) .lp-pop { box-shadow: 0 24px 60px -24px rgb(15 23 42 / 0.28), 0 0 0 1px rgb(15 23 42 / 0.04); }
+
 @layer components {
   /* Bars that fill in on mount */
   .lp-bar-in { transform-origin: left; animation: lp-bar-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -579,7 +695,7 @@
 
   /* Soft loading shimmer */
   .lp-skeleton {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.07) 50%, rgba(255, 255, 255, 0.03) 75%);
+    background: linear-gradient(90deg, rgb(var(--lp-white, 255 255 255) / 0.03) 25%, rgb(var(--lp-white, 255 255 255) / 0.07) 50%, rgb(var(--lp-white, 255 255 255) / 0.03) 75%);
     background-size: 200% 100%;
     animation: lp-shimmer 1.4s ease-in-out infinite;
   }
@@ -592,33 +708,33 @@
 
 /* Markdown replies in the AI assistant (the typography plugin isn't enabled) */
 @layer components {
-  .lp-md { color: #dde6f3; font-size: 15.5px; line-height: 1.75; overflow-wrap: anywhere; }
+  .lp-md { color: rgb(var(--lp-md)); font-size: 15.5px; line-height: 1.75; overflow-wrap: anywhere; }
   .lp-md > :first-child { margin-top: 0; }
   .lp-md > :last-child { margin-bottom: 0; }
   .lp-md p { margin: 0.75em 0; }
-  .lp-md h1, .lp-md h2, .lp-md h3, .lp-md h4 { color: #fff; font-weight: 600; letter-spacing: -0.02em; line-height: 1.3; margin: 1.4em 0 0.5em; }
+  .lp-md h1, .lp-md h2, .lp-md h3, .lp-md h4 { color: rgb(var(--lp-white, 255 255 255)); font-weight: 600; letter-spacing: -0.02em; line-height: 1.3; margin: 1.4em 0 0.5em; }
   .lp-md h1 { font-size: 1.45em; }
   .lp-md h2 { font-size: 1.25em; }
   .lp-md h3, .lp-md h4 { font-size: 1.08em; }
-  .lp-md strong { color: #fff; font-weight: 600; }
-  .lp-md em { color: #e8eef8; }
-  .lp-md a { color: #7cb4ff; text-decoration: underline; text-underline-offset: 3px; }
+  .lp-md strong { color: rgb(var(--lp-white, 255 255 255)); font-weight: 600; }
+  .lp-md em { color: rgb(var(--lp-text)); }
+  .lp-md a { color: rgb(var(--lp-sky)); text-decoration: underline; text-underline-offset: 3px; }
   .lp-md ul, .lp-md ol { margin: 0.75em 0; padding-left: 1.4em; }
   .lp-md ul { list-style: disc; }
   .lp-md ol { list-style: decimal; }
   .lp-md li { margin: 0.3em 0; padding-left: 0.2em; }
-  .lp-md li::marker { color: #7cb4ff; }
-  .lp-md blockquote { margin: 1em 0; border-left: 3px solid #3b82f6; padding: 0.2em 0 0.2em 1em; color: #a5b4cb; }
-  .lp-md code { background: rgba(124, 180, 255, 0.12); color: #bfdbfe; border-radius: 6px; padding: 0.1em 0.4em; font-size: 0.9em; }
-  .lp-md pre { background: #03060f; border: 1px solid #1a2744; border-radius: 14px; padding: 1em 1.1em; margin: 1em 0; overflow-x: auto; }
-  .lp-md pre code { background: none; padding: 0; color: #e8eef8; }
-  .lp-md hr { border: 0; border-top: 1px solid #1a2744; margin: 1.5em 0; }
+  .lp-md li::marker { color: rgb(var(--lp-sky)); }
+  .lp-md blockquote { margin: 1em 0; border-left: 3px solid rgb(var(--lp-blue)); padding: 0.2em 0 0.2em 1em; color: rgb(var(--lp-soft)); }
+  .lp-md code { background: rgb(var(--lp-sky) / 0.12); color: rgb(var(--lp-code)); border-radius: 6px; padding: 0.1em 0.4em; font-size: 0.9em; }
+  .lp-md pre { background: rgb(var(--lp-deep)); border: 1px solid rgb(var(--lp-line)); border-radius: 14px; padding: 1em 1.1em; margin: 1em 0; overflow-x: auto; }
+  .lp-md pre code { background: none; padding: 0; color: rgb(var(--lp-text)); }
+  .lp-md hr { border: 0; border-top: 1px solid rgb(var(--lp-line)); margin: 1.5em 0; }
   .lp-md table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.94em; }
-  .lp-md th, .lp-md td { border: 1px solid #1a2744; padding: 0.5em 0.75em; text-align: left; }
-  .lp-md th { background: #0f1b36; color: #fff; font-weight: 600; }
+  .lp-md th, .lp-md td { border: 1px solid rgb(var(--lp-line)); padding: 0.5em 0.75em; text-align: left; }
+  .lp-md th { background: rgb(var(--lp-raised)); color: rgb(var(--lp-white, 255 255 255)); font-weight: 600; }
 
   /* Typing indicator */
-  .lp-dots span { display: inline-block; width: 6px; height: 6px; border-radius: 9999px; background: #7cb4ff; animation: lp-dot 1.2s infinite ease-in-out; }
+  .lp-dots span { display: inline-block; width: 6px; height: 6px; border-radius: 9999px; background: rgb(var(--lp-sky)); animation: lp-dot 1.2s infinite ease-in-out; }
   .lp-dots span:nth-child(2) { animation-delay: 0.15s; }
   .lp-dots span:nth-child(3) { animation-delay: 0.3s; }
   @keyframes lp-dot { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
@@ -627,13 +743,13 @@
 
 /* Built-in study guides (subjects) */
 @layer components {
-  .lp-md-table { overflow-x: auto; margin: 1.1em 0; border: 1px solid #1a2744; border-radius: 14px; }
+  .lp-md-table { overflow-x: auto; margin: 1.1em 0; border: 1px solid rgb(var(--lp-line)); border-radius: 14px; }
   .lp-md-table table { margin: 0; border-style: hidden; min-width: 540px; }
   .lp-md-table th, .lp-md-table td { overflow-wrap: normal; word-break: normal; }
   .lp-guide { font-size: 16px; }
-  .lp-guide h2 { font-size: 1.3em; margin-top: 1.9em; padding-top: 1.2em; border-top: 1px solid #1a2744; }
+  .lp-guide h2 { font-size: 1.3em; margin-top: 1.9em; padding-top: 1.2em; border-top: 1px solid rgb(var(--lp-line)); }
   .lp-guide > h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-  .lp-guide h3 { color: #cfe0ff; }
-  .lp-guide blockquote { background: rgba(59, 130, 246, 0.08); border-radius: 0 12px 12px 0; padding: 0.75em 1em; color: #cfe0ff; }
-  .lp-guide td strong, .lp-guide li strong { color: #fff; }
+  .lp-guide h3 { color: rgb(var(--lp-accent-soft)); }
+  .lp-guide blockquote { background: rgb(var(--lp-blue) / 0.08); border-radius: 0 12px 12px 0; padding: 0.75em 1em; color: rgb(var(--lp-accent-soft)); }
+  .lp-guide td strong, .lp-guide li strong { color: rgb(var(--lp-white, 255 255 255)); }
 }

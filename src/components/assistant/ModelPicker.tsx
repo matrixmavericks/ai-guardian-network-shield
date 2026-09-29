@@ -198,7 +198,7 @@ export const ModelPicker: React.FC<{
           <div
             role="menu"
             aria-label="Choose a model"
-            className="lp-fade absolute bottom-12 left-0 z-40 flex max-h-[min(640px,72vh)] w-[430px] flex-col overflow-hidden rounded-3xl border border-lp-line bg-lp-deep shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9),0_0_0_1px_rgba(124,180,255,0.06)] max-sm:fixed max-sm:inset-x-3 max-sm:bottom-28 max-sm:w-auto"
+            className="lp-pop lp-fade absolute bottom-12 left-0 z-40 flex max-h-[min(640px,72vh)] w-[430px] flex-col overflow-hidden rounded-3xl border border-lp-line bg-lp-deep shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9),0_0_0_1px_rgba(124,180,255,0.06)] max-sm:fixed max-sm:inset-x-3 max-sm:bottom-28 max-sm:w-auto"
           >
             <div className="flex items-center gap-3 border-b border-lp-line px-4 pb-3 pt-3.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lp-mute">Model</p>

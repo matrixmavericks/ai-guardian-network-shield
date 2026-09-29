@@ -37,6 +37,7 @@ import {
   type LearningPath,
   type PathProgress,
 } from "@/services/learningPathService";
+import { tone } from "@/lib/portalAppearance";
 
 const LearningPathDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -202,7 +203,7 @@ const LearningPathDetail = () => {
       </Link>
 
       {/* Hero */}
-      <section className="lp-fade relative mt-4 overflow-hidden rounded-3xl border border-white/10" style={{ background: theme.gradient, animationFillMode: "both" }}>
+      <section className="lp-keep lp-fade relative mt-4 overflow-hidden rounded-3xl border border-white/10" style={{ background: theme.gradient, animationFillMode: "both" }}>
         <PathTrail stops={sortedModules.length} done={completedModules.length} accent="#FFFFFF" className="pointer-events-none absolute inset-x-6 bottom-3 h-20 w-[calc(100%-3rem)] opacity-40" height={80} />
         <div className="relative flex flex-wrap items-center justify-between gap-6 p-6 pb-24 sm:p-8 sm:pb-24">
           <div className="min-w-0 max-w-[720px]">
@@ -252,12 +253,12 @@ const LearningPathDetail = () => {
                 return (
                   <li key={module.id} className="relative pb-1 pl-10">
                     {index < sortedModules.length - 1 && (
-                      <span aria-hidden className="absolute bottom-0 left-[15px] top-8 w-0.5 rounded-full" style={{ background: done ? theme.accent : "#1A2744" }} />
+                      <span aria-hidden className="absolute bottom-0 left-[15px] top-8 w-0.5 rounded-full" style={{ background: done ? theme.accent : "rgb(var(--lp-line))" }} />
                     )}
                     <span
                       className={cn(
                         "absolute left-0 top-2 flex h-8 w-8 items-center justify-center rounded-full border-2 text-[12px] font-semibold",
-                        done ? "border-transparent text-lp-deep" : isNext ? "border-lp-sky bg-lp-blue/20 text-white" : "border-lp-line bg-lp-surface text-lp-mute",
+                        done ? "border-transparent text-[#03060F]" : isNext ? "border-lp-sky bg-lp-blue/20 text-white" : "border-lp-line bg-lp-surface text-lp-mute",
                       )}
                       style={done ? { background: theme.accent } : undefined}
                     >
@@ -303,7 +304,7 @@ const LearningPathDetail = () => {
                       <li key={module.id}>
                         <button type="button" onClick={() => openModule(module)} className="group flex h-full w-full gap-3 rounded-2xl border border-lp-line bg-lp-deep/40 p-4 text-left transition-colors hover:border-white/20">
                           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[13px] font-semibold text-white" style={{ background: `${theme.accent}33` }}>
-                            {completedModules.includes(module.id) ? <CheckCircle className="h-4 w-4" style={{ color: theme.accent }} /> : i + 1}
+                            {completedModules.includes(module.id) ? <CheckCircle className="h-4 w-4" style={{ color: tone(theme.accent) }} /> : i + 1}
                           </span>
                           <span className="min-w-0">
                             <span className="block text-[14px] font-medium text-white group-hover:text-lp-sky">{module.title}</span>

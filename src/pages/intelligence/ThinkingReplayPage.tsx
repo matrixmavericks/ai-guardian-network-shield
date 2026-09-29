@@ -9,6 +9,7 @@ import { StudyShell, Markdown, selectCls } from "@/components/subjects/kit";
 import { EmptyState, Panel, PanelHead } from "@/components/student/ui";
 import { useStoredState } from "@/components/assistant/storage";
 import { Inline, IntelHeader, ReportSkeleton, RunButton, findSection, itemsOf, parseSections, useIntelReport } from "@/components/intelligence/intel";
+import { tone } from "@/lib/portalAppearance";
 
 type Row = { role: string; content: string; created_at: string; session_id: string };
 
@@ -46,7 +47,7 @@ const Heatmap: React.FC<{ rows: Row[] }> = ({ rows }) => {
                   key={h}
                   title={`${DAYS[di]} ${h}:00 · ${v} message${v === 1 ? "" : "s"}`}
                   className="h-3 flex-1 rounded-[3px] sm:h-4 sm:rounded-[4px]"
-                  style={{ background: v ? `rgba(63, 233, 255, ${0.15 + (v / max) * 0.85})` : "#111C36" }}
+                  style={{ background: v ? `rgb(var(--lp-cyan) / ${0.15 + (v / max) * 0.85})` : "rgb(var(--lp-raised))" }}
                 />
               ))}
             </div>
@@ -261,7 +262,7 @@ const ThinkingReplayPage = () => {
                     const k = KIND[item.kind];
                     return (
                       <li key={i} className="lp-fade relative" style={{ animationDelay: `${Math.min(i, 12) * 40}ms`, animationFillMode: "both" }}>
-                        <span className="absolute -left-8 top-2.5 flex h-6 w-6 items-center justify-center rounded-full border-2 bg-lp-surface" style={{ borderColor: k.color, color: k.color }}>
+                        <span className="absolute -left-8 top-2.5 flex h-6 w-6 items-center justify-center rounded-full border-2 bg-lp-surface" style={{ borderColor: k.color, color: tone(k.color) }}>
                           <k.icon className="h-3 w-3" />
                         </span>
                         <div className="rounded-2xl border border-lp-line bg-lp-deep/40 px-4 py-3">

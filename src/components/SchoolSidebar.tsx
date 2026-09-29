@@ -1,9 +1,10 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, TrendingUp, BookOpen, GraduationCap, Settings, Brain, MessageSquare, Book, Users, Briefcase, Building2, DollarSign, Layers, Shield, Megaphone, Calendar } from 'lucide-react';
+import { LogOut, TrendingUp, BookOpen, GraduationCap, Settings, Brain, MessageSquare, Book, Users, Briefcase, Building2, DollarSign, Layers, Shield, Megaphone, Calendar, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSchool } from '@/contexts/SchoolContext';
+import { useAppearance } from '@/lib/portalAppearance';
 
 const SchoolSidebar = () => {
   const { logout, user } = useAuth();
@@ -16,6 +17,7 @@ const SchoolSidebar = () => {
   };
 
   const role = user?.role || 'student';
+  const appearance = useAppearance();
   const displayName = user?.fullName || user?.email || 'User';
   const initial = displayName.charAt(0).toUpperCase();
 
@@ -109,6 +111,12 @@ const SchoolSidebar = () => {
       </nav>
       
       <div className="p-4 border-t mt-auto">
+        {role === 'student' && (
+          <Button variant="ghost" className="w-full justify-start text-slate-600 hover:bg-slate-100" onClick={appearance.toggle}>
+            {appearance.mode === 'light' ? <Moon className="mr-3 h-5 w-5" /> : <Sun className="mr-3 h-5 w-5" />}
+            {appearance.mode === 'light' ? 'Dark mode' : 'Light mode'}
+          </Button>
+        )}
         <Button variant="ghost" className="w-full justify-start text-slate-600 hover:text-red-600 hover:bg-red-50" onClick={handleLogout}>
           <LogOut className="mr-3 h-5 w-5" /> Logout
         </Button>

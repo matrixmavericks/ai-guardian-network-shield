@@ -40,6 +40,7 @@ import CreateLiveQuiz from '@/components/livequiz/CreateLiveQuiz';
 import LiveQuizPlayer from '@/components/livequiz/LiveQuizPlayer';
 import QuizResults from '@/components/livequiz/QuizResults';
 import ClassCoursesManager from '@/components/ClassCoursesManager';
+import { tone } from "@/lib/portalAppearance";
 
 interface Student {
   student_id: string;
@@ -545,7 +546,7 @@ const ClassDetailPage = () => {
           <Link to="/classes" className="inline-flex items-center gap-1.5 text-[13px] text-lp-mute transition-colors hover:text-white">
             <ArrowLeft className="h-4 w-4" /> All classes
           </Link>
-          <section className="lp-fade relative mt-4 overflow-hidden rounded-3xl border border-white/10" style={{ background: theme.gradient, animationFillMode: 'both' }}>
+          <section className="lp-keep lp-fade relative mt-4 overflow-hidden rounded-3xl border border-white/10" style={{ background: theme.gradient, animationFillMode: 'both' }}>
             <div
               aria-hidden
               className="absolute inset-0 opacity-20"
@@ -1334,7 +1335,7 @@ const ClassDetailPage = () => {
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <h4 className="text-[15px] font-medium text-white">{a.title}</h4>
-                                  <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: st.color, background: `${st.color}1F` }}>
+                                  <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: tone(st.color), background: `${st.color}1F` }}>
                                     {st.label}
                                   </span>
                                   {a.is_group_assignment && (

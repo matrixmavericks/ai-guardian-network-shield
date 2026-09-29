@@ -32,7 +32,7 @@ export const Modal: React.FC<{
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className={cn("lp-fade flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-lp-line bg-lp-surface shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)] sm:rounded-3xl", width)}
+        className={cn("lp-pop lp-fade flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-lp-line bg-lp-surface shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)] sm:rounded-3xl", width)}
       >
         <div className="flex items-start justify-between gap-4 border-b border-lp-line px-6 pb-4 pt-5">
           <div className="min-w-0">

@@ -6,6 +6,7 @@ import { ArrowDownRight, ArrowUpRight, ChevronDown, Minus, Sparkles } from "luci
 import { cn } from "@/lib/utils";
 import type { GradingSystem } from "@/services/gradingService";
 import { byDate, colorFor, gradeIn, toneHex, toneOf, type GradedWork, type SubjectStat } from "./stats";
+import { tone } from "@/lib/portalAppearance";
 
 /* ---------- Small pieces ---------- */
 
@@ -32,7 +33,7 @@ export const TrendChip: React.FC<{ delta: number | null; className?: string }> =
 export const GradePill: React.FC<{ pct: number; system: GradingSystem | null; className?: string }> = ({ pct, system, className }) => {
   const c = toneHex[toneOf(pct)];
   return (
-    <span className={cn("inline-flex min-w-[2.25rem] items-center justify-center rounded-lg px-2 py-0.5 text-[13px] font-semibold tabular-nums", className)} style={{ color: c, background: `${c}1F` }}>
+    <span className={cn("inline-flex min-w-[2.25rem] items-center justify-center rounded-lg px-2 py-0.5 text-[13px] font-semibold tabular-nums", className)} style={{ color: tone(c), background: `${c}1F` }}>
       {gradeIn(pct, system)}
     </span>
   );
@@ -111,9 +112,9 @@ export const Timeline: React.FC<{ items: GradedWork[]; subjects: string[]; syste
               <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#1A2744" vertical={false} />
-          <XAxis dataKey="label" tick={{ fill: "#7688A6", fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={16} />
-          <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={{ fill: "#7688A6", fontSize: 11 }} axisLine={false} tickLine={false} />
+          <CartesianGrid stroke="rgb(var(--lp-line))" vertical={false} />
+          <XAxis dataKey="label" tick={{ fill: "rgb(var(--lp-mute))", fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={16} />
+          <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={{ fill: "rgb(var(--lp-mute))", fontSize: 11 }} axisLine={false} tickLine={false} />
           <Tooltip content={<ChartTip system={system} subjects={subjects} />} cursor={{ stroke: "#33415C", strokeDasharray: "3 3" }} />
           {goal !== null && (
             <ReferenceLine
@@ -131,9 +132,9 @@ export const Timeline: React.FC<{ items: GradedWork[]; subjects: string[]; syste
             strokeWidth={2.5}
             fill="url(#gradeFill)"
             dot={(props: { cx?: number; cy?: number; payload?: Point; index?: number }) => (
-              <circle key={props.index} cx={props.cx} cy={props.cy} r={4.5} fill={colorFor(props.payload?.subject ?? "", subjects)} stroke="#050A18" strokeWidth={2} />
+              <circle key={props.index} cx={props.cx} cy={props.cy} r={4.5} fill={colorFor(props.payload?.subject ?? "", subjects)} stroke="rgb(var(--lp-bg))" strokeWidth={2} />
             )}
-            activeDot={{ r: 6, stroke: "#050A18", strokeWidth: 2, fill: "#FFFFFF" }}
+            activeDot={{ r: 6, stroke: "rgb(var(--lp-bg))", strokeWidth: 2, fill: "#FFFFFF" }}
             isAnimationActive
             animationDuration={900}
           />

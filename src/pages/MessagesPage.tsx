@@ -51,7 +51,7 @@ const initials = (name: string) =>
 const Avatar: React.FC<{ contact: Contact; size?: "sm" | "md" }> = ({ contact, size = "md" }) => {
   const g = AVATAR_GRADIENTS[[...contact.user_id].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_GRADIENTS.length];
   return (
-    <span className={cn("flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-white/5", size === "sm" ? "h-9 w-9 text-[12px]" : "h-11 w-11 text-[13px]")} style={{ background: g }}>
+    <span className={cn("lp-keep flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-white/5", size === "sm" ? "h-9 w-9 text-[12px]" : "h-11 w-11 text-[13px]")} style={{ background: g }}>
       {initials(contact.full_name) || "?"}
     </span>
   );
