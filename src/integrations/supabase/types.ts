@@ -536,6 +536,35 @@ export type Database = {
           },
         ]
       }
+      class_members: {
+        Row: {
+          class_id: string
+          id: string
+          joined_at: string
+          student_id: string
+        }
+        Insert: {
+          class_id: string
+          id?: string
+          joined_at?: string
+          student_id: string
+        }
+        Update: {
+          class_id?: string
+          id?: string
+          joined_at?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_members_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_myp_courses: {
         Row: {
           class_id: string
@@ -567,35 +596,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "class_myp_courses_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "classes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      class_members: {
-        Row: {
-          class_id: string
-          id: string
-          joined_at: string
-          student_id: string
-        }
-        Insert: {
-          class_id: string
-          id?: string
-          joined_at?: string
-          student_id: string
-        }
-        Update: {
-          class_id?: string
-          id?: string
-          joined_at?: string
-          student_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "class_members_class_id_fkey"
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
