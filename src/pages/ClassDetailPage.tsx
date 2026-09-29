@@ -42,6 +42,9 @@ import CreateLiveQuiz from '@/components/livequiz/CreateLiveQuiz';
 import LiveQuizPlayer from '@/components/livequiz/LiveQuizPlayer';
 import QuizResults from '@/components/livequiz/QuizResults';
 import ClassCoursesManager from '@/components/ClassCoursesManager';
+import { ClassMypCard } from '@/components/subjects/ClassMypCard';
+import { useCourseLinks } from '@/components/subjects/classCourses';
+import { getSubject } from '@/content/myp';
 import { tone } from "@/lib/portalAppearance";
 
 interface Student {
@@ -122,6 +125,8 @@ const ClassDetailPage = () => {
   const [studentFilter, setStudentFilter] = useState<'all' | 'todo' | 'submitted' | 'graded'>('all');
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
+  const mypCourses = useCourseLinks();
+  const mypLinks = mypCourses.links.filter(l => l.classId === id);
 
   // Handle generateQuiz query param from teaching plans
   useEffect(() => {
@@ -586,6 +591,24 @@ const ClassDetailPage = () => {
                         <CheckCircle2 className="h-3.5 w-3.5" /> {assignments.filter(a => getStudentSubmission(a.id)).length} handed in
                       </span>
                     </>
+                  )}
+                  {mypLinks.map(l => (
+                    <Link
+                      key={l.id}
+                      to={isTeacher ? `/subjects/${l.subject}?tab=classes&class=${l.classId}` : `/subjects/${l.subject}`}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[12.5px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30"
+                    >
+                      <GraduationCap className="h-3.5 w-3.5" /> MYP {getSubject(l.subject)?.name}
+                    </Link>
+                  ))}
+                  {isTeacher && !mypLinks.length && mypCourses.available && !mypCourses.loading && (
+                    <button
+                      type="button"
+                      onClick={() => setClassTab('courses')}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-white/40 px-3 py-1 text-[12.5px] font-medium text-white transition-colors hover:bg-white/15"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Align to an MYP course
+                    </button>
                   )}
                   {classGradingSystem && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1 text-[12.5px] text-white backdrop-blur-sm">
@@ -1173,7 +1196,10 @@ const ClassDetailPage = () => {
 
               {/* ===== COURSES TAB ===== */}
               <TabsContent value="courses">
-                <ClassCoursesManager classId={id!} isTeacher={isTeacher} />
+                <div className="space-y-6">
+                  <ClassMypCard classId={id!} classSubject={classInfo.subject} isTeacher={isTeacher} courses={mypCourses} />
+                  <ClassCoursesManager classId={id!} isTeacher={isTeacher} />
+                </div>
               </TabsContent>
 
               {/* ===== SETTINGS TAB ===== */}
@@ -1410,6 +1436,7 @@ const ClassDetailPage = () => {
                   </div>
 
                   <div className="min-w-0 space-y-4">
+                    <ClassMypCard classId={classInfo.id} classSubject={classInfo.subject} isTeacher={false} courses={mypCourses} delay={40} />
                     <Panel className="p-5" delay={80}>
                       <PanelHead title="Class resources" icon={Upload} />
                       <p className="mt-1 text-[12px] text-lp-mute">Files, notes and links from your teacher.</p>

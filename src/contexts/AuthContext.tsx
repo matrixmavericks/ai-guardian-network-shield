@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
+import { toLoginEmail } from "@/lib/studentIds";
 
 interface AuthUser {
   id: string;
@@ -365,7 +366,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const handleLogin = async (email: string, password: string): Promise<AuthUser> => {
+  const handleLogin = async (identifier: string, password: string): Promise<AuthUser> => {
+    // Pilot students sign in with an ID (MIS-…) instead of an email
+    const email = toLoginEmail(identifier);
     const finalizeLogin = async (activeSession: Session) => {
       const authUser = await buildAuthUser(activeSession.user);
       setUser(authUser);

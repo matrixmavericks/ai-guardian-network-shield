@@ -24,6 +24,7 @@ import {
 import { ModelPicker, PoweredBy, choiceLabel, type ModelAccess, type ModelChoice } from "@/components/assistant/ModelPicker";
 import { AI_MODELS, BASIC_PLANS, DEFAULT_MODEL, REFYN_PICKS, findModel } from "@/lib/aiModels";
 import AppearanceToggle from "@/components/student/AppearanceToggle";
+import { friendlyFirstName } from "@/lib/studentIds";
 
 // The chat tables aren't in the generated Supabase types yet
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -670,7 +671,7 @@ const StudentInterface = () => {
 
   const activeSubjectData = SUBJECTS.find(s => s.id === activeSubject)!;
   const SubjectIcon = activeSubjectData.icon;
-  const firstName = (user?.fullName || user?.email?.split("@")[0] || "there").split(" ")[0];
+  const firstName = friendlyFirstName(user?.fullName, "there");
   const visibleSessions = sessions.filter(s => !archived.includes(s.id));
   const archivedSessions = sessions.filter(s => archived.includes(s.id));
   const filteredSessions = visibleSessions.filter(s => (s.title || "Untitled").toLowerCase().includes(chatSearch.toLowerCase()));

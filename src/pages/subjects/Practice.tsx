@@ -16,13 +16,14 @@ import {
   Sparkles,
   Timer,
   X,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { findTopic, questionsOf, type Question, type Subject } from "@/content/myp";
 import { Bar, EmptyState, Ring, chip, ghostBtn } from "@/components/student/ui";
 import { ToolHeader, iconBtn, primaryBtn, selectCls, shuffle } from "@/components/subjects/kit";
 import { askRefyn } from "@/components/subjects/AskPanel";
-import { isSaved, latest, useStudy } from "@/components/subjects/store";
+import { dueQuestions, isSaved, latest, useStudy } from "@/components/subjects/store";
 
 export type QItem = Question & { topicId: string };
 
@@ -710,6 +711,61 @@ export const MistakesLog: React.FC<{ subject: Subject }> = ({ subject }) => {
                   })}
                 </ul>
               </section>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
+/** Spaced review: questions due today, wrong answers first, then ones whose gap has passed. */
+export const ReviewSession: React.FC<{ subject: Subject }> = ({ subject }) => {
+  const { state } = useStudy();
+  const all = useMemo(() => questionsOf(subject), [subject]);
+  const due = useMemo(() => dueQuestions(state, [subject]), [state, subject]);
+  const [run, setRun] = useState<QItem[] | null>(null);
+  const items = due.map((d) => all.find((q) => q.id === d.id)).filter((q): q is QItem => !!q);
+  const tried = all.filter((q) => state.attempts[q.id]?.length).length;
+
+  return (
+    <>
+      <ToolHeader
+        subject={subject}
+        title="Daily review"
+        body="Spaced repetition: anything you got wrong comes back tomorrow, and right answers return after 1, 3, 7, 16 and 35 days so they stick."
+        icon={CalendarClock}
+        accent="#3FE9FF"
+        actions={
+          !run && items.length > 0 ? (
+            <button type="button" onClick={() => setRun(items.slice(0, 15))} className={primaryBtn}>
+              <CalendarClock className="h-4 w-4" /> Review {Math.min(15, items.length)} now
+            </button>
+          ) : undefined
+        }
+      />
+      <div className="mt-6">
+        {run ? (
+          <QuizRunner key={run.map((q) => q.id).join()} subject={subject} questions={run} mode="practice" onDone={() => setRun(null)} onRetry={(qs) => setRun(shuffle(qs))} />
+        ) : items.length === 0 ? (
+          <div className="lp-fade rounded-3xl border border-dashed border-lp-line" style={{ animationFillMode: "both" }}>
+            <EmptyState
+              icon={PartyPopper}
+              title={tried ? "Nothing due today" : "Nothing to review yet"}
+              body={tried ? "You're up to date. Answer more questions and they'll come back here on the right day." : "Answer some practice questions first. They'll come back here at the right time."}
+            />
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { label: "Due now", value: items.length },
+              { label: "Wrong last time", value: due.filter((d) => latest(state, d.id)?.ok === false).length },
+              { label: "Questions tried", value: tried },
+            ].map((s) => (
+              <div key={s.label} className="rounded-2xl border border-lp-line bg-lp-surface/70 p-4">
+                <p className="text-[26px] font-semibold tabular-nums text-white">{s.value}</p>
+                <p className="text-[12.5px] text-lp-mute">{s.label}</p>
+              </div>
             ))}
           </div>
         )}

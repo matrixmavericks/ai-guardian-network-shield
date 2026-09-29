@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { getSubject, type Subject } from "@/content/myp";
 import { StudyShell } from "@/components/subjects/kit";
 import { useStudy } from "@/components/subjects/store";
-import { ExamBuilder, MistakesLog, Questionbank } from "./Practice";
+import { ExamBuilder, MistakesLog, Questionbank, ReviewSession } from "./Practice";
 import { CheatsheetList, Definitions, GuideList, LessonList, TeachRefyn } from "./Library";
 import { Flashcards } from "./Flashcards";
 import { SubjectMissing } from "./SubjectPage";
@@ -12,6 +12,7 @@ const TOOLS: Record<string, { label: string; wide?: boolean; Page: React.FC<{ su
   questionbank: { label: "Questionbank", wide: true, Page: Questionbank },
   exam: { label: "Exam builder", wide: true, Page: ExamBuilder },
   mistakes: { label: "Mistakes log", Page: MistakesLog },
+  review: { label: "Daily review", wide: true, Page: ReviewSession },
   teach: { label: "Teach Refyn", wide: true, Page: TeachRefyn },
   guides: { label: "Study guide", Page: GuideList },
   lessons: { label: "Lessons", Page: LessonList },

@@ -6,9 +6,12 @@ import {
   BookOpen,
   BookText,
   Brain,
+  CalendarClock,
   CalendarDays,
   Check,
   ClipboardList,
+  ClipboardPen,
+  Crosshair,
   FileText,
   GraduationCap,
   Layers,
@@ -21,6 +24,7 @@ import {
   Timer,
   Trash2,
   TrendingUp,
+  Users,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,6 +35,8 @@ import {
   STATUS_META,
   STATUS_ORDER,
   buildPlan,
+  dueQuestions,
+  examScore,
   subjectSummary,
   today,
   topicScore,
@@ -41,8 +47,12 @@ import {
   type StudyState,
 } from "@/components/subjects/store";
 import { tone } from "@/lib/portalAppearance";
+import { useAuth } from "@/contexts/AuthContext";
+import { depthOf } from "@/content/myp/depth";
+import { useCourseLinks, type CourseLink } from "@/components/subjects/classCourses";
+import { CourseClasses } from "@/components/subjects/CourseClasses";
 
-type TabId = "resources" | "topics" | "plan" | "saved";
+type TabId = "resources" | "topics" | "plan" | "saved" | "classes";
 
 export const SubjectMissing: React.FC = () => (
   <StudyShell>
@@ -102,6 +112,42 @@ const SubjectHero: React.FC<{ subject: Subject; state: StudyState }> = ({ subjec
   );
 };
 
+/* ---------- Class focus (students) ---------- */
+
+const ClassFocus: React.FC<{ subject: Subject; links: CourseLink[] }> = ({ subject, links }) => {
+  if (!links.length) return null;
+  return (
+    <div className="mt-4 space-y-2">
+      {links.map((l) => {
+        const units = subject.units.map((u, i) => ({ u, i })).filter(({ u }) => l.focusUnits.includes(u.id));
+        const first = units[0]?.u.topics[0];
+        return (
+          <div key={l.id} className="lp-fade flex flex-wrap items-center gap-3 rounded-2xl border border-lp-sky/30 bg-lp-blue/10 px-4 py-3" style={{ animationFillMode: "both" }}>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lp-blue/20 text-lp-sky">
+              <Users className="h-4 w-4" />
+            </span>
+            <p className="min-w-0 flex-1 text-[13.5px] text-lp-soft">
+              <span className="font-medium text-white">{l.className}</span>{" "}
+              {units.length ? (
+                <>
+                  is studying <span className="font-medium text-white">{units.map(({ u, i }) => `Unit ${i + 1}: ${u.title}`).join(" and ")}</span>
+                </>
+              ) : (
+                "follows this course"
+              )}
+            </p>
+            {first && (
+              <Link to={`/subjects/${subject.slug}/topic/${first.id}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-lp-blue px-3 text-[12.5px] font-medium text-white hover:bg-[#2F6FE0]">
+                Go to the unit
+              </Link>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 /* ---------- Resources ---------- */
 
 const ResourceCard: React.FC<{
@@ -132,6 +178,11 @@ const ResourceCard: React.FC<{
 
 const Resources: React.FC<{ subject: Subject; state: StudyState }> = ({ subject, state }) => {
   const s = subjectSummary(subject, state);
+  const due = dueQuestions(state, [subject]).length;
+  const topics = topicsOf(subject);
+  const examIds = topics.flatMap((t) => depthOf(t.id)?.exam.map((q) => q.id) ?? []);
+  const examDone = examIds.filter((id) => (state.exam ?? {})[id]?.length).length;
+  const nextExam = topics.find((t) => (examScore(state, depthOf(t.id)?.exam.map((q) => q.id) ?? []) ?? 0) < 70) ?? topics[0];
   const base = `/subjects/${subject.slug}`;
   const cards = topicsOf(subject).reduce((n, t) => n + t.flashcards.length, 0);
   const terms = topicsOf(subject).reduce((n, t) => n + t.keyTerms.length, 0);
@@ -144,6 +195,8 @@ const Resources: React.FC<{ subject: Subject; state: StudyState }> = ({ subject,
         { to: `${base}/teach`, icon: MessageCircleQuestion, title: "Teach Refyn", body: "Explain a topic to Refyn. It asks questions until the gaps show.", meta: "Feynman method", accent: "#3FE9FF" },
         { to: `${base}/exam`, icon: Timer, title: "Exam builder", body: "Build a timed paper from the topics you choose.", meta: "Timed or untimed", accent: "#A78BFA" },
         { to: `${base}/mistakes`, icon: RotateCcw, title: "Mistakes log", body: "Every question you got wrong, ready to retry.", meta: s.mistakes ? `${s.mistakes} to review` : "All clear", accent: "#F2706A" },
+        { to: `${base}/review`, icon: CalendarClock, title: "Daily review", body: "Spaced repetition: questions come back just before you'd forget them.", meta: due ? `${due} due today` : "Nothing due", accent: "#3FE9FF" },
+        { to: `${base}/topic/${nextExam.id}`, icon: ClipboardPen, title: "Exam practice", body: "MYP-style questions with command terms, mark schemes and marking by Refyn.", meta: `${examDone}/${examIds.length} tried`, accent: "#FBBF24" },
       ],
     },
     {
@@ -191,7 +244,7 @@ export const StatusLegend: React.FC<{ counts?: Record<string, number>; className
   </div>
 );
 
-const TopicsProgress: React.FC<{ subject: Subject; state: StudyState }> = ({ subject, state }) => {
+const TopicsProgress: React.FC<{ subject: Subject; state: StudyState; links: CourseLink[] }> = ({ subject, state, links }) => {
   const s = subjectSummary(subject, state);
   const base = `/subjects/${subject.slug}`;
   return (
@@ -216,6 +269,11 @@ const TopicsProgress: React.FC<{ subject: Subject; state: StudyState }> = ({ sub
               <div className="min-w-0">
                 <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-lp-mute">Unit {ui + 1}</p>
                 <h3 className="text-[15.5px] font-medium text-white">{unit.title}</h3>
+                {links.filter((l) => l.focusUnits.includes(unit.id)).map((l) => (
+                  <span key={l.id} className="mt-1 inline-flex items-center gap-1 rounded-full bg-lp-blue/15 px-2 py-0.5 text-[11px] font-medium text-lp-sky">
+                    <Crosshair className="h-3 w-3" /> {l.className} is studying this
+                  </span>
+                ))}
               </div>
               <div className="flex w-40 items-center gap-2">
                 <Bar value={unitWeight} />
@@ -229,13 +287,21 @@ const TopicsProgress: React.FC<{ subject: Subject; state: StudyState }> = ({ sub
                 return (
                   <li key={t.id} className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]">
                     <StatusIcon status={st} size={20} />
-                    <Link to={`${base}/guide/${t.id}`} className="min-w-0 flex-1">
+                    <Link to={`${base}/topic/${t.id}`} className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-medium text-white group-hover:text-lp-sky">{t.title}</p>
                       <p className="truncate text-[12.5px] text-lp-mute">{t.summary}</p>
                     </Link>
                     <span className="hidden shrink-0 text-[12px] tabular-nums text-lp-mute sm:inline" title="Correct on latest attempt">
                       {sc.correct}/{sc.total}
                     </span>
+                    {(() => {
+                      const ex = examScore(state, depthOf(t.id)?.exam.map((q) => q.id) ?? []);
+                      return ex === null ? null : (
+                        <span className="hidden shrink-0 rounded-full bg-lp-amber/15 px-2 py-0.5 text-[11px] font-medium text-lp-amber lg:inline" title="Best exam-practice score">
+                          Exam {ex}%
+                        </span>
+                      );
+                    })()}
                     <span className="hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium md:inline" style={{ color: tone(STATUS_META[st].color), background: `${STATUS_META[st].color}18` }}>
                       {STATUS_META[st].label}
                     </span>
@@ -628,7 +694,11 @@ const SubjectPage = () => {
   const [params, setParams] = useSearchParams();
   const study = useStudy();
   const { state } = study;
-  const tab = (["resources", "topics", "plan", "saved"].includes(params.get("tab") || "") ? params.get("tab") : "resources") as TabId;
+  const { user } = useAuth();
+  const teacher = user?.role === "teacher" || user?.role === "admin";
+  const { links } = useCourseLinks();
+  const tabs: TabId[] = teacher ? ["resources", "topics", "classes", "plan", "saved"] : ["resources", "topics", "plan", "saved"];
+  const tab = (tabs.includes((params.get("tab") || "") as TabId) ? params.get("tab") : "resources") as TabId;
 
   useEffect(() => {
     if (subject) study.visit({ subject: subject.slug, path: `/subjects/${subject.slug}`, label: subject.name });
@@ -637,11 +707,13 @@ const SubjectPage = () => {
 
   if (!subject) return <SubjectMissing />;
   const savedCount = state.saved.filter((x) => x.subject === subject.slug).length;
+  const myLinks = links.filter((l) => l.subject === subject.slug);
 
   return (
     <StudyShell>
       <Crumbs items={[{ label: "My subjects", to: "/my-courses" }, { label: "MYP", to: "/my-courses" }, { label: subject.name }]} />
       <SubjectHero subject={subject} state={state} />
+      {!teacher && <ClassFocus subject={subject} links={myLinks} />}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <TabBar
@@ -650,6 +722,7 @@ const SubjectPage = () => {
           tabs={[
             { id: "resources", label: "Resources", icon: LayoutGrid },
             { id: "topics", label: "Topics & Progress", icon: TrendingUp },
+            ...(teacher ? [{ id: "classes" as TabId, label: "My classes", icon: Users, count: myLinks.length || undefined }] : []),
             { id: "plan", label: "Study plan", icon: CalendarDays },
             { id: "saved", label: "Saved", icon: Bookmark, count: savedCount },
           ]}
@@ -661,7 +734,8 @@ const SubjectPage = () => {
 
       <div className="mt-6">
         {tab === "resources" && <Resources subject={subject} state={state} />}
-        {tab === "topics" && <TopicsProgress subject={subject} state={state} />}
+        {tab === "topics" && <TopicsProgress subject={subject} state={state} links={myLinks} />}
+        {tab === "classes" && teacher && <CourseClasses subject={subject} highlightClass={params.get("class")} />}
         {tab === "plan" && <StudyPlanTab subject={subject} state={state} study={study} />}
         {tab === "saved" && <SavedTab subject={subject} state={state} study={study} />}
       </div>

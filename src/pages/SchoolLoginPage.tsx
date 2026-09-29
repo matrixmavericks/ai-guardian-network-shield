@@ -54,8 +54,8 @@ const SchoolLoginPage = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+              <Label htmlFor="email">Email or student ID</Label>
+              <Input id="email" type="text" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="username" placeholder="MIS-XXXXXXXX" value={email} onChange={e => setEmail(e.target.value)} required />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>

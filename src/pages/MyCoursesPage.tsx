@@ -3,9 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   BookOpen,
+  CalendarClock,
   Check,
   Clock,
   Cloud,
+  Crosshair,
   CloudOff,
   Flame,
   GraduationCap,
@@ -17,17 +19,20 @@ import {
   SlidersHorizontal,
   Sparkles,
   Target,
+  Users,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { friendlyFirstName } from "@/lib/studentIds";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
-import { SUBJECTS, topicsOf, type Subject } from "@/content/myp";
+import { SUBJECTS, getSubject, topicsOf, type Subject } from "@/content/myp";
 import { Bar, EmptyState, chip, ghostBtn, useCountUp } from "@/components/student/ui";
 import { StudyShell, SubjectGlyph, StatusIcon, primaryBtn } from "@/components/subjects/kit";
-import { mySubjects, streak, subjectSummary, topicStatus, useStudy, useSyncStatus, type StudyState } from "@/components/subjects/store";
+import { dueQuestions, mySubjects, streak, subjectSummary, topicStatus, useStudy, useSyncStatus, type StudyState } from "@/components/subjects/store";
+import { useCourseLinks, type CourseLink } from "@/components/subjects/classCourses";
 
 type Course = Tables<"courses">;
 type EnrolledCourse = Course & {
@@ -50,7 +55,7 @@ const CURRICULUM_LABELS: Record<string, string> = {
 
 /* ---------- Subject card ---------- */
 
-const SubjectCard: React.FC<{ subject: Subject; state: StudyState; index: number }> = ({ subject, state, index }) => {
+const SubjectCard: React.FC<{ subject: Subject; state: StudyState; index: number; links?: CourseLink[] }> = ({ subject, state, index, links = [] }) => {
   const s = subjectSummary(subject, state);
   const started = s.topics - s.counts.unseen;
   return (
@@ -85,6 +90,15 @@ const SubjectCard: React.FC<{ subject: Subject; state: StudyState; index: number
       <div className="flex flex-1 flex-col p-5">
         <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-white">{subject.name}</h3>
         <p className="mt-1 text-[13px] leading-snug text-lp-mute">{subject.description}</p>
+        {links.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1">
+            {links.map((l) => (
+              <span key={l.id} className="inline-flex items-center gap-1 rounded-full bg-lp-blue/15 px-2 py-0.5 text-[11px] font-medium text-lp-sky">
+                <Users className="h-3 w-3" /> {l.className}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-1" aria-label="Topic progress">
           {topicsOf(subject).map((t) => (
@@ -445,6 +459,60 @@ const CourseLibrary: React.FC = () => {
   );
 };
 
+/* ---------- Linked classes ---------- */
+
+const unitLabel = (link: CourseLink) => {
+  const subject = getSubject(link.subject);
+  if (!subject) return null;
+  const units = subject.units.map((u, i) => ({ u, i })).filter(({ u }) => link.focusUnits.includes(u.id));
+  return units.length ? units.map(({ u, i }) => `Unit ${i + 1}: ${u.title}`).join(", ") : null;
+};
+
+const ClassStrip: React.FC<{ links: CourseLink[]; teacher: boolean }> = ({ links, teacher }) => {
+  if (!links.length) return null;
+  return (
+    <section className="lp-fade mt-7" style={{ animationDelay: "100ms", animationFillMode: "both" }}>
+      <h2 className="mb-3 flex items-center gap-2 text-[15px] font-medium text-white">
+        <Users className="h-4 w-4 text-lp-sky" /> {teacher ? "Your classes on MYP courses" : "From your classes"}
+      </h2>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {links.map((l) => {
+          const subject = getSubject(l.subject)!;
+          const focus = unitLabel(l);
+          const firstTopic = subject.units.find((u) => l.focusUnits.includes(u.id))?.topics[0];
+          const to = teacher ? `/subjects/${subject.slug}?tab=classes&class=${l.classId}` : firstTopic ? `/subjects/${subject.slug}/topic/${firstTopic.id}` : `/subjects/${subject.slug}`;
+          return (
+            <Link key={l.id} to={to} className="group flex items-start gap-3 rounded-2xl border border-lp-line bg-lp-surface p-3.5 transition-colors hover:border-lp-sky/40">
+              <span className="lp-keep flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white" style={{ background: subject.theme.gradient }}>
+                <SubjectGlyph subject={subject} className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-medium text-white">{l.className}</p>
+                <p className="truncate text-[12.5px] text-lp-mute">{subject.name}</p>
+                <p className={cn("mt-0.5 line-clamp-2 text-[12px] leading-snug", focus ? "text-lp-sky" : "text-lp-mute")}>
+                  {focus ? (
+                    <>
+                      <Crosshair className="-mt-0.5 mr-1 inline h-3 w-3" />
+                      {focus}
+                    </>
+                  ) : teacher ? (
+                    "No unit picked yet"
+                  ) : (
+                    "Your teacher hasn't picked a unit yet"
+                  )}
+                </p>
+              </div>
+              <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-[12.5px] font-medium text-lp-sky transition-transform group-hover:translate-x-0.5">
+                {teacher ? "Progress" : focus ? "Go" : "Open"} <ArrowRight className="h-3.5 w-3.5" />
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+};
+
 /* ---------- Page ---------- */
 
 const SyncBadge: React.FC = () => {
@@ -486,7 +554,15 @@ const MyCoursesPage = () => {
   const { user } = useAuth();
   const { state, setSubjects } = useStudy();
   const [picking, setPicking] = useState(false);
-  const list = mySubjects(state);
+  const teacher = user?.role === "teacher" || user?.role === "admin";
+  const { links } = useCourseLinks();
+  // Courses a student's class is linked to always show, even if they hid the subject.
+  const list = useMemo(() => {
+    const chosen = mySubjects(state);
+    const extra = SUBJECTS.filter((s) => !chosen.includes(s) && links.some((l) => l.subject === s.slug));
+    return [...chosen, ...extra];
+  }, [state, links]);
+  const due = useMemo(() => dueQuestions(state, list).length, [state, list]);
 
   const totals = useMemo(() => {
     let answered = 0;
@@ -510,7 +586,7 @@ const MyCoursesPage = () => {
     return null;
   }, [list, state]);
 
-  const first = (user?.fullName || "").split(" ")[0];
+  const first = friendlyFirstName(user?.fullName, "");
   const days = streak(state);
 
   return (
@@ -518,9 +594,11 @@ const MyCoursesPage = () => {
       <header className="lp-fade flex flex-wrap items-end justify-between gap-4" style={{ animationFillMode: "both" }}>
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-lp-sky">IB MYP</p>
-          <h1 className="mt-1.5 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-white sm:text-[34px]">My subjects</h1>
+          <h1 className="mt-1.5 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-white sm:text-[34px]">{teacher ? "MYP courses" : "My subjects"}</h1>
           <p className="mt-1.5 max-w-[560px] text-[14.5px] text-lp-soft">
-            {first ? `${first}, pick` : "Pick"} a subject to revise with study guides, practice questions and flashcards. Your progress shows what to work on next.
+            {teacher
+              ? "Every course has study guides, worked examples, exam practice and quizzes. Link a class to a course to set the unit you're teaching and follow each student topic by topic."
+              : `${first ? `${first}, pick` : "Pick"} a subject to revise with study guides, practice questions and flashcards. Your progress shows what to work on next.`}
           </p>
         </div>
         <button type="button" onClick={() => setPicking(true)} className={ghostBtn}>
@@ -528,14 +606,55 @@ const MyCoursesPage = () => {
         </button>
       </header>
 
+      {teacher && !links.length && (
+        <div className="lp-fade mt-7 flex flex-wrap items-center gap-3 rounded-2xl border border-lp-blue/30 bg-lp-blue/10 p-4" style={{ animationDelay: "60ms", animationFillMode: "both" }}>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lp-blue/20 text-lp-sky">
+            <Users className="h-5 w-5" />
+          </span>
+          <p className="min-w-0 flex-1 text-[13.5px] text-lp-soft">
+            <span className="font-medium text-white">Align a class to a course.</span> Open a course and use the My classes tab, or pick a course when you create a class.
+          </p>
+        </div>
+      )}
+      <ClassStrip links={links} teacher={teacher} />
+
+      {!teacher && (
       <div className="lp-fade mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4" style={{ animationDelay: "60ms", animationFillMode: "both" }}>
         <Stat icon={Flame} label="day streak" value={days} tone="text-[#FBBF24]" />
         <Stat icon={ListChecks} label="questions answered" value={totals.answered} />
         <Stat icon={Target} label="topics mastered" value={totals.mastered} tone="text-lp-green" />
         <Stat icon={RotateCcw} label="mistakes to review" value={totals.mistakes} tone="text-lp-red" />
       </div>
+      )}
 
-      {(state.recent || suggestion) && (
+      {!teacher && due > 0 && (
+        <div className="lp-fade mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-lp-line bg-lp-surface p-4 sm:p-5" style={{ animationDelay: "100ms", animationFillMode: "both" }}>
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lp-cyan/15 text-lp-cyan">
+              <CalendarClock className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[12px] text-lp-mute">Daily review</p>
+              <p className="text-[15px] font-medium text-white">
+                {due} question{due === 1 ? "" : "s"} due, spaced so you remember them for the exam
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {list
+              .map((s) => ({ s, n: dueQuestions(state, [s]).length }))
+              .filter((x) => x.n)
+              .slice(0, 3)
+              .map(({ s, n }) => (
+                <Link key={s.slug} to={`/subjects/${s.slug}/review`} className={cn(chip, "h-9 gap-1.5 px-3 text-[12.5px] hover:border-lp-sky/40 hover:text-white")}>
+                  {s.name} <span className="tabular-nums text-lp-sky">{n}</span>
+                </Link>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {!teacher && (state.recent || suggestion) && (
         <div
           className="lp-fade relative mt-4 overflow-hidden rounded-2xl border border-lp-blue/30 bg-gradient-to-r from-lp-blue/15 via-lp-surface to-lp-surface p-4 sm:p-5"
           style={{ animationDelay: "120ms", animationFillMode: "both" }}
@@ -553,7 +672,7 @@ const MyCoursesPage = () => {
               </div>
             </div>
             <Link
-              to={state.recent ? state.recent.path : `/subjects/${suggestion!.subject.slug}/guide/${suggestion!.topic.id}`}
+              to={state.recent ? state.recent.path : `/subjects/${suggestion!.subject.slug}/topic/${suggestion!.topic.id}`}
               className={primaryBtn}
             >
               {state.recent ? "Continue" : "Start"} <ArrowRight className="h-4 w-4" />
@@ -565,13 +684,13 @@ const MyCoursesPage = () => {
       <section className="mt-9">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-[15px] font-medium text-white">
-            <BookOpen className="h-4 w-4 text-lp-sky" /> {list.length} subject{list.length === 1 ? "" : "s"}
+            <BookOpen className="h-4 w-4 text-lp-sky" /> {list.length} {teacher ? "course" : "subject"}{list.length === 1 ? "" : "s"}
           </h2>
-          <SyncBadge />
+          {!teacher && <SyncBadge />}
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {list.map((s, i) => (
-            <SubjectCard key={s.slug} subject={s} state={state} index={i} />
+            <SubjectCard key={s.slug} subject={s} state={state} index={i} links={links.filter((l) => l.subject === s.slug)} />
           ))}
           <button
             type="button"

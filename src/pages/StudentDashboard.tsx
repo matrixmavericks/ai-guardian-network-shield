@@ -28,6 +28,7 @@ import { GlowButton } from '@/components/landing/primitives';
 import {
   Bar, EmptyState, Panel, PanelHead, Ring, chip, ghostBtn, gradeLabel, gradeText, gradeTone, useCountUp,
 } from '@/components/student/ui';
+import { friendlyFirstName } from "@/lib/studentIds";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 interface ClassAssignment {
@@ -385,7 +386,8 @@ const StudentDashboard = () => {
     .sort((a, b) => new Date(b.graded_at || b.submitted_at).getTime() - new Date(a.graded_at || a.submitted_at).getTime())
     .slice(0, 5);
 
-  const firstName = displayName.split(' ')[0];
+  // Pilot ID accounts (MIS-…) have no name, so the greeting drops it
+  const firstName = friendlyFirstName(displayName, '');
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const summary = overdueOpen.length > 0
@@ -448,8 +450,8 @@ const StudentDashboard = () => {
         <div>
           <p className="text-[13px] font-medium text-lp-mute">{format(now, 'EEEE, d MMMM')}</p>
           <h1 className="mt-2 text-[36px] font-normal leading-[1] tracking-[-0.045em] text-white sm:text-[48px]">
-            {greeting},{' '}
-            <span className="bg-gradient-to-r from-lp-sky via-[#A5CCFF] to-lp-cyan bg-clip-text text-transparent">{firstName}</span>
+            {firstName ? `${greeting}, ` : greeting}
+            {firstName && <span className="bg-gradient-to-r from-lp-sky via-[#A5CCFF] to-lp-cyan bg-clip-text text-transparent">{firstName}</span>}
           </h1>
           <p className="mt-3 max-w-[40rem] text-[15.5px] text-lp-soft">{summary}</p>
         </div>

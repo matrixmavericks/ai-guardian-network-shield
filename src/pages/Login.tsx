@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
+import { friendlyFirstName } from '@/lib/studentIds';
 import { lovable } from '@/integrations/lovable/index';
 import { Wordmark } from "@/components/landing/LandingNav";
 import AuthBrandPanel from "@/components/landing/AuthBrandPanel";
@@ -49,7 +50,7 @@ const Login = () => {
       const loggedInUser = await login(email, password);
       toast({
         title: "Login successful",
-        description: `Welcome back, ${loggedInUser.fullName}!`,
+        description: `Welcome back${friendlyFirstName(loggedInUser.fullName, "") ? `, ${friendlyFirstName(loggedInUser.fullName, "")}` : ""}!`,
       });
       navigateByRole(loggedInUser.role);
     } catch (err: unknown) {
@@ -139,17 +140,21 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="lp-fade space-y-5" style={{ animationDelay: "160ms", animationFillMode: "both" }}>
             <div>
               <label htmlFor="email" className="mb-2 block text-[13.5px] font-medium text-lp-soft">
-                Email
+                Email or student ID
               </label>
               <div className="relative">
                 <Mail aria-hidden className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-lp-mute" />
                 <input
                   id="email"
-                  type="email"
-                  autoComplete="email"
+                  type="text"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@school.edu"
+                  placeholder="you@school.edu or MIS-XXXXXXXX"
                   required
                   className={inputClass}
                 />

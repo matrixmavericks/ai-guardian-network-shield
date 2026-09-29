@@ -30,6 +30,7 @@ import {
   History,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { isStudentId } from "@/lib/studentIds";
 import { cn } from "@/lib/utils";
 import AppearanceToggle from "@/components/student/AppearanceToggle";
 import { modKey } from "@/lib/portalAppearance";
@@ -84,6 +85,7 @@ const TEACHER_GROUPS: NavGroup[] = [
     label: "Teaching",
     items: [
       { title: "Planner", href: "/teacher-plan-generator", icon: NotebookPen },
+      { title: "MYP Courses", href: "/my-courses", icon: GraduationCap },
       { title: "Content Library", href: "/library", icon: Library },
       { title: "Learning Paths", href: "/learning-paths", icon: Book },
       { title: "Portfolios", href: "/student-portfolios", icon: Briefcase },
@@ -309,7 +311,7 @@ const SidebarBody: React.FC<{ onNavigate?: () => void; onSearch: () => void }> =
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13.5px] font-medium text-white">{displayName}</p>
-            <p className="truncate text-[11.5px] text-lp-mute">{user?.email}</p>
+            <p className="truncate text-[11.5px] text-lp-mute">{isStudentId(user?.fullName ?? "") ? "Student ID" : user?.email}</p>
           </div>
           <AppearanceToggle />
           <button

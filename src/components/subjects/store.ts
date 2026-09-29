@@ -17,6 +17,8 @@ export type PlanTask = { id: string; kind: TaskKind; topicId?: string; done: boo
 export type PlanDay = { date: string; tasks: PlanTask[] };
 export type StudyPlan = { createdAt: number; examDate: string; weekdays: number[]; minutes: number; days: PlanDay[] };
 export type Recent = { subject: string; path: string; label: string; at: number };
+/** A self- or AI-marked attempt at an exam-style question. */
+export type ExamAttempt = { score: number; max: number; at: number; by: "self" | "refyn" };
 
 export type StudyState = {
   /** Slugs the student picked; null until they choose (then all subjects show). */
@@ -30,11 +32,15 @@ export type StudyState = {
   /** Actions per day (YYYY-MM-DD), for the streak. */
   activity: Record<string, number>;
   recent: Recent | null;
+  /** Exam-style (structured) question attempts, by question id */
+  exam: Record<string, ExamAttempt[]>;
+  /** Worked examples the student stepped through, by topic id */
+  worked: Record<string, number>;
   /** When settings-like fields (subjects, cards, saved, plans) last changed here. The newer copy wins those. */
   settingsAt: number;
 };
 
-const EMPTY: StudyState = { subjects: null, attempts: {}, read: {}, cards: {}, saved: [], plans: {}, activity: {}, recent: null, settingsAt: 0 };
+const EMPTY: StudyState = { subjects: null, attempts: {}, read: {}, cards: {}, saved: [], plans: {}, activity: {}, recent: null, exam: {}, worked: {}, settingsAt: 0 };
 
 const cache = new Map<string, StudyState>();
 const listeners = new Set<() => void>();
@@ -111,6 +117,15 @@ const maxRecord = (a: Record<string, number>, b: Record<string, number>) => {
   return out;
 };
 
+const mergeExam = (a: StudyState["exam"], b: StudyState["exam"]) => {
+  const out: StudyState["exam"] = { ...a };
+  for (const [q, list] of Object.entries(b)) {
+    const seen = new Set((out[q] || []).map((x) => x.at));
+    out[q] = [...(out[q] || []), ...list.filter((x) => !seen.has(x.at))].sort((x, y) => x.at - y.at).slice(-5);
+  }
+  return out;
+};
+
 /**
  * Combine this device's copy with the account's. Answers, read guides and
  * streak days are merged; settings-like fields come from the newer copy so a
@@ -129,6 +144,8 @@ export const mergeStates = (local: StudyState, remote: Partial<StudyState>): Stu
     read: maxRecord(local.read, r.read),
     activity: maxRecord(local.activity, r.activity),
     recent,
+    exam: mergeExam(local.exam ?? {}, r.exam ?? {}),
+    worked: maxRecord(local.worked ?? {}, r.worked ?? {}),
     settingsAt: Math.max(local.settingsAt, r.settingsAt),
   };
 };
@@ -279,6 +296,9 @@ export const useStudy = () => {
         );
         return touch({ ...s, plans: { ...s.plans, [slug]: { ...plan, days } } });
       }),
+    saveExam: (questionId: string, score: number, max: number, by: ExamAttempt["by"]) =>
+      update((s) => bump({ ...s, exam: { ...(s.exam ?? {}), [questionId]: [...((s.exam ?? {})[questionId] || []), { score, max, at: Date.now(), by }].slice(-5) } })),
+    markWorked: (topicId: string) => update((s) => bump({ ...s, worked: { ...(s.worked ?? {}), [topicId]: Date.now() } })),
     visit: (recent: Omit<Recent, "at">) =>
       update((s) => (s.recent?.path === recent.path ? s : { ...s, recent: { ...recent, at: Date.now() } })),
   };
@@ -407,4 +427,40 @@ export const buildPlan = (subject: Subject, state: StudyState, examDate: string,
   });
 
   return { createdAt: Date.now(), examDate, weekdays, minutes, days };
+};
+
+/* ---------- Spaced review ---------- */
+
+const DAY_MS = 86_400_000;
+/** Days to wait after 1, 2, 3… correct answers in a row before asking again. */
+const INTERVALS = [1, 3, 7, 16, 35];
+
+/**
+ * Questions due for review: anything answered wrong last time, plus correct
+ * answers whose spacing interval has passed. Most overdue first.
+ */
+export const dueQuestions = (state: StudyState, subjects: Subject[], now = Date.now()) => {
+  const out: { id: string; topicId: string; subject: string; overdue: number }[] = [];
+  for (const subject of subjects)
+    for (const t of topicsOf(subject))
+      for (const q of t.questions) {
+        const list = state.attempts[q.id];
+        if (!list?.length) continue;
+        const last = list[list.length - 1];
+        if (!last.ok) {
+          out.push({ id: q.id, topicId: t.id, subject: subject.slug, overdue: (now - last.at) / DAY_MS + 100 });
+          continue;
+        }
+        let run = 0;
+        for (let i = list.length - 1; i >= 0 && list[i].ok; i--) run++;
+        const wait = INTERVALS[Math.min(run, INTERVALS.length) - 1] * DAY_MS;
+        if (now - last.at >= wait) out.push({ id: q.id, topicId: t.id, subject: subject.slug, overdue: (now - last.at - wait) / DAY_MS });
+      }
+  return out.sort((a, b) => b.overdue - a.overdue);
+};
+
+/** Best exam-practice percentage for a topic's structured questions, or null if none tried. */
+export const examScore = (state: StudyState, ids: string[]) => {
+  const best = ids.map((id) => (state.exam ?? {})[id]?.reduce((m, a) => Math.max(m, a.score / a.max), 0)).filter((x): x is number => x !== undefined);
+  return best.length ? Math.round((best.reduce((a, b) => a + b, 0) / best.length) * 100) : null;
 };

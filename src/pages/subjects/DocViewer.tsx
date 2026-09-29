@@ -17,6 +17,7 @@ import {
   Plus,
   Printer,
   ScrollText,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { findTopic, getSubject, topicsOf, type Subject, type Topic, type Unit } from "@/content/myp";
@@ -131,6 +132,17 @@ const GuideDetails: React.FC<{ subject: Subject; unit: Unit; topic: Topic; state
       >
         <Check className="h-4 w-4" /> {read ? "Read · mark as unread" : "Mark as read"}
       </button>
+
+      <Link to={`${base}/topic/${topic.id}`} className="flex items-center gap-3 rounded-2xl border border-lp-sky/30 bg-lp-blue/10 p-3.5 transition-colors hover:border-lp-sky/60">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lp-blue/20 text-lp-sky">
+          <Target className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13.5px] font-medium text-white">Open the topic hub</span>
+          <span className="block text-[12px] text-lp-mute">Worked example, exam practice and mark scheme</span>
+        </span>
+        <ArrowRight className="h-4 w-4 text-lp-sky" />
+      </Link>
 
       <div className="grid grid-cols-3 gap-2">
         {[

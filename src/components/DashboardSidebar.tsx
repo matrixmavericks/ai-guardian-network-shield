@@ -81,6 +81,7 @@ const DashboardSidebar = () => {
                   { title: 'Registrations', href: '/registration-requests', icon: <ClipboardList className="h-4 w-4" /> },
                   { title: 'Create Account', href: '/create-account', icon: <UserPlus className="h-4 w-4" /> },
                   { title: 'Pilot Analysis', href: '/pilot-analysis', icon: <Activity className="h-4 w-4" /> },
+                  { title: 'Student ID cards', href: '/pilot/mahindra/ids', icon: <UserPlus className="h-4 w-4" /> },
                   { title: 'Security & Data', href: '/security-overview', icon: <Shield className="h-4 w-4" /> },
                   { title: 'Source Code', href: '/source-code', icon: <Code className="h-4 w-4" /> },
                   { title: 'Project Nelo', href: '/project-nelo-admin', icon: <Sparkles className="h-4 w-4" /> },

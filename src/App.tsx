@@ -45,6 +45,7 @@ import SubjectPage from './pages/subjects/SubjectPage';
 import SubjectTool from './pages/subjects/SubjectTool';
 import DocViewer from './pages/subjects/DocViewer';
 import LessonPlayer from './pages/subjects/LessonPlayer';
+import TopicPage from './pages/subjects/TopicPage';
 import PayPage from './pages/PayPage';
 import CheckoutReturn from './pages/CheckoutReturn';
 import PlatformDocsPage from './pages/PlatformDocsPage';
@@ -52,6 +53,7 @@ import PilotAnalysisPage from './pages/PilotAnalysisPage';
 import PilotMahindraConsole from './pages/PilotMahindraConsole';
 import PilotMahindraReport from './pages/PilotMahindraReport';
 import PilotStudentImportPage from './pages/PilotStudentImportPage';
+import PilotStudentIdsPage from './pages/PilotStudentIdsPage';
 import CreateUserAccountPage from './pages/CreateUserAccountPage';
 import SecurityOverviewPage from './pages/SecurityOverviewPage';
 import LegalDocPage from './pages/LegalDocPage';
@@ -164,6 +166,7 @@ function App() {
           <Route path="/pilot-analysis" element={<ProtectedRoute allowedRoles={['admin']}><PilotAnalysisPage /></ProtectedRoute>} />
           <Route path="/pilot/mahindra" element={<ProtectedRoute allowedRoles={['admin']}><PilotMahindraConsole /></ProtectedRoute>} />
           <Route path="/pilot/mahindra/report" element={<ProtectedRoute allowedRoles={['admin']}><PilotMahindraReport /></ProtectedRoute>} />
+          <Route path="/pilot/mahindra/ids" element={<ProtectedRoute allowedRoles={['admin']}><PilotStudentIdsPage /></ProtectedRoute>} />
           <Route path="/pilot/mahindra/students" element={<ProtectedRoute allowedRoles={['admin']}><PilotStudentImportPage /></ProtectedRoute>} />
           <Route path="/create-account" element={<ProtectedRoute allowedRoles={['admin']}><CreateUserAccountPage /></ProtectedRoute>} />
           <Route path="/security-overview" element={<ProtectedRoute allowedRoles={['admin']}><SecurityOverviewPage /></ProtectedRoute>} />
@@ -195,6 +198,7 @@ function App() {
           <Route path="/subjects/:slug" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><SubjectPage /></ProtectedRoute>} />
           <Route path="/subjects/:slug/guide/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><DocViewer kind="guide" /></ProtectedRoute>} />
           <Route path="/subjects/:slug/cheatsheet/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><DocViewer kind="cheatsheet" /></ProtectedRoute>} />
+          <Route path="/subjects/:slug/topic/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><TopicPage /></ProtectedRoute>} />
           <Route path="/subjects/:slug/lesson/:id" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><LessonPlayer /></ProtectedRoute>} />
           <Route path="/subjects/:slug/:tool" element={<ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}><SubjectTool /></ProtectedRoute>} />
 

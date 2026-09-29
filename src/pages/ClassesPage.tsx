@@ -10,6 +10,8 @@ import { EmptyState, chip, ghostBtn } from "@/components/student/ui";
 import { StudyShell, primaryBtn } from "@/components/subjects/kit";
 import { Field, Modal, inputCls } from "@/components/student/Modal";
 import { monogram, themeFor } from "@/components/student/themes";
+import { SUBJECTS, getSubject } from "@/content/myp";
+import { guessCourse, useCourseLinks } from "@/components/subjects/classCourses";
 
 interface ClassItem {
   id: string;
@@ -100,7 +102,8 @@ const ClassCard: React.FC<{
   onCopy: () => void;
   onDelete: () => void;
   delay: number;
-}> = ({ cls, teacherName, next, pending, isTeacher, onCopy, onDelete, delay }) => {
+  myp?: string[];
+}> = ({ cls, teacherName, next, pending, isTeacher, onCopy, onDelete, delay, myp = [] }) => {
   const theme = themeFor(cls.subject || cls.name);
   const days = next ? differenceInCalendarDays(new Date(next.due_date), new Date()) : null;
   return (
@@ -124,6 +127,11 @@ const ClassCard: React.FC<{
               {CURRICULUM_LABELS[cls.curriculum_type] ?? cls.curriculum_type}
             </span>
           )}
+          {myp.map((m) => (
+            <span key={m} className="rounded-full bg-white/20 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-sm">
+              MYP {m}
+            </span>
+          ))}
           {pending > 0 && <span className="rounded-full bg-white/90 px-2.5 py-1 text-[10.5px] font-semibold text-[#0B1530]">{pending} to do</span>}
         </div>
       </div>
@@ -192,6 +200,10 @@ const ClassesPage = () => {
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [newClass, setNewClass] = useState({ name: "", subject: "Mathematics", description: "", curriculum_type: "general" });
+  // "" = no MYP course; null = follow the subject's suggestion until the teacher picks.
+  const [mypPick, setMypPick] = useState<string | null>(null);
+  const mypCourse = mypPick ?? guessCourse(newClass.subject) ?? "";
+  const courseLinks = useCourseLinks();
   const [creating, setCreating] = useState(false);
   const [dueList, setDueList] = useState<Due[]>([]);
   const [teachers, setTeachers] = useState<Record<string, string>>({});
@@ -257,17 +269,25 @@ const ClassesPage = () => {
     }
     setCreating(true);
     try {
-      const { error } = await supabase.from("classes").insert({
-        name: newClass.name.trim(),
-        subject: newClass.subject,
-        description: newClass.description.trim(),
-        teacher_id: user!.id,
-        curriculum_type: newClass.curriculum_type,
-      });
+      const { data: created, error } = await supabase
+        .from("classes")
+        .insert({
+          name: newClass.name.trim(),
+          subject: newClass.subject,
+          description: newClass.description.trim(),
+          teacher_id: user!.id,
+          curriculum_type: newClass.curriculum_type,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      if (mypCourse && created) {
+        await courseLinks.link(created.id, mypCourse).catch(() => toast.error("Class created, but it couldn't be aligned to the MYP course. Try again from the class page."));
+      }
       toast.success("Class created!");
       setCreateOpen(false);
       setNewClass({ name: "", subject: "Mathematics", description: "", curriculum_type: "general" });
+      setMypPick(null);
       fetchClasses();
     } catch (err) {
       console.error(err);
@@ -420,6 +440,7 @@ const ClassesPage = () => {
                 next={nextFor.get(cls.id)}
                 pending={dueList.filter((d) => d.class_id === cls.id).length}
                 isTeacher={isTeacher}
+                myp={courseLinks.links.filter((l) => l.classId === cls.id).map((l) => getSubject(l.subject)?.name ?? l.subject)}
                 onCopy={() => copyCode(cls.join_code)}
                 onDelete={() => handleDelete(cls.id)}
                 delay={80 + i * 50}
@@ -471,6 +492,18 @@ const ClassesPage = () => {
               </select>
             </Field>
           </div>
+          {courseLinks.available && (
+            <Field label="Align to an MYP course" hint="Students get the course with study guides, exam practice and quizzes, and you see their progress topic by topic.">
+              <select className={inputCls} value={mypCourse} onChange={(e) => setMypPick(e.target.value)}>
+                <option value="">No, just a class</option>
+                {SUBJECTS.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    MYP {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
           <Field label="Description (optional)">
             <textarea className={cn(inputCls, "min-h-[88px]")} placeholder="What this class covers" value={newClass.description} onChange={(e) => setNewClass((p) => ({ ...p, description: e.target.value }))} />
           </Field>

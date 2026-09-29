@@ -384,6 +384,11 @@ const PilotMahindraConsole: React.FC = () => {
             <Button variant="outline" size="sm" onClick={() => setRefreshKey(k => k + 1)} className="border-slate-700">
               <RefreshCcw className="h-3.5 w-3.5 mr-1.5" /> Refresh
             </Button>
+            <Link to="/pilot/mahindra/ids">
+              <Button size="sm">
+                <Users className="h-3.5 w-3.5 mr-1.5" /> Student ID cards
+              </Button>
+            </Link>
             <Link to="/pilot/mahindra/students">
               <Button variant="outline" size="sm" className="border-slate-700">
                 <Users className="h-3.5 w-3.5 mr-1.5" /> Bulk add students
