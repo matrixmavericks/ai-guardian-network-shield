@@ -4,6 +4,7 @@ import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, Sparkles } f
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { friendlyFirstName } from '@/lib/studentIds';
+import { IN_ANDROID_APP } from '@/lib/appShell';
 import { lovable } from '@/integrations/lovable/index';
 import { Wordmark } from "@/components/landing/LandingNav";
 import AuthBrandPanel from "@/components/landing/AuthBrandPanel";
@@ -98,12 +99,16 @@ const Login = () => {
           <Link to="/" aria-label="Refyn home" className="text-white lg:invisible">
             <Wordmark />
           </Link>
-          <p className="text-[14px] text-lp-soft">
-            New to Refyn?{" "}
-            <Link to="/register" className="font-medium text-white underline decoration-lp-blue/60 underline-offset-4 transition-colors hover:text-lp-sky">
-              Sign up
-            </Link>
-          </p>
+          {IN_ANDROID_APP ? (
+            <p className="text-[13px] text-lp-mute">Accounts are set up by your school</p>
+          ) : (
+            <p className="text-[14px] text-lp-soft">
+              New to Refyn?{" "}
+              <Link to="/register" className="font-medium text-white underline decoration-lp-blue/60 underline-offset-4 transition-colors hover:text-lp-sky">
+                Sign up
+              </Link>
+            </p>
+          )}
         </header>
 
         <div className="relative mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center py-12">

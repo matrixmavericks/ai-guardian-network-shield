@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Refyn" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/brandBackground</item>
+        <item name="android:statusBarColor">@color/brandBackground</item>
+        <item name="android:navigationBarColor">@color/brandBackground</item>
+    </style>
+    <style name="Theme.Refyn.Launcher" parent="@android:style/Theme.Translucent.NoTitleBar" />
+</resources>

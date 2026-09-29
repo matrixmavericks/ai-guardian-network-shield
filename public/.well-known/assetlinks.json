@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "us.refyntech.app",
+      "sha256_cert_fingerprints": [
+        "8C:DE:31:08:A5:E9:2B:3C:84:DC:0F:6F:03:87:BF:7D:3C:97:50:9A:E3:0E:2D:CD:50:17:E1:6F:16:3C:7A:AB"
+      ]
+    }
+  }
+]

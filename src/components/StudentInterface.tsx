@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import FeatureGate from "@/components/FeatureGate";
+import { IN_ANDROID_APP } from "@/lib/appShell";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -335,7 +336,7 @@ const StudentInterface = () => {
     if (plan && !canUseTokens(1)) {
       toast({
         title: "Token limit reached",
-        description: `You've used all ${plan.monthly_token_limit} tokens this month. Upgrade your plan for more.`,
+        description: `You've used all ${plan.monthly_token_limit} tokens this month. ${IN_ANDROID_APP ? "They reset next month." : "Upgrade your plan for more."}`,
         variant: "destructive",
       });
       return;

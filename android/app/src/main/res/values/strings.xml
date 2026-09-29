@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appName">Refyn</string>
+    <string name="launcherName">Refyn</string>
+    <string name="hostName" translatable="false">refyntech.us</string>
+    <string name="launchUrl" translatable="false">https://refyntech.us/login?app=android</string>
+    <string name="providerAuthority" translatable="false">us.refyntech.app.fileprovider</string>
+    <string name="assetStatements" translatable="false">
+        [{ \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+           \"target\": {\"namespace\": \"web\", \"site\": \"https://refyntech.us\"} }]
+    </string>
+</resources>

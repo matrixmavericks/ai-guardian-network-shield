@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import { APP_PLAN_NOTE, IN_ANDROID_APP } from '@/lib/appShell';
 
 const planIcons: Record<string, React.ReactNode> = {
   starter: <Sparkles className="h-5 w-5 text-blue-500" />,
@@ -199,6 +200,9 @@ const StudentPlanCard = () => {
           )}
 
           {/* Action Buttons */}
+          {IN_ANDROID_APP ? (
+            <p className="pt-3 border-t text-xs text-muted-foreground">{APP_PLAN_NOTE}</p>
+          ) : (
           <div className="pt-3 border-t flex flex-wrap gap-2">
             {availableUpgrades.length > 0 && (
               <Button size="sm" onClick={() => openDialog('upgrade')} className="gap-1.5 shadow-md shadow-primary/20">
@@ -217,6 +221,7 @@ const StudentPlanCard = () => {
               <XCircle className="h-3.5 w-3.5" /> Cancel Plan
             </Button>
           </div>
+          )}
         </CardContent>
       </Card>
 

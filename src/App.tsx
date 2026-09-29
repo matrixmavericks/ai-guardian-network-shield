@@ -39,6 +39,8 @@ import PlatformWorkflowPage from './pages/PlatformWorkflowPage';
 import SchoolRoutes from './pages/SchoolRoutes';
 import ContentLibraryPage from './pages/ContentLibraryPage';
 import MyCoursesPage from './pages/MyCoursesPage';
+import AppAccountNotice from './components/AppAccountNotice';
+import { IN_ANDROID_APP } from './lib/appShell';
 import CourseStudyPage from './pages/CourseStudyPage';
 import CreateCoursePage from './pages/CreateCoursePage';
 import SubjectPage from './pages/subjects/SubjectPage';
@@ -133,14 +135,14 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={IN_ANDROID_APP ? <Navigate to="/login" replace /> : <Index />} />
           <Route path="/demo" element={<DemoShowcasePage />} />
           <Route path="/tour" element={<GuidedTourPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/pay/:requestId" element={<PayPage />} />
-          <Route path="/checkout/return" element={<CheckoutReturn />} />
+          <Route path="/register" element={IN_ANDROID_APP ? <AppAccountNotice /> : <Register />} />
+          <Route path="/pay/:requestId" element={IN_ANDROID_APP ? <AppAccountNotice /> : <PayPage />} />
+          <Route path="/checkout/return" element={IN_ANDROID_APP ? <AppAccountNotice /> : <CheckoutReturn />} />
           <Route path="/legal/:doc" element={<LegalDocPage />} />
           <Route path="/project-nelo" element={<ProjectNeloPublicPage />} />
           <Route path="/project-nelo-admin" element={<ProtectedRoute allowedRoles={['admin']}><ProjectNeloAdminPage /></ProtectedRoute>} />

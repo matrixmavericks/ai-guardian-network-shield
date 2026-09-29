@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { APP_PLAN_NOTE, IN_ANDROID_APP } from '@/lib/appShell';
 
 interface FeatureGateProps {
   feature: keyof PlanConfig['featureFlags'];
@@ -183,7 +184,7 @@ const FeatureGate: React.FC<FeatureGateProps> = ({
           "bg-gradient-to-br", colors.bg,
           className
         )}
-          onClick={() => navigate('/student-dashboard?tab=myplan')}
+          onClick={() => !IN_ANDROID_APP && navigate('/student-dashboard?tab=myplan')}
         >
           <div className="flex items-center gap-3">
             <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center bg-gradient-to-br", colors.bg, colors.text)}>
@@ -278,6 +279,9 @@ const FeatureGate: React.FC<FeatureGateProps> = ({
             </div>
 
             {/* CTA */}
+            {IN_ANDROID_APP ? (
+              <p className="text-center text-sm text-muted-foreground">{APP_PLAN_NOTE}</p>
+            ) : (
             <div className="flex flex-col items-center gap-3">
               <Button
                 size="lg"
@@ -297,6 +301,7 @@ const FeatureGate: React.FC<FeatureGateProps> = ({
                 </p>
               )}
             </div>
+            )}
           </div>
         </div>
       </div>

@@ -425,9 +425,9 @@ const TopicPage = () => {
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: subject.theme.gradient }} />
         <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-1/2 opacity-20" style={{ background: `radial-gradient(70% 90% at 100% 0%, ${accent}, transparent 70%)` }} />
         <div className="relative flex flex-wrap items-start justify-between gap-6">
-          <div className="flex min-w-0 flex-1 items-start gap-4">
-            <span className="lp-keep flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl" style={{ background: subject.theme.gradient }}>
-              <SubjectGlyph subject={subject} className="h-7 w-7 text-white" />
+          <div className="flex min-w-[min(100%,20rem)] flex-1 items-start gap-4">
+            <span className="lp-keep flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14" style={{ background: subject.theme.gradient }}>
+              <SubjectGlyph subject={subject} className="h-6 w-6 text-white sm:h-7 sm:w-7" />
             </span>
             <div className="min-w-0">
               <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-lp-mute">

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Portal background colour, same as the site -->
+    <color name="brandBackground">#050A18</color>
+</resources>
