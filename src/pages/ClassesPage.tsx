@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { differenceInCalendarDays, format } from "date-fns";
 import { ArrowRight, CalendarClock, Check, Copy, KeyRound, Loader2, Plus, School, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -180,7 +180,15 @@ const ClassesPage = () => {
   const { user } = useAuth();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // ?new=1 (from the overview or ⌘K) opens the create form straight away
+  const [createOpen, setCreateOpen] = useState(() => searchParams.get("new") === "1");
+  useEffect(() => {
+    if (searchParams.get("new") !== "1") return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("new");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [newClass, setNewClass] = useState({ name: "", subject: "Mathematics", description: "", curriculum_type: "general" });

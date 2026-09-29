@@ -23,6 +23,8 @@ import {
   ArrowLeft, Copy, Users, Brain, MessageSquare, Book, Send, UserCircle, Shield,
   Plus, FileText, Calendar, Sparkles, RefreshCw, Trash2, CheckCircle2, ClipboardList,
   BarChart3, Upload, Clock, AlertTriangle, GraduationCap, Settings, Trophy,
+  ClipboardCheck,
+  Table2,
 } from 'lucide-react';
 import TeacherGradingView from '@/components/TeacherGradingView';
 import { Progress } from '@/components/ui/progress';
@@ -564,9 +566,17 @@ const ClassDetailPage = () => {
                 {classInfo.description && <p className="mt-2 text-[14.5px] leading-relaxed text-white/80">{classInfo.description}</p>}
                 <div className="mt-4 flex flex-wrap gap-2">
                   {isTeacher ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1 text-[12.5px] text-white backdrop-blur-sm">
-                      <Users className="h-3.5 w-3.5" /> {students.length} students
-                    </span>
+                    <>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1 text-[12.5px] text-white backdrop-blur-sm">
+                        <Users className="h-3.5 w-3.5" /> {students.length} students
+                      </span>
+                      <Link to={`/marking?class=${classInfo.id}`} className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[12.5px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30">
+                        <ClipboardCheck className="h-3.5 w-3.5" /> Mark work
+                      </Link>
+                      <Link to={`/grades?class=${classInfo.id}`} className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[12.5px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30">
+                        <Table2 className="h-3.5 w-3.5" /> Gradebook
+                      </Link>
+                    </>
                   ) : (
                     <>
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1 text-[12.5px] text-white backdrop-blur-sm">
@@ -598,29 +608,29 @@ const ClassDetailPage = () => {
           <div className="mt-6">
           {isTeacher ? (
             <Tabs value={classTab} onValueChange={setClassTab}>
-              <TabsList className="mb-6">
-                <TabsTrigger value="students">
+              <TabsList className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 rounded-2xl border border-lp-line bg-lp-surface/60 p-1.5">
+                <TabsTrigger value="students" className="rounded-xl px-3.5 py-2 text-[13.5px] font-medium text-lp-soft hover:text-white data-[state=active]:bg-lp-blue data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_-10px_rgba(59,130,246,0.8)]">
                   <Users className="mr-2 h-4 w-4" /> Students
                 </TabsTrigger>
-                <TabsTrigger value="assignments">
+                <TabsTrigger value="assignments" className="rounded-xl px-3.5 py-2 text-[13.5px] font-medium text-lp-soft hover:text-white data-[state=active]:bg-lp-blue data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_-10px_rgba(59,130,246,0.8)]">
                   <FileText className="mr-2 h-4 w-4" /> Assignments
                 </TabsTrigger>
-                <TabsTrigger value="analytics">
+                <TabsTrigger value="analytics" className="rounded-xl px-3.5 py-2 text-[13.5px] font-medium text-lp-soft hover:text-white data-[state=active]:bg-lp-blue data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_-10px_rgba(59,130,246,0.8)]">
                   <BarChart3 className="mr-2 h-4 w-4" /> Analytics
                 </TabsTrigger>
-                <TabsTrigger value="resources">
+                <TabsTrigger value="resources" className="rounded-xl px-3.5 py-2 text-[13.5px] font-medium text-lp-soft hover:text-white data-[state=active]:bg-lp-blue data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_-10px_rgba(59,130,246,0.8)]">
                   <Upload className="mr-2 h-4 w-4" /> Resources
                 </TabsTrigger>
-                <TabsTrigger value="learning-paths">
+                <TabsTrigger value="learning-paths" className="rounded-xl px-3.5 py-2 text-[13.5px] font-medium text-lp-soft hover:text-white data-[state=active]:bg-lp-blue data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_-10px_rgba(59,130,246,0.8)]">
                   <Book className="mr-2 h-4 w-4" /> Learning Paths
                 </TabsTrigger>
-                <TabsTrigger value="courses">
+                <TabsTrigger value="courses" className="rounded-xl px-3.5 py-2 text-[13.5px] font-medium text-lp-soft hover:text-white data-[state=active]:bg-lp-blue data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_-10px_rgba(59,130,246,0.8)]">
                   <GraduationCap className="mr-2 h-4 w-4" /> Courses
                 </TabsTrigger>
-                <TabsTrigger value="settings">
+                <TabsTrigger value="settings" className="rounded-xl px-3.5 py-2 text-[13.5px] font-medium text-lp-soft hover:text-white data-[state=active]:bg-lp-blue data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_-10px_rgba(59,130,246,0.8)]">
                   <Settings className="mr-2 h-4 w-4" /> Settings
                 </TabsTrigger>
-                <TabsTrigger value="live-quiz">
+                <TabsTrigger value="live-quiz" className="rounded-xl px-3.5 py-2 text-[13.5px] font-medium text-lp-soft hover:text-white data-[state=active]:bg-lp-blue data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_-10px_rgba(59,130,246,0.8)]">
                   <Trophy className="mr-2 h-4 w-4" /> Live Quiz
                 </TabsTrigger>
               </TabsList>

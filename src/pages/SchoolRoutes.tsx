@@ -24,6 +24,7 @@ import SchoolAnnouncementsPage from '@/pages/SchoolAnnouncementsPage';
 import SchoolEventsPage from '@/pages/SchoolEventsPage';
 import { Loader2, School } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import TeacherDashboard from '@/pages/teacher/TeacherDashboard';
 
 const SchoolGuard = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) => {
   const { user, isLoading } = useAuth();
@@ -39,6 +40,7 @@ const SchoolDashboardRedirect = () => {
   const { user } = useAuth();
   if (!user) return null;
   if (user.role === 'student') return <StudentDashboard />;
+  if (user.role === 'teacher') return <TeacherDashboard />;
   return <Dashboard />;
 };
 

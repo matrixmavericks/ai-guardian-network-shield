@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { format, isToday, isYesterday } from "date-fns";
 import { ArrowLeft, ArrowUp, Check, CheckCheck, MessageSquare, Search, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -68,6 +69,8 @@ const STARTERS = ["Hi! I have a question about the last assignment.", "Could you
 const MessagesPage = () => {
   const { user } = useAuth();
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
+  const [searchParams] = useSearchParams();
+  const openWith = searchParams.get("to");
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -75,6 +78,13 @@ const MessagesPage = () => {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [lastByContact, setLastByContact] = useState<Record<string, Message>>({});
   const [loadingContacts, setLoadingContacts] = useState(true);
+
+  // ?to=<user id> (from a teacher's overview) opens that conversation
+  useEffect(() => {
+    if (!openWith || activeContact) return;
+    const c = contacts.find((x) => x.user_id === openWith);
+    if (c) setActiveContact(c);
+  }, [openWith, contacts]); // eslint-disable-line react-hooks/exhaustive-deps
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);

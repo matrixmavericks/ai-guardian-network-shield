@@ -1,16 +1,27 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Book,
   Brain,
   Briefcase,
+  CalendarClock,
+  CheckCircle2,
+  ClipboardCheck,
+  Gauge,
   GraduationCap,
+  Layers,
   LayoutGrid,
+  Library,
   LogOut,
+  Mail,
   Menu,
   MessageSquare,
+  NotebookPen,
+  Radar,
   Rocket,
+  Search,
   Sparkles,
+  Table2,
   Users,
   X,
   Award,
@@ -19,9 +30,15 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import AppearanceToggle from "@/components/student/AppearanceToggle";
+import { modKey } from "@/lib/portalAppearance";
+import CommandPalette, { type PaletteNav } from "@/components/portal/CommandPalette";
+import { needsMarking, useTeacherData, waited } from "@/components/teacher/data";
 import { Wordmark } from "@/components/landing/LandingNav";
 
-const groups = [
+type NavItem = { title: string; href: string; icon: React.ElementType; badge?: "marking" };
+type NavGroup = { label: string; items: NavItem[] };
+
+const STUDENT_GROUPS: NavGroup[] = [
   {
     label: "Core",
     items: [
@@ -50,13 +67,101 @@ const groups = [
   },
 ];
 
-const SidebarBody: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
+const TEACHER_GROUPS: NavGroup[] = [
+  {
+    label: "Core",
+    items: [
+      { title: "Overview", href: "/dashboard", icon: LayoutGrid },
+      { title: "Marking", href: "/marking", icon: ClipboardCheck, badge: "marking" },
+      { title: "Gradebook", href: "/grades", icon: Table2 },
+      { title: "Classes", href: "/classes", icon: Users },
+    ],
+  },
+  {
+    label: "Teaching",
+    items: [
+      { title: "Planner", href: "/teacher-plan-generator", icon: NotebookPen },
+      { title: "Content Library", href: "/library", icon: Library },
+      { title: "Learning Paths", href: "/learning-paths", icon: Book },
+      { title: "Portfolios", href: "/student-portfolios", icon: Briefcase },
+      { title: "Messages", href: "/messages", icon: MessageSquare },
+    ],
+  },
+  {
+    label: "AI & insights",
+    items: [
+      { title: "AI Assistant", href: "/ai-learning-assistant", icon: Brain },
+      { title: "Differentiate", href: "/intel/auto-iep", icon: Layers },
+      { title: "Parent Briefs", href: "/intel/parent-brief", icon: Mail },
+      { title: "At-Risk Radar", href: "/intel/at-risk-radar", icon: Radar },
+      { title: "Workload & Clashes", href: "/intel/curriculum-conflict", icon: CalendarClock },
+      { title: "AI Usage", href: "/ai-usage", icon: Gauge },
+    ],
+  },
+];
+
+const isTeacherRole = (role?: string) => role === "teacher";
+
+/** Items that also count as active for a nav entry (detail pages live under their list). */
+const alsoActive = (href: string, pathname: string) =>
+  (href === "/my-courses" && /^\/(subjects|course)\//.test(pathname)) ||
+  (href === "/classes" && pathname.startsWith("/class/")) ||
+  (href === "/learning-paths" && /^\/(learning-path\/|create-learning-path)/.test(pathname)) ||
+  (href === "/portfolio" && pathname.startsWith("/portfolio/"));
+
+/** Shows the marking backlog; only mounted for teachers so students never load class data. */
+const MarkingBadge: React.FC = () => {
+  const { data } = useTeacherData();
+  const n = data.submissions.filter(needsMarking).length;
+  if (!n) return null;
+  return <span className="ml-auto rounded-full bg-lp-blue px-1.5 py-px text-[10.5px] font-semibold tabular-nums text-white">{n > 99 ? "99+" : n}</span>;
+};
+
+const MarkingCard: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
+  const { data, loading } = useTeacherData();
+  const queue = data.submissions.filter(needsMarking);
+  const oldest = queue.map((s) => s.submitted_at).sort()[0];
+  if (loading && !data.classes.length) return null;
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-lp-blue/30 bg-gradient-to-br from-lp-blue/20 via-lp-surface to-lp-surface p-4">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full opacity-60 blur-2xl"
+        style={{ background: "radial-gradient(circle, rgba(63,233,255,0.5), transparent 70%)" }}
+      />
+      {queue.length ? (
+        <>
+          <p className="relative flex items-center gap-1.5 text-[13.5px] font-medium text-white">
+            <ClipboardCheck className="h-3.5 w-3.5 text-lp-cyan" /> {queue.length} to mark
+          </p>
+          <p className="relative mt-1 text-[12.5px] leading-snug text-lp-soft">Oldest has waited {oldest ? waited(oldest) : "a while"}. Keyboard-first marking with AI drafts.</p>
+          <Link to="/marking" onClick={onNavigate} className="relative mt-3 inline-flex h-8 items-center rounded-lg bg-lp-blue px-3 text-[12.5px] font-medium text-white transition-colors hover:bg-[#2F6FE0]">
+            Start marking
+          </Link>
+        </>
+      ) : (
+        <>
+          <p className="relative flex items-center gap-1.5 text-[13.5px] font-medium text-white">
+            <CheckCircle2 className="h-3.5 w-3.5 text-lp-green" /> All caught up
+          </p>
+          <p className="relative mt-1 text-[12.5px] leading-snug text-lp-soft">Nothing waiting to be marked. Plan what comes next.</p>
+          <Link to="/teacher-plan-generator" onClick={onNavigate} className="relative mt-3 inline-flex h-8 items-center rounded-lg bg-lp-blue px-3 text-[12.5px] font-medium text-white transition-colors hover:bg-[#2F6FE0]">
+            Open planner
+          </Link>
+        </>
+      )}
+    </div>
+  );
+};
+
+const SidebarBody: React.FC<{ onNavigate?: () => void; onSearch: () => void }> = ({ onNavigate, onSearch }) => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  // Subject and course pages live under My Subjects
-  const inSubjects = /^\/(subjects|course)\//.test(pathname);
-  const displayName = user?.fullName || user?.email || "Student";
+  const teacher = isTeacherRole(user?.role);
+  const groups = teacher ? TEACHER_GROUPS : STUDENT_GROUPS;
+  const home = teacher ? "/dashboard" : "/student-dashboard";
+  const displayName = user?.fullName || user?.email || (teacher ? "Teacher" : "Student");
   const initials = displayName
     .split(" ")
     .map((p) => p[0])
@@ -71,18 +176,30 @@ const SidebarBody: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between px-5 pb-6 pt-6">
-        <Link to="/student-dashboard" onClick={onNavigate} aria-label="Refyn overview" className="text-white">
+      <div className="flex items-center justify-between px-5 pb-4 pt-6">
+        <Link to={home} onClick={onNavigate} aria-label="Refyn overview" className="text-white">
           <Wordmark className="text-[22px]" />
         </Link>
         {!onNavigate && (
           <span className="rounded-full border border-lp-blue/40 bg-lp-blue/15 px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-lp-sky">
-            Student
+            {teacher ? "Teacher" : "Student"}
           </span>
         )}
       </div>
 
-      <nav aria-label="Student" className="flex-1 space-y-6 overflow-y-auto px-3 pb-4">
+      <div className="px-3 pb-3">
+        <button
+          type="button"
+          onClick={onSearch}
+          className="flex h-9 w-full items-center gap-2 rounded-xl border border-lp-line bg-lp-surface/60 px-3 text-[13px] text-lp-mute transition-colors hover:border-lp-sky/40 hover:text-lp-soft"
+        >
+          <Search className="h-3.5 w-3.5" />
+          <span className="flex-1 text-left">{teacher ? "Search or jump to…" : "Search Refyn…"}</span>
+          <kbd className="rounded-md border border-lp-line px-1.5 text-[10.5px] font-medium">{modKey()} K</kbd>
+        </button>
+      </div>
+
+      <nav aria-label={teacher ? "Teacher" : "Student"} className={cn("flex-1 overflow-y-auto px-3 pb-4", teacher ? "space-y-5" : "space-y-6")}>
         {groups.map((group) => (
           <div key={group.label}>
             <p className="mb-2 px-3 text-[10.5px] font-medium uppercase tracking-[0.2em] text-lp-mute">{group.label}</p>
@@ -93,32 +210,34 @@ const SidebarBody: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
                   <li key={item.href}>
                     <NavLink
                       to={item.href}
-                      end={item.href === "/student-dashboard"}
+                      end={item.href === home}
                       onClick={onNavigate}
                       className={({ isActive }) =>
                         cn(
-                          "group relative flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] transition-all duration-200",
-                          isActive || (inSubjects && item.href === "/my-courses")
+                          "group relative flex items-center gap-3 rounded-xl px-3 text-[14px] transition-all duration-200",
+                          teacher ? "h-9" : "h-10",
+                          isActive || alsoActive(item.href, pathname)
                             ? "bg-gradient-to-r from-lp-blue/25 via-lp-blue/10 to-transparent font-medium text-white"
                             : "text-lp-soft hover:bg-white/[0.04] hover:text-white",
                         )
                       }
                     >
                       {({ isActive: exact }) => {
-                        const isActive = exact || (inSubjects && item.href === "/my-courses");
+                        const isActive = exact || alsoActive(item.href, pathname);
                         return (
-                        <>
-                          {isActive && (
-                            <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-lp-sky shadow-[0_0_12px_2px_rgba(124,180,255,0.7)]" />
-                          )}
-                          <Icon
-                            className={cn(
-                              "h-[18px] w-[18px] shrink-0 transition-colors",
-                              isActive ? "text-lp-sky" : "text-lp-mute group-hover:text-lp-soft",
+                          <>
+                            {isActive && (
+                              <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-lp-sky shadow-[0_0_12px_2px_rgba(124,180,255,0.7)]" />
                             )}
-                          />
-                          <span className="truncate">{item.title}</span>
-                        </>
+                            <Icon
+                              className={cn(
+                                "h-[18px] w-[18px] shrink-0 transition-colors",
+                                isActive ? "text-lp-sky" : "text-lp-mute group-hover:text-lp-soft",
+                              )}
+                            />
+                            <span className="truncate">{item.title}</span>
+                            {item.badge === "marking" && <MarkingBadge />}
+                          </>
                         );
                       }}
                     </NavLink>
@@ -130,26 +249,30 @@ const SidebarBody: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
         ))}
       </nav>
 
-      {/* Nudge towards the assistant */}
-      <div className="px-3 pb-3">
-        <div className="relative overflow-hidden rounded-2xl border border-lp-blue/30 bg-gradient-to-br from-lp-blue/20 via-lp-surface to-lp-surface p-4">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full opacity-60 blur-2xl"
-            style={{ background: "radial-gradient(circle, rgba(63,233,255,0.5), transparent 70%)" }}
-          />
-          <p className="relative flex items-center gap-1.5 text-[13.5px] font-medium text-white">
-            <Sparkles className="h-3.5 w-3.5 text-lp-cyan" /> Stuck on something?
-          </p>
-          <p className="relative mt-1 text-[12.5px] leading-snug text-lp-soft">Refyn will guide you through it, step by step.</p>
-          <Link
-            to="/ai-learning-assistant"
-            onClick={onNavigate}
-            className="relative mt-3 inline-flex h-8 items-center rounded-lg bg-lp-blue px-3 text-[12.5px] font-medium text-white transition-colors hover:bg-[#2F6FE0]"
-          >
-            Ask Refyn
-          </Link>
-        </div>
+      {/* Nudge: the assistant for students, the marking queue for teachers (hidden on short screens) */}
+      <div className={cn("px-3 pb-3", teacher ? "[@media(max-height:1040px)]:hidden" : "[@media(max-height:940px)]:hidden")}>
+        {teacher ? (
+          <MarkingCard onNavigate={onNavigate} />
+        ) : (
+          <div className="relative overflow-hidden rounded-2xl border border-lp-blue/30 bg-gradient-to-br from-lp-blue/20 via-lp-surface to-lp-surface p-4">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full opacity-60 blur-2xl"
+              style={{ background: "radial-gradient(circle, rgba(63,233,255,0.5), transparent 70%)" }}
+            />
+            <p className="relative flex items-center gap-1.5 text-[13.5px] font-medium text-white">
+              <Sparkles className="h-3.5 w-3.5 text-lp-cyan" /> Stuck on something?
+            </p>
+            <p className="relative mt-1 text-[12.5px] leading-snug text-lp-soft">Refyn will guide you through it, step by step.</p>
+            <Link
+              to="/ai-learning-assistant"
+              onClick={onNavigate}
+              className="relative mt-3 inline-flex h-8 items-center rounded-lg bg-lp-blue px-3 text-[12.5px] font-medium text-white transition-colors hover:bg-[#2F6FE0]"
+            >
+              Ask Refyn
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="border-t border-lp-line p-3">
@@ -178,12 +301,19 @@ const SidebarBody: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
 };
 
 /**
- * Sidebar for every student page: fixed on desktop, a slide-out drawer on
- * smaller screens (opened by the floating menu button).
+ * Portal sidebar for students and teachers: fixed on desktop, a slide-out
+ * drawer on smaller screens, plus the ⌘K command palette.
  */
 const StudentSidebar = () => {
   const [open, setOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
+  const teacher = isTeacherRole(user?.role);
+  const paletteNav = useMemo<PaletteNav[]>(
+    () => (teacher ? TEACHER_GROUPS : STUDENT_GROUPS).flatMap((g) => g.items.map((i) => ({ title: i.title, href: i.href, icon: i.icon, group: g.label }))),
+    [teacher],
+  );
 
   useEffect(() => setOpen(false), [location.pathname]);
   useEffect(() => {
@@ -198,13 +328,18 @@ const StudentSidebar = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const search = () => {
+    setOpen(false);
+    setPaletteOpen(true);
+  };
+
   return (
     <>
       <aside
         data-legacy-dashboard-sidebar="true"
         className="lp-chrome relative z-[1] hidden h-screen w-[264px] shrink-0 self-start border-r border-lp-line bg-lp-deep font-ui lg:sticky lg:top-0 lg:block"
       >
-        <SidebarBody />
+        <SidebarBody onSearch={search} />
       </aside>
 
       {/* Mobile: floating menu button + drawer */}
@@ -241,8 +376,10 @@ const StudentSidebar = () => {
         >
           <X className="h-5 w-5" />
         </button>
-        <SidebarBody onNavigate={() => setOpen(false)} />
+        <SidebarBody onNavigate={() => setOpen(false)} onSearch={search} />
       </aside>
+
+      <CommandPalette nav={paletteNav} role={teacher ? "teacher" : "student"} open={paletteOpen} onOpenChange={setPaletteOpen} />
     </>
   );
 };

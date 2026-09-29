@@ -65,3 +65,7 @@ export const useAppearance = () => {
  * in dark it resolves to the colour unchanged.
  */
 export const tone = (color: string) => `color-mix(in oklab, ${color} calc(100% - var(--lp-tone, 0%)), #0B1226)`;
+
+/** "⌘" on Apple devices, "Ctrl" elsewhere, for shortcut hints. */
+export const modKey = () =>
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl";

@@ -18,6 +18,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import Gradebook from "@/pages/teacher/Gradebook";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { fetchGradingSystems, getGradeBoundaries, type GradingSystem } from "@/services/gradingService";
@@ -181,7 +182,7 @@ const GoalPlanner: React.FC<{
 
 /* ---------- Page ---------- */
 
-const GradesPage = () => {
+const StudentGrades = () => {
   const { user } = useAuth();
   const { state: study } = useStudy();
   const [grades, setGrades] = useState<GradedWork[]>([]);
@@ -773,6 +774,12 @@ const GradesPage = () => {
       </div>
     </StudyShell>
   );
+};
+
+/** Teachers (and admins) get the class gradebook; students get their own grades. */
+const GradesPage = () => {
+  const { user } = useAuth();
+  return user?.role === "teacher" || user?.role === "admin" ? <Gradebook /> : <StudentGrades />;
 };
 
 export default GradesPage;

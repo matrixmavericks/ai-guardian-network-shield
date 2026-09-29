@@ -14,7 +14,8 @@ import { Brain, Save, Copy, RefreshCw, Sparkles, BookOpen, Trash2, Book, Users, 
 import { TeacherPlan, saveTeacherPlan, getTeacherPlans, deleteTeacherPlan, generateId } from "@/services/localStorageService";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardSidebar from "@/components/DashboardSidebar";
+import { StudyShell } from "@/components/subjects/kit";
+import { PageHeader } from "@/components/teacher/parts";
 import ReactMarkdown from 'react-markdown';
 import { toast as sonnerToast } from 'sonner';
 
@@ -324,19 +325,12 @@ const TeacherPlanGenerator = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <DashboardSidebar />
-      <div className="flex-1 overflow-y-auto">
-        <div className="container py-8 max-w-5xl">
-          <div className="mb-6">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-bold text-foreground">AI Teaching Plan Generator</h1>
-            </div>
-            <p className="text-muted-foreground mt-1">
-              Create comprehensive, AI-powered teaching plans in seconds
-            </p>
-          </div>
+    <StudyShell>
+          <PageHeader
+            eyebrow="Teaching"
+            title="Planner"
+            body="Describe the unit and Refyn drafts a full teaching plan: objectives, lessons, activities and checks. Turn any plan into learning paths for a class."
+          />
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
@@ -539,8 +533,6 @@ const TeacherPlanGenerator = () => {
               )}
             </TabsContent>
           </Tabs>
-        </div>
-      </div>
 
       {/* Create Learning Paths Dialog */}
       <Dialog open={createPathDialogOpen} onOpenChange={setCreatePathDialogOpen}>
@@ -666,7 +658,7 @@ const TeacherPlanGenerator = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </StudyShell>
   );
 };
 

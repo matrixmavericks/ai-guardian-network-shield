@@ -15,6 +15,8 @@ import Register from './pages/Register';
 import LearningPathsPage from './pages/LearningPathsPage';
 import LearningPathDetail from './pages/LearningPathDetail';
 import TeacherPlanGenerator from './components/TeacherPlanGenerator';
+import TeacherDashboard from './pages/teacher/TeacherDashboard';
+import MarkingPage from './pages/teacher/MarkingPage';
 import UserManagement from './components/UserManagement';
 import MessagesPage from './pages/MessagesPage';
 import SettingsPage from './pages/SettingsPage';
@@ -88,6 +90,8 @@ const DashboardRouter = () => {
   if (user && getPrimaryConfig(user.email)) {
     return <Navigate to="/playground" replace />;
   }
+  // Teachers get the teaching overview; admins keep the platform dashboard
+  if (user?.role === 'teacher') return <TeacherDashboard />;
   return <Dashboard />;
 };
 
@@ -142,6 +146,7 @@ function App() {
           <Route path="/admin-overview" element={<ProtectedRoute allowedRoles={['admin']}><AdminOverviewPage /></ProtectedRoute>} />
           <Route path="/school-management" element={<ProtectedRoute allowedRoles={['admin']}><SchoolManagementPage /></ProtectedRoute>} />
           <Route path="/security-keys" element={<ProtectedRoute allowedRoles={['admin']}><SecurityKeysPage /></ProtectedRoute>} />
+          <Route path="/marking" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><MarkingPage /></ProtectedRoute>} />
           <Route path="/teacher-plan-generator" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherPlanGenerator /></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
           <Route path="/registration-requests" element={<ProtectedRoute allowedRoles={['admin']}><RegistrationRequestsPage /></ProtectedRoute>} />

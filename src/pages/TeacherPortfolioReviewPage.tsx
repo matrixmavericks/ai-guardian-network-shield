@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardSidebar from "@/components/DashboardSidebar";
+import { StudyShell } from "@/components/subjects/kit";
+import { PageHeader } from "@/components/teacher/parts";
 import {
   ArrowLeft,
   Briefcase,
@@ -177,13 +178,8 @@ const TeacherPortfolioReviewPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <DashboardSidebar />
-      <div className="flex-1 p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Student Portfolios</h1>
-          <p className="text-muted-foreground mt-1">Review and provide feedback on student portfolio projects</p>
-        </div>
+    <StudyShell wide>
+        <PageHeader eyebrow="Teaching" title="Student portfolios" body="Browse each student's projects and capstones, and leave feedback they will see on the project page." />
 
         {isLoading ? (
           <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -396,8 +392,7 @@ const TeacherPortfolioReviewPage = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </StudyShell>
   );
 };
 

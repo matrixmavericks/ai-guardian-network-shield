@@ -27,8 +27,8 @@ const DashboardSidebar = () => {
   const isInSchool = useSchoolCheck();
 
   if (isInSchool) return null;
-  // Students get the redesigned portal sidebar; admins and teachers keep this one
-  if ((user?.role || 'student') === 'student') return <StudentSidebar />;
+  // Students and teachers get the portal sidebar; admins keep this one
+  if ((user?.role || 'student') !== 'admin') return <StudentSidebar />;
 
   const handleLogout = async () => {
     await logout();

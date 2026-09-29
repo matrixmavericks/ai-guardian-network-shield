@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DashboardSidebar from '@/components/DashboardSidebar';
+import { StudyShell } from '@/components/subjects/kit';
+import { PageHeader } from '@/components/teacher/parts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -153,19 +154,10 @@ const ContentLibraryPage = () => {
   }, [filtered]);
 
   return (
-    <div className="flex h-screen bg-background">
-      <DashboardSidebar />
-      <div className="flex-1 overflow-y-auto">
-        <div className="container py-8 max-w-6xl space-y-6">
+    <StudyShell wide>
+        <div className="space-y-6">
           <div className="flex items-start justify-between flex-wrap gap-4">
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-3">
-                <Library className="h-8 w-8 text-primary" /> Content Library
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Courses and learning paths organised by subject and grade level, with the author of each.
-              </p>
-            </div>
+            <PageHeader eyebrow="Teaching" title="Content library" body="Courses and learning paths organised by subject and grade level, with the author of each." />
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => navigate('/course/create')}>
                 <BookOpen className="h-4 w-4 mr-1" /> New course
@@ -282,8 +274,7 @@ const ContentLibraryPage = () => {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
-    </div>
+    </StudyShell>
   );
 };
 
