@@ -214,8 +214,9 @@ const Login = () => {
               <Sparkles className="h-3.5 w-3.5" />
             </span>
             <p className="text-[13px] leading-relaxed text-lp-soft">
-              <span className="font-medium text-lp-text">Pilot students:</span> sign in with the temporary password you
-              were given, or with Google using the same school email. Both open the same account.
+              <span className="font-medium text-lp-text">Pilot students:</span> type the student ID (MIS-…) and password
+              from your card. Student ID accounts don&apos;t use Google. Given a school email instead? Use its temporary
+              password or Google.
             </p>
           </div>
         </div>

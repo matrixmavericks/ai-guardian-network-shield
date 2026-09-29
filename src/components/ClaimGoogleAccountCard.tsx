@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { X } from "lucide-react";
+import { STUDENT_ID_DOMAIN } from "@/lib/studentIds";
 
 const DISMISS_KEY = "refyn_claim_google_dismissed";
 
@@ -25,6 +26,10 @@ const ClaimGoogleAccountCard = () => {
       const { data } = await supabase.auth.getUser();
       const user = data?.user;
       if (!active || !user) return;
+      // Anonymous student-ID accounts (MIS-…) stay password-only at the school's
+      // request: their address can never match a Google account, so "linking"
+      // would really sign the student in as their named Google account.
+      if (user.email?.toLowerCase().endsWith(`@${STUDENT_ID_DOMAIN}`) || user.user_metadata?.anonymous_pilot) return;
       const identities = (user as any).identities as { provider: string }[] | undefined;
       const hasGoogle = (identities ?? []).some((i) => i.provider === "google");
       setEmail(user.email ?? "");
