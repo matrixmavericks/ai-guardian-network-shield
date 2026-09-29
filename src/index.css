@@ -753,3 +753,37 @@ html.lp-light :is(.lp-app, .lp-chrome) .lp-pop { box-shadow: 0 24px 60px -24px r
   .lp-guide blockquote { background: rgb(var(--lp-blue) / 0.08); border-radius: 0 12px 12px 0; padding: 0.75em 1em; color: rgb(var(--lp-accent-soft)); }
   .lp-guide td strong, .lp-guide li strong { color: rgb(var(--lp-white, 255 255 255)); }
 }
+
+/* Refyn Studio printables */
+@layer components {
+  .ws-ed { border-radius: 4px; outline: none; transition: background-color 0.15s ease, box-shadow 0.15s ease; }
+  .ws-ed:hover { background: rgba(37, 99, 235, 0.06); }
+  .ws-ed:focus { background: rgba(37, 99, 235, 0.08); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35); }
+  .break-after-avoid { break-after: avoid; page-break-after: avoid; }
+}
+@media print {
+  .ws-noprint { display: none !important; }
+  .ws-page-break { break-before: page; page-break-before: always; }
+  .ws-paper { max-width: none !important; padding: 0 !important; box-shadow: none !important; }
+  .ws-ed:hover, .ws-ed:focus { background: none !important; box-shadow: none !important; }
+  .ws-q { break-inside: avoid; page-break-inside: avoid; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* White "paper" for Studio outputs: dark ink in every app theme and in print */
+.lp-paper {
+  --lp-md: 51 65 85;
+  --lp-white: 11 18 38;
+  --lp-text: 15 23 42;
+  --lp-soft: 51 65 85;
+  --lp-mute: 100 116 139;
+  --lp-line: 222 229 240;
+  --lp-raised: 241 245 251;
+  --lp-deep: 246 248 252;
+  --lp-sky: 37 99 235;
+  --lp-blue: 37 99 235;
+  --lp-code: 29 78 216;
+  --lp-accent-soft: 30 64 175;
+  background: #ffffff;
+  color: rgb(15 23 42);
+}

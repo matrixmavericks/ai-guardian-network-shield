@@ -6,6 +6,8 @@ import {
   Briefcase,
   CalendarClock,
   CheckCircle2,
+  FilePlus2,
+  Shapes,
   ClipboardCheck,
   Gauge,
   GraduationCap,
@@ -34,6 +36,7 @@ import { modKey } from "@/lib/portalAppearance";
 import CommandPalette, { type PaletteNav } from "@/components/portal/CommandPalette";
 import { needsMarking, useTeacherData, waited } from "@/components/teacher/data";
 import { Wordmark } from "@/components/landing/LandingNav";
+import { getStudioConfig } from "@/lib/mispStudioConfigs";
 
 type NavItem = { title: string; href: string; icon: React.ElementType; badge?: "marking" };
 type NavGroup = { label: string; items: NavItem[] };
@@ -102,12 +105,37 @@ const TEACHER_GROUPS: NavGroup[] = [
 
 const isTeacherRole = (role?: string) => role === "teacher";
 
+/** Pilot "Studio" teachers get their Studio first, and the class overview under Core. */
+const groupsFor = (teacher: boolean, email?: string | null): { groups: NavGroup[]; home: string } => {
+  if (!teacher) return { groups: STUDENT_GROUPS, home: "/student-dashboard" };
+  const studio = getStudioConfig(email);
+  if (!studio) return { groups: TEACHER_GROUPS, home: "/dashboard" };
+  const core = TEACHER_GROUPS[0].items.map((i) => (i.href === "/dashboard" ? { ...i, title: "Class overview", href: "/teaching" } : i));
+  return {
+    home: "/studio",
+    groups: [
+      {
+        label: studio.title,
+        items: [
+          { title: "Studio", href: "/studio", icon: studio.HeroIcon as React.ElementType },
+          { title: "Create printables", href: "/studio/create", icon: FilePlus2 },
+          { title: "Diagram lab", href: "/studio/diagrams", icon: Shapes },
+          { title: "Library", href: "/studio/library", icon: Library },
+        ],
+      },
+      { label: "Core", items: core },
+      ...TEACHER_GROUPS.slice(1),
+    ],
+  };
+};
+
 /** Items that also count as active for a nav entry (detail pages live under their list). */
 const alsoActive = (href: string, pathname: string) =>
   (href === "/my-courses" && /^\/(subjects|course)\//.test(pathname)) ||
   (href === "/classes" && pathname.startsWith("/class/")) ||
   (href === "/learning-paths" && /^\/(learning-path\/|create-learning-path)/.test(pathname)) ||
-  (href === "/portfolio" && pathname.startsWith("/portfolio/"));
+  (href === "/portfolio" && pathname.startsWith("/portfolio/")) ||
+  (href === "/studio" && pathname.startsWith("/studio/tool/"));
 
 /** Shows the marking backlog; only mounted for teachers so students never load class data. */
 const MarkingBadge: React.FC = () => {
@@ -159,8 +187,7 @@ const SidebarBody: React.FC<{ onNavigate?: () => void; onSearch: () => void }> =
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const teacher = isTeacherRole(user?.role);
-  const groups = teacher ? TEACHER_GROUPS : STUDENT_GROUPS;
-  const home = teacher ? "/dashboard" : "/student-dashboard";
+  const { groups, home } = groupsFor(teacher, user?.email);
   const displayName = user?.fullName || user?.email || (teacher ? "Teacher" : "Student");
   const initials = displayName
     .split(" ")
@@ -311,8 +338,8 @@ const StudentSidebar = () => {
   const { user } = useAuth();
   const teacher = isTeacherRole(user?.role);
   const paletteNav = useMemo<PaletteNav[]>(
-    () => (teacher ? TEACHER_GROUPS : STUDENT_GROUPS).flatMap((g) => g.items.map((i) => ({ title: i.title, href: i.href, icon: i.icon, group: g.label }))),
-    [teacher],
+    () => groupsFor(teacher, user?.email).groups.flatMap((g) => g.items.map((i) => ({ title: i.title, href: i.href, icon: i.icon, group: g.label }))),
+    [teacher, user?.email],
   );
 
   useEffect(() => setOpen(false), [location.pathname]);

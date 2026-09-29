@@ -208,13 +208,13 @@ const humanitiesTools: StudioTool[] = [
   {
     id: "diagram",
     title: "Econ Diagram Explainer",
-    description: "Get an ASCII-sketched diagram + step-by-step shifts and welfare analysis.",
+    description: "An exact, labelled diagram with step-by-step shifts and welfare analysis.",
     icon: LineChart,
     needsInput: true,
     inputLabel: "Diagram or scenario",
     inputPlaceholder: "e.g. effect of indirect tax on a market, monopoly DWL",
     buildPrompt: (i, g) =>
-      `For ${g} IB Economics, explain the diagram for "${i}". Sketch it as ASCII art with axes labelled, mark all key points (P, Q, equilibria, shaded areas), then walk through (1) the initial equilibrium, (2) the shift and what causes it, (3) the new equilibrium, (4) effects on consumer surplus / producer surplus / government revenue / deadweight loss, (5) stakeholder evaluation.`,
+      `For ${g} IB Economics, explain the diagram for "${i}". Include the diagram (with the shift, and shaded areas where relevant), then walk through (1) the initial equilibrium, (2) the shift and what causes it, (3) the new equilibrium, (4) effects on consumer surplus / producer surplus / government revenue / deadweight loss, (5) stakeholder evaluation.`,
   },
   {
     id: "commandterms",

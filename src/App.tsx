@@ -76,7 +76,11 @@ import LearnerProfilePortfolioPage from './pages/intelligence/LearnerProfilePort
 import RecipeMarketplacePage from './pages/RecipeMarketplacePage';
 import DemoShowcasePage from './pages/DemoShowcasePage';
 import GuidedTourPage from './pages/GuidedTourPage';
-import TeacherStudio from './pages/TeacherStudio';
+import StudioHome from './pages/studio/StudioHome';
+import PrintableMaker from './pages/studio/PrintableMaker';
+import DiagramLab from './pages/studio/DiagramLab';
+import StudioToolPage from './pages/studio/StudioToolPage';
+import StudioLibrary from './pages/studio/StudioLibrary';
 import PrimaryPlayground from './pages/PrimaryPlayground';
 import { getStudioConfig } from './lib/mispStudioConfigs';
 import { getPrimaryConfig } from './lib/mispPrimaryConfig';
@@ -141,7 +145,12 @@ function App() {
           <Route path="/legal-admin" element={<ProtectedRoute allowedRoles={['admin']}><LegalAdminPage /></ProtectedRoute>} />
 
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><DashboardRouter /></ProtectedRoute>} />
-          <Route path="/studio" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TeacherStudio /></ProtectedRoute>} />
+          <Route path="/studio" element={<ProtectedRoute allowedRoles={['teacher','admin']}><StudioHome /></ProtectedRoute>} />
+          <Route path="/studio/create" element={<ProtectedRoute allowedRoles={['teacher','admin']}><PrintableMaker /></ProtectedRoute>} />
+          <Route path="/studio/diagrams" element={<ProtectedRoute allowedRoles={['teacher','admin']}><DiagramLab /></ProtectedRoute>} />
+          <Route path="/studio/tool/:id" element={<ProtectedRoute allowedRoles={['teacher','admin']}><StudioToolPage /></ProtectedRoute>} />
+          <Route path="/studio/library" element={<ProtectedRoute allowedRoles={['teacher','admin']}><StudioLibrary /></ProtectedRoute>} />
+          <Route path="/teaching" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TeacherDashboard /></ProtectedRoute>} />
           <Route path="/playground" element={<ProtectedRoute allowedRoles={['teacher','admin']}><PrimaryPlayground /></ProtectedRoute>} />
           <Route path="/admin-overview" element={<ProtectedRoute allowedRoles={['admin']}><AdminOverviewPage /></ProtectedRoute>} />
           <Route path="/school-management" element={<ProtectedRoute allowedRoles={['admin']}><SchoolManagementPage /></ProtectedRoute>} />
