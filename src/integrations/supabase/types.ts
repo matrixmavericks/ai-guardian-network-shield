@@ -2134,6 +2134,92 @@ export type Database = {
           },
         ]
       }
+      pp_fingerprints: {
+        Row: {
+          created_at: string
+          hashes: number[]
+          review_id: string
+          school_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hashes: number[]
+          review_id: string
+          school_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hashes?: number[]
+          review_id?: string
+          school_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pp_fingerprints_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: true
+            referencedRelation: "pp_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pp_fingerprints_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pp_reviews: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          id: string
+          pages: number | null
+          recording_minutes: number
+          result: Json
+          school_id: string | null
+          title: string
+          user_id: string
+          words: number | null
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          pages?: number | null
+          recording_minutes?: number
+          result?: Json
+          school_id?: string | null
+          title?: string
+          user_id: string
+          words?: number | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          pages?: number | null
+          recording_minutes?: number
+          result?: Json
+          school_id?: string | null
+          title?: string
+          user_id?: string
+          words?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pp_reviews_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       primary_observations: {
         Row: {
           created_at: string
