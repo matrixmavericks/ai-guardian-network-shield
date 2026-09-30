@@ -30,6 +30,7 @@ import {
   History,
   Presentation,
   FileStack,
+  Target,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isStudentId } from "@/lib/studentIds";
@@ -59,6 +60,7 @@ const STUDENT_GROUPS: NavGroup[] = [
     items: [
       { title: "Learning Paths", href: "/learning-paths", icon: Book },
       { title: "Portfolio", href: "/portfolio", icon: Briefcase },
+      { title: "Personal Project", href: "/personal-project", icon: Target },
       { title: "AI Assistant", href: "/ai-learning-assistant", icon: Brain },
       { title: "Messages", href: "/messages", icon: MessageSquare },
     ],
@@ -89,6 +91,7 @@ const TEACHER_GROUPS: NavGroup[] = [
       { title: "Planner", href: "/teacher-plan-generator", icon: NotebookPen },
       { title: "Presentations", href: "/decks", icon: Presentation },
       { title: "Past papers", href: "/past-papers", icon: FileStack },
+      { title: "Personal Project", href: "/personal-project", icon: Target },
       { title: "MYP Courses", href: "/my-courses", icon: GraduationCap },
       { title: "Content Library", href: "/library", icon: Library },
       { title: "Learning Paths", href: "/learning-paths", icon: Book },
