@@ -1716,6 +1716,65 @@ export type Database = {
         }
         Relationships: []
       }
+      past_papers: {
+        Row: {
+          char_count: number | null
+          content: string
+          created_at: string
+          file_name: string | null
+          file_path: string | null
+          id: string
+          kind: string
+          pages: number | null
+          school_id: string | null
+          session: string
+          subject: string
+          subject_group: string
+          title: string
+          uploaded_by: string
+        }
+        Insert: {
+          char_count?: number | null
+          content?: string
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          kind: string
+          pages?: number | null
+          school_id?: string | null
+          session: string
+          subject: string
+          subject_group: string
+          title: string
+          uploaded_by: string
+        }
+        Update: {
+          char_count?: number | null
+          content?: string
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          kind?: string
+          pages?: number | null
+          school_id?: string | null
+          session?: string
+          subject?: string
+          subject_group?: string
+          title?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "past_papers_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_transactions: {
         Row: {
           amount_inr: number
@@ -2896,6 +2955,47 @@ export type Database = {
             columns: ["topic_id"]
             isOneToOne: false
             referencedRelation: "course_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_decks: {
+        Row: {
+          created_at: string
+          deck: Json
+          id: string
+          session_id: string | null
+          slide_count: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deck?: Json
+          id?: string
+          session_id?: string | null
+          slide_count?: number
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deck?: Json
+          id?: string
+          session_id?: string | null
+          slide_count?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_decks_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_sessions"
             referencedColumns: ["id"]
           },
         ]
