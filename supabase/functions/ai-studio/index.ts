@@ -71,6 +71,24 @@ const logUsage = (userId: string, model: string, promptTokens: number, completio
   return admin().from("ai_usage_logs").insert({ user_id: userId, prompt_tokens: promptTokens, completion_tokens: completionTokens, total_tokens: promptTokens + completionTokens, estimated_cost_usd: cost, model });
 };
 
+/** The generated image as base64, whichever shape the gateway answers in (b64_json, a data or hosted URL, or chat-style images). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function imageBase64(data: any): Promise<string | null> {
+  const first = data?.data?.[0];
+  if (first?.b64_json) return first.b64_json;
+  const url: string | undefined = first?.url ?? data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  if (!url) return null;
+  if (url.startsWith("data:")) return url.slice(url.indexOf(",") + 1);
+  try {
+    const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  } catch {
+    return null;
+  }
+}
+
 /** Count braces outside strings: 0 when a JSON object is complete. */
 function balance(s: string) {
   let depth = 0, inStr = false, esc = false;
@@ -270,8 +288,7 @@ ${LAYOUT_GUIDE}`;
           body: JSON.stringify({ model: a.model, ...a.body }),
         });
         if (!r.ok) { console.error("image", a.model, r.status, (await r.text()).slice(0, 300)); if (r.status === 402) return json({ error: "AI credits have run out." }, 402); continue; }
-        const data = await r.json();
-        b64 = data?.data?.[0]?.b64_json ?? null;
+        b64 = await imageBase64(await r.json());
         if (b64) { used = a.model; break; }
       } catch (e) {
         console.error("image failed", a.model, e);
