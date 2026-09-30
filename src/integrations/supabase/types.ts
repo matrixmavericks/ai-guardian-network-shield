@@ -2900,6 +2900,47 @@ export type Database = {
           },
         ]
       }
+      studio_decks: {
+        Row: {
+          created_at: string
+          deck: Json
+          id: string
+          session_id: string | null
+          slide_count: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deck?: Json
+          id?: string
+          session_id?: string | null
+          slide_count?: number
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deck?: Json
+          id?: string
+          session_id?: string | null
+          slide_count?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_decks_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           billing_cycle: string | null
