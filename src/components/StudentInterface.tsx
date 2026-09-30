@@ -2,8 +2,16 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Archive, ArrowUp, Beaker, BookMarked, BookOpen, Calculator, Check, ChevronDown, Copy, FileText, Languages,
   LayoutGrid, Lightbulb, Loader2, LogOut, Menu, MessageSquare, PanelLeftClose, PanelLeftOpen, PenTool, Plus,
-  Puzzle, Route, Search, Sparkles, Terminal, Users, X, Briefcase, Layers, RotateCcw,
+  Puzzle, Route, Search, Sparkles, Terminal, Users, X, Briefcase, Layers, RotateCcw, Paperclip, Library as LibraryIcon,
+  AlertCircle, Upload as UploadIcon,
 } from "lucide-react";
+import remarkGfm from "remark-gfm";
+import { useChatLibrary } from "@/components/assistant/files/library";
+import { LibraryPanel, itemIcon } from "@/components/assistant/files/LibraryPanel";
+import { FileCard } from "@/components/assistant/files/FileCard";
+import { splitReply } from "@/components/assistant/files/outputs";
+import { ACCEPT } from "@/components/assistant/files/extract";
+import { fetchDriveFile, pickDriveFiles } from "@/components/assistant/files/google";
 import { useToast } from "@/components/ui/use-toast";
 import FeatureGate from "@/components/FeatureGate";
 import { IN_ANDROID_APP } from "@/lib/appShell";
@@ -43,6 +51,10 @@ interface ChatMessage {
   effort?: string | null;
   /** Set when a different model answered than the one chosen */
   notice?: string;
+  /** Files added with this message */
+  attachments?: string[];
+  /** How much of the chat library the reply read */
+  library?: { items: number; used: number; mode: "full" | "excerpts"; names?: string[] };
 }
 
 interface ChatSession {
@@ -71,7 +83,7 @@ const NOTES_PROMPT =
   "Turn what we've covered in this chat into concise study notes: a short summary, the key ideas under clear headings, any formulas or definitions, and three questions I should be able to answer.";
 
 type ChatState = "idle" | "sending" | "error";
-type Panel = "skills" | "notebook" | "commands" | "archived" | null;
+type Panel = "skills" | "notebook" | "commands" | "archived" | "files" | null;
 type Suggestion = { key: string; label: string; hint: string; kind: "command" | "skill"; value: string; command?: Command };
 
 const groupSessions = (sessions: ChatSession[]) => {
@@ -150,6 +162,13 @@ const StudentInterface = () => {
   const [modelAccess, setModelAccess] = useState<ModelAccess | null>(null);
   const [retryMenu, setRetryMenu] = useState(false);
   const [pendingModel, setPendingModel] = useState<string | null>(null);
+
+  // Chat library: files, notes and saved replies Refyn reads on every reply
+  const lib = useChatLibrary(user?.id ?? null, currentSessionId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const readyUploads = lib.uploads.filter(u => u.status === "ready");
+  const pendingUploads = lib.uploads.filter(u => u.status === "uploading" || u.status === "reading");
 
   // Pick up resource context from URL params (from "Use in AI" button)
   useEffect(() => {
@@ -249,7 +268,7 @@ const StudentInterface = () => {
       .order('created_at', { ascending: true });
 
     if (data) {
-      type Row = { id: string; role: string; content: string; created_at: string; metadata: { model?: string; effort?: string | null; notice?: string } | null };
+      type Row = { id: string; role: string; content: string; created_at: string; metadata: { model?: string; effort?: string | null; notice?: string; attachments?: string[]; library?: ChatMessage["library"] } | null };
       setMessages(data.map((m: Row) => ({
         id: m.id,
         role: m.role as "user" | "assistant",
@@ -258,6 +277,8 @@ const StudentInterface = () => {
         model: m.metadata?.model,
         effort: m.metadata?.effort ?? null,
         notice: m.metadata?.notice,
+        attachments: m.metadata?.attachments,
+        library: m.metadata?.library,
       })));
     }
     const session = sessions.find(s => s.id === sessionId);
@@ -278,6 +299,27 @@ const StudentInterface = () => {
     }
     setCurrentSessionId(data.id);
     return data.id;
+  };
+
+  /** The chat to save files into, created on first use. */
+  const ensureSession = async () => currentSessionId ?? (await createSession());
+
+  const addFiles = (files: File[]) => {
+    if (!files.length) return;
+    lib.addFiles(files, ensureSession).then(loadSessions);
+  };
+
+  const importFromDrive = async () => {
+    try {
+      const picked = await pickDriveFiles();
+      if (!picked.length) return;
+      const files: File[] = [];
+      for (const f of picked) files.push(await fetchDriveFile(f));
+      await lib.addFiles(files, ensureSession, picked.map(p => ({ kind: "google" as const, url: p.url })));
+      loadSessions();
+    } catch (e) {
+      toast({ title: "Google Drive", description: (e as Error).message, variant: "destructive" });
+    }
   };
 
   const saveMessage = async (sessionId: string, role: string, content: string, meta?: Record<string, unknown>) => {
@@ -325,7 +367,10 @@ const StudentInterface = () => {
     text: string,
     opts: { saveAs?: string; retry?: boolean; model?: string; base?: ChatMessage[] } = {},
   ) => {
-    if (!text.trim() || chatState === "sending") return;
+    const attached = opts.retry ? [] : readyUploads;
+    const typed = !!text.trim();
+    if ((!text.trim() && !attached.length) || chatState === "sending") return;
+    if (!text.trim()) text = `I've added ${attached.map(u => `"${u.name}"`).join(", ")}. Give me a short overview of ${attached.length === 1 ? "it" : "them"} and ask what I'd like to do next.`;
     const base = opts.base ?? messages;
     const model = opts.model ?? activeModel;
     const info = findModel(model);
@@ -348,6 +393,7 @@ const StudentInterface = () => {
       content: text.trim(),
       timestamp: new Date(),
       skills: activeSkills.map(s => s.name),
+      attachments: attached.length ? attached.map(u => u.name) : undefined,
     };
 
     if (!opts.retry) setMessages(prev => [...prev, userMessage]);
@@ -365,11 +411,13 @@ const StudentInterface = () => {
       }
 
       // Save user message (a retry re-uses the one already saved)
-      if (!opts.retry) await saveMessage(sessionId, 'user', sentPrompt);
+      if (!opts.retry) await saveMessage(sessionId, 'user', sentPrompt, attached.length ? { attachments: attached.map(u => u.name) } : undefined);
+      if (attached.length) lib.clearUploads(attached.map(u => u.key));
 
       // Update session title on first message
       if (base.length === 0 && !opts.retry) {
-        const title = sentPrompt.length > 50 ? sentPrompt.substring(0, 50) + '...' : sentPrompt;
+        const titleText = typed ? sentPrompt : attached.map(u => u.name).join(", ");
+        const title = titleText.length > 50 ? titleText.substring(0, 50) + '...' : titleText;
         await db.from('ai_chat_sessions').update({ title }).eq('id', sessionId);
       }
 
@@ -391,6 +439,8 @@ const StudentInterface = () => {
           resourceContext: context,
           model,
           effort,
+          library: true,
+          images: attached.map(u => u.image).filter(Boolean),
         },
       });
 
@@ -413,6 +463,7 @@ const StudentInterface = () => {
         model: typeof meta.model === "string" ? meta.model : undefined,
         effort: typeof meta.effort === "string" ? meta.effort : null,
         notice: typeof meta.notice === "string" ? meta.notice : undefined,
+        library: meta.library && typeof meta.library === "object" ? meta.library : undefined,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -554,6 +605,7 @@ const StudentInterface = () => {
         break;
       case "skills": done(); setPanel("skills"); break;
       case "notebook": done(); setNotebookFocus(null); setPanel("notebook"); break;
+      case "files": done(); setPanel("files"); break;
       case "help": done(); setPanel("commands"); break;
       case "guided": done(); setIsProcessTeaching(true); toast({ title: "Guided mode on", description: "Refyn will help you work it out." }); break;
       case "direct": done(); setIsProcessTeaching(false); toast({ title: "Direct mode on", description: "Refyn will explain things clearly and directly." }); break;
@@ -594,6 +646,11 @@ const StudentInterface = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = prompt.trim();
+    if (pendingUploads.length) {
+      toast({ title: "Still reading your files", description: "Send once they've finished loading." });
+      return;
+    }
+    if (!text && readyUploads.length) { await sendPrompt(""); return; }
     if (!text) return;
     if (text.startsWith("/")) {
       const parsed = parseCommand(text);
@@ -693,6 +750,7 @@ const StudentInterface = () => {
         { title: "Messages", href: "/messages", icon: MessageSquare },
       ];
   const tools = [
+    { title: "Files", icon: LibraryIcon, count: lib.items.length, onClick: () => setPanel("files") },
     { title: "Notebook", icon: BookMarked, count: notebook.length, onClick: () => { setNotebookFocus(null); setPanel("notebook"); } },
     { title: "Skills", icon: Puzzle, count: installedSkills.length, onClick: () => setPanel("skills") },
     { title: "Commands", icon: Terminal, onClick: () => setPanel("commands") },
@@ -874,6 +932,30 @@ const StudentInterface = () => {
       )}
 
       <div className="lp-pop rounded-[26px] border border-lp-line bg-lp-surface/90 p-2 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl transition-[border-color,box-shadow] focus-within:border-lp-blue/60 focus-within:shadow-[0_0_0_4px_rgba(59,130,246,0.12),0_20px_60px_-30px_rgba(0,0,0,0.9)]">
+        {lib.uploads.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 px-1.5 pt-1.5">
+            {lib.uploads.map(u => {
+              const Icon = itemIcon({ kind: "file", name: u.name });
+              return (
+                <span
+                  key={u.key}
+                  title={u.detail || u.name}
+                  className={cn(
+                    "lp-fade flex max-w-[240px] items-center gap-2 rounded-xl border py-1.5 pl-2 pr-1 text-[12.5px]",
+                    u.status === "error" ? "border-lp-red/40 bg-lp-red/10 text-lp-red" : "border-lp-line bg-lp-raised/70 text-white",
+                  )}
+                >
+                  {u.status === "error" ? <AlertCircle className="h-4 w-4 shrink-0" /> : u.status === "ready" ? (u.image ? <img src={u.image} alt="" className="h-6 w-6 shrink-0 rounded object-cover" /> : <Icon className="h-4 w-4 shrink-0 text-lp-sky" />) : <Loader2 className="h-4 w-4 shrink-0 animate-spin text-lp-sky" />}
+                  <span className="min-w-0 truncate">{u.name}</span>
+                  <span className="shrink-0 text-[11px] text-lp-mute">{u.status === "uploading" ? "Uploading" : u.status === "reading" ? "Reading" : u.status === "error" ? "Failed" : ""}</span>
+                  <button type="button" onClick={() => lib.clearUploads([u.key])} aria-label={`Remove ${u.name} from this message`} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-lp-mute hover:bg-white/10 hover:text-white">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
         {resourceContext && (
           <div className="m-1.5 flex items-center gap-2 rounded-2xl border border-lp-blue/30 bg-lp-blue/10 px-3 py-2 text-[13px] text-lp-soft">
             <FileText className="h-4 w-4 shrink-0 text-lp-sky" />
@@ -890,13 +972,45 @@ const StudentInterface = () => {
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={e => {
+            const files = Array.from(e.clipboardData.files);
+            if (files.length) { e.preventDefault(); addFiles(files); }
+          }}
           rows={1}
           aria-label="Message Refyn"
-          placeholder={resourceContext ? `Ask about "${resourceContext.title}"…` : `Ask Refyn about ${activeSubjectData.name.toLowerCase()}, or type / for commands`}
+          placeholder={readyUploads.length ? "Ask about your files, or send them as they are" : resourceContext ? `Ask about "${resourceContext.title}"…` : `Ask Refyn about ${activeSubjectData.name.toLowerCase()}, or type / for commands`}
           className="block max-h-[200px] min-h-[48px] w-full resize-none bg-transparent px-3.5 pb-1 pt-3 text-[15.5px] leading-relaxed text-white placeholder:text-lp-mute outline-none"
         />
         <div className="flex items-center justify-between gap-2 px-1.5 pb-1 pt-1">
           <div className="flex min-w-0 items-center gap-1.5">
+            {/* Attach files */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={ACCEPT}
+              className="hidden"
+              onChange={e => { addFiles(Array.from(e.target.files ?? [])); e.target.value = ""; }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Add files"
+              title="Add files: PDF, Word, Excel, PowerPoint, CSV, images"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lp-soft transition-colors hover:bg-white/[0.06] hover:text-white"
+            >
+              <Paperclip className="h-[18px] w-[18px]" />
+            </button>
+            {lib.items.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setPanel("files")}
+                title="This chat's files and context"
+                className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-lp-line px-2.5 text-[13px] font-medium text-lp-soft transition-colors hover:border-lp-blue/50 hover:text-white sm:px-3"
+              >
+                <LibraryIcon className="h-4 w-4 text-lp-sky" /> {lib.items.length}
+              </button>
+            )}
             {/* Subject */}
             <div className="relative">
               <button
@@ -984,7 +1098,7 @@ const StudentInterface = () => {
 
           <button
             type="submit"
-            disabled={chatState === "sending" || compacting || !prompt.trim()}
+            disabled={chatState === "sending" || compacting || pendingUploads.length > 0 || (!prompt.trim() && !readyUploads.length)}
             aria-label="Send"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lp-blue text-white shadow-[0_8px_24px_-8px_rgba(59,130,246,0.9)] transition-all hover:bg-[#2F6FE0] disabled:bg-lp-raised disabled:text-lp-mute disabled:shadow-none"
           >
@@ -1043,7 +1157,19 @@ const StudentInterface = () => {
       </aside>
 
       <FeatureGate feature="aiAssistant" className="flex min-w-0 flex-1">
-        <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <main
+          className="relative flex min-w-0 flex-1 flex-col overflow-hidden"
+          onDragOver={e => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setDragging(true); } }}
+          onDragLeave={e => { if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
+          onDrop={e => { e.preventDefault(); setDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
+        >
+          {dragging && (
+            <div className="pointer-events-none absolute inset-3 z-30 flex flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-lp-sky/60 bg-lp-deep/85 text-center backdrop-blur-sm">
+              <UploadIcon className="h-8 w-8 text-lp-sky" />
+              <p className="mt-3 text-[16px] font-medium text-white">Drop files to add them to this chat</p>
+              <p className="mt-1 text-[13px] text-lp-mute">PDF, Word, Excel, PowerPoint, CSV, text and images</p>
+            </div>
+          )}
           <div
             aria-hidden
             className="pointer-events-none absolute left-1/2 top-0 h-[360px] w-[800px] -translate-x-1/2 rounded-full opacity-40 blur-[130px]"
@@ -1133,6 +1259,7 @@ const StudentInterface = () => {
                     { label: "/quiz photosynthesis", run: () => setPrompt("/quiz photosynthesis") },
                     { label: "@essay-coach", run: () => setPrompt("@essay-coach ") },
                     { label: "Browse skills", run: () => setPanel("skills") },
+                    { label: "Add files", run: () => fileInputRef.current?.click() },
                   ].map(c => (
                     <button
                       key={c.label}
@@ -1151,10 +1278,22 @@ const StudentInterface = () => {
             <div className="relative min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">
               <div className="mx-auto w-full max-w-[800px] space-y-8 py-6">
                 {messages.map((msg, i) => (
-                  <React.Fragment key={msg.id}>
+                  <div key={msg.id} className="space-y-8">
                     {compact && compact.index === i && compactDivider}
                     {msg.role === "user" ? (
                       <div className="lp-fade flex flex-col items-end gap-1.5">
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div className="flex max-w-[85%] flex-wrap justify-end gap-1.5">
+                            {msg.attachments.map(name => {
+                              const Icon = itemIcon({ kind: "file", name });
+                              return (
+                                <button key={name} type="button" onClick={() => setPanel("files")} className="flex max-w-[260px] items-center gap-2 rounded-xl border border-lp-line bg-lp-surface px-2.5 py-1.5 text-[12.5px] text-white hover:border-lp-blue/50">
+                                  <Icon className="h-4 w-4 shrink-0 text-lp-sky" /> <span className="truncate">{name}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                         <p className="max-w-[85%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-lp-blue px-5 py-3 text-[15px] leading-relaxed text-white shadow-[0_10px_30px_-12px_rgba(59,130,246,0.8)]">
                           {msg.content}
                         </p>
@@ -1173,9 +1312,21 @@ const StudentInterface = () => {
                       <div className="lp-fade group flex gap-4">
                         <RefynMark className="mt-0.5 h-9 w-9" />
                         <div className="min-w-0 flex-1">
-                          <div className="lp-md">
-                            <ReactMarkdown>{msg.content}</ReactMarkdown>
-                          </div>
+                          {splitReply(msg.content).map((seg, k) =>
+                            seg.type === "text" ? (
+                              <div key={k} className="lp-md">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{seg.text}</ReactMarkdown>
+                              </div>
+                            ) : (
+                              <FileCard
+                                key={k}
+                                file={seg.file}
+                                complete={seg.complete}
+                                teacher={isTeacher}
+                                onSaveToLibrary={async f => { await lib.addOutput(f, ensureSession); }}
+                              />
+                            ),
+                          )}
                           <div className="mt-2.5 flex flex-wrap items-center gap-x-1 gap-y-1">
                             <div className={cn("flex items-center gap-0.5 transition-opacity focus-within:opacity-100 group-hover:opacity-100", i === messages.length - 1 ? "opacity-100" : "opacity-0")}>
                               <button
@@ -1242,14 +1393,44 @@ const StudentInterface = () => {
                               >
                                 <BookMarked className="h-4 w-4" />
                               </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const heading = msg.content.match(/^#{1,3}\s+(.+)$/m)?.[1];
+                                  try {
+                                    await lib.addText("message", heading ? heading.slice(0, 80) : `Reply from ${format(msg.timestamp, "d MMM, p")}`, msg.content, ensureSession);
+                                    toast({ title: "Added to this chat's files", description: "Refyn will keep it in mind for the rest of the chat." });
+                                  } catch (e) {
+                                    toast({ title: "Couldn't add it", description: (e as Error).message, variant: "destructive" });
+                                  }
+                                }}
+                                title="Keep in this chat's files"
+                                aria-label="Keep in this chat's files"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-lp-mute hover:bg-white/[0.06] hover:text-white"
+                              >
+                                <LibraryIcon className="h-4 w-4" />
+                              </button>
                             </div>
                             {msg.model && <PoweredBy model={msg.model} effort={msg.effort} className="ml-1" />}
+                            {msg.library && msg.library.used > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setPanel("files")}
+                                title={msg.library.names?.join(", ")}
+                                className="ml-1 flex items-center gap-1 rounded-full border border-lp-line px-2 py-0.5 text-[11.5px] text-lp-mute hover:text-white"
+                              >
+                                <LibraryIcon className="h-3 w-3 text-lp-sky" />
+                                {msg.library.mode === "full"
+                                  ? `Read ${msg.library.used} file${msg.library.used === 1 ? "" : "s"}`
+                                  : `Searched ${msg.library.items} files, used ${msg.library.used}`}
+                              </button>
+                            )}
                           </div>
                           {msg.notice && <p className="mt-1 text-[12px] text-[#FBBF24]/90">{msg.notice}</p>}
                         </div>
                       </div>
                     )}
-                  </React.Fragment>
+                  </div>
                 ))}
                 {compact && compact.index >= messages.length && compactDivider}
                 {(chatState === "sending" || compacting) && (
@@ -1284,6 +1465,34 @@ const StudentInterface = () => {
         open={panel === "commands"}
         onClose={() => setPanel(null)}
         onPick={c => { setPanel(null); setPrompt(`/${c.name}${c.takesInput ? " " : ""}`); textareaRef.current?.focus(); }}
+      />
+      <LibraryPanel
+        open={panel === "files"}
+        onClose={() => setPanel(null)}
+        items={lib.items}
+        uploads={lib.uploads}
+        loading={lib.loading}
+        available={lib.available}
+        modelPrice={findModel(activeModel)?.price.input ?? 0.3}
+        teacher={isTeacher}
+        onUpload={() => fileInputRef.current?.click()}
+        onDrive={importFromDrive}
+        onAddNote={async (name, text) => {
+          try {
+            await lib.addText("note", name, text, ensureSession);
+            loadSessions();
+          } catch (e) {
+            toast({ title: "Couldn't save the note", description: (e as Error).message, variant: "destructive" });
+          }
+        }}
+        onRemove={item => lib.remove(item)}
+        onTogglePin={item => lib.togglePin(item)}
+        onDownload={item => lib.download(item).catch(e => toast({ title: "Couldn't download", description: (e as Error).message, variant: "destructive" }))}
+        onPreview={item => lib.readText(item)}
+        loadOthers={lib.fromOtherChats}
+        onCopy={async item => {
+          try { await lib.copyFrom(item, ensureSession); } catch (e) { toast({ title: "Couldn't add it", description: (e as Error).message, variant: "destructive" }); }
+        }}
       />
       <ArchivedPanel
         open={panel === "archived"}

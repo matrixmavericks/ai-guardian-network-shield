@@ -39,6 +39,8 @@ import PlatformWorkflowPage from './pages/PlatformWorkflowPage';
 import SchoolRoutes from './pages/SchoolRoutes';
 import ContentLibraryPage from './pages/ContentLibraryPage';
 import MyCoursesPage from './pages/MyCoursesPage';
+import { Toaster } from './components/ui/toaster';
+import { Toaster as Sonner } from './components/ui/sonner';
 import AppAccountNotice from './components/AppAccountNotice';
 import { IN_ANDROID_APP } from './lib/appShell';
 import CourseStudyPage from './pages/CourseStudyPage';
@@ -134,6 +136,8 @@ function App() {
     <ThemeProvider>
     <AuthProvider>
       <BrowserRouter>
+        <Toaster />
+        <Sonner position="top-center" />
         <Routes>
           <Route path="/" element={IN_ANDROID_APP ? <Navigate to="/login" replace /> : <Index />} />
           <Route path="/demo" element={<DemoShowcasePage />} />

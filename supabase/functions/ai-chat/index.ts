@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { AI_MODELS, BASIC_PLANS, DEFAULT_MODEL, FALLBACK_MODELS, findModel, normalizeModel, type AiModel, type Effort } from "../_shared/aiModels.ts";
+import { FILE_INSTRUCTIONS, LIBRARY_RULES, buildLibrary, historyBudget, libraryBudget, type LibraryUse } from "../_shared/chatLibrary.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -305,6 +306,9 @@ serve(async (req) => {
   let requestedModel: string | null = null;
   let requestedEffort: string | null = null;
   let action: string | null = null;
+  let libraryEnabled = false;
+  let images: string[] = [];
+  let describeName = '';
 
   try {
     const body = await req.json();
@@ -320,8 +324,15 @@ serve(async (req) => {
     if (Array.isArray(body.history)) {
       history = body.history
         .filter((m: any) => m && typeof m.content === 'string' && (m.role === 'user' || m.role === 'assistant'))
-        .slice(-40); // trimmed further to the model's memory below
+        .slice(-80); // trimmed to the model's history budget below
     }
+    libraryEnabled = body.library === true;
+    // Images attached to this message (or to transcribe): data URLs only, a few MB at most
+    const rawImages = Array.isArray(body.images) ? body.images : [];
+    images = rawImages
+      .filter((u: unknown) => typeof u === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(u as string) && (u as string).length < 5_000_000)
+      .slice(0, 8);
+    describeName = typeof body.name === 'string' ? body.name.slice(0, 200) : '';
   } catch {
     return json({ success: false, reply: FALLBACK_REPLY, error: 'Invalid request body', meta: null }, 400);
   }
@@ -342,6 +353,45 @@ serve(async (req) => {
       schoolRestricted: !!access.schoolModels,
       models: AI_MODELS.map((m) => ({ id: m.id, available: !blockedReason(m, access), reason: blockedReason(m, access) })),
     });
+  }
+
+  if (action === 'describe') {
+    if (!userId) return json({ success: false, error: 'Sign in required' }, 401);
+    if (!images.length) return json({ success: false, error: 'No images' }, 400);
+    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!apiKey) return json({ success: false, error: 'AI service not configured' }, 500);
+    let settings: any = null;
+    try { settings = await getSchoolSettings(userId); } catch { /* no school */ }
+    const access = await getAccess(userId, settings);
+    const model = resolveModel(null, access).id;
+    const content = [
+      {
+        type: 'text',
+        text: `These are ${images.length > 1 ? 'pages or images' : 'an image'} from "${describeName || 'an uploaded file'}", added to a school AI assistant's library.
+Transcribe all readable text exactly, keeping its structure: headings, numbered questions, lists, and tables as markdown tables. ${images.length > 1 ? 'Start each page with "## Page N".' : ''}
+Then, under "Visual description", briefly describe any diagrams, graphs, photos or handwriting that matter.
+Do not answer, solve or grade anything in the image: only transcribe and describe it.`,
+      },
+      ...images.map((url) => ({ type: 'image_url', image_url: { url } })),
+    ];
+    try {
+      const r = await callGateway(apiKey, access.gatewayIds.get(model) ?? model, null, [{ role: 'user', content }], 90_000);
+      if (!r.ok) return json({ success: false, error: `Couldn't read the image (${r.status})` }, 502);
+      const text = r.data?.choices?.[0]?.message?.content || '';
+      const usage = r.data?.usage;
+      const info = findModel(model);
+      const p = info?.price ?? { input: COST_PER_1M_INPUT, output: COST_PER_1M_OUTPUT };
+      const pt = usage?.prompt_tokens ?? 1500 * images.length;
+      const ct = usage?.completion_tokens ?? Math.ceil(text.length / 4);
+      runInBackground(getAdminClient().from('ai_usage_logs').insert({
+        user_id: userId, session_id: sessionId, prompt_tokens: pt, completion_tokens: ct, total_tokens: pt + ct,
+        estimated_cost_usd: (pt / 1e6) * p.input + (ct / 1e6) * p.output, model,
+      }));
+      return json({ success: true, text });
+    } catch (e) {
+      console.error('describe failed:', e);
+      return json({ success: false, error: 'Timed out reading the image' }, 504);
+    }
   }
 
   if (!prompt) {
@@ -430,6 +480,7 @@ CRITICAL MATH FORMATTING RULES:
 - Write exponents inline: x², x³, or "x to the power of n".
 - For equations, write them on their own line in plain text, e.g.: "Area = π × r²"
 - For complex formulas, use code blocks with plain text formatting.`;
+  systemMessage += FILE_INSTRUCTIONS;
 
   const forceProcessMode = schoolSettings?.process_mode_enabled === true;
   if (processTeaching || forceProcessMode || moderationStatus === 'rewritten') {
@@ -483,11 +534,47 @@ IMPORTANT: You are in Process Teaching Mode.
   let usedEffort: Effort | null = chosen && chosen.efforts.length
     ? (chosen.efforts.includes(requestedEffort as Effort) ? (requestedEffort as Effort) : chosen.defaultEffort ?? null)
     : null;
-  const memory = chosen?.memory ?? 20;
-  const messages = [
+  const priceIn = chosen?.price.input ?? COST_PER_1M_INPUT;
+
+  // Chat library: every file, note and saved reply in this chat, within budget
+  let libraryUse: LibraryUse | null = null;
+  if (libraryEnabled && userId && sessionId) {
+    try {
+      const { data: items } = await getAdminClient()
+        .from('chat_context_items')
+        .select('id, name, kind, content, pinned, created_at')
+        .eq('session_id', sessionId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+      const recent = history.filter((h) => h.role === 'user').slice(-2).map((h) => h.content).join('\n');
+      const lib = buildLibrary(items ?? [], `${prompt}\n${prompt}\n${recent}`, libraryBudget(priceIn));
+      if (lib) {
+        libraryUse = lib.use;
+        systemMessage += `\n${LIBRARY_RULES}${lib.use.mode === 'excerpts' ? `\nThe library is larger than one reply can read, so you are seeing the parts most relevant to this question from ${lib.use.used} of ${lib.use.items} items. If something the user mentions seems missing, say so and suggest they pin that file.` : ''}\n<library>\n${lib.text}\n</library>`;
+      }
+    } catch (e) {
+      console.error('Library load failed (non-fatal):', e);
+    }
+  }
+
+  // Conversation history: as many recent turns as fit the model's budget
+  const histBudget = historyBudget(priceIn);
+  const kept: typeof history = [];
+  let histUsed = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const c = history[i].content.length;
+    if (kept.length >= 4 && histUsed + c > histBudget) break;
+    kept.unshift({ role: history[i].role, content: history[i].content.slice(0, 40_000) });
+    histUsed += Math.min(c, 40_000);
+  }
+
+  const userContent = images.length
+    ? [{ type: 'text', text: effectivePrompt }, ...images.map((url) => ({ type: 'image_url', image_url: { url } }))]
+    : effectivePrompt;
+  let messages: unknown[] = [
     { role: 'system', content: systemMessage },
-    ...history.slice(-memory).map(h => ({ role: h.role, content: h.content })),
-    { role: 'user', content: effectivePrompt },
+    ...kept,
+    { role: 'user', content: userContent },
   ];
   const timeoutMs = usedEffort === 'high' ? 110_000 : usedEffort === 'medium' ? 75_000 : 45_000;
 
@@ -505,6 +592,12 @@ IMPORTANT: You are in Process Teaching Mode.
       if (!result.ok && result.status === 400 && effort && /reason/i.test(result.text)) {
         result = await callGateway(lovableApiKey, gatewayId, null, messages, timeoutMs);
         if (result.ok) usedEffort = null;
+      }
+
+      // A model without image input: answer from the text (the library holds a transcription)
+      if (!result.ok && result.status === 400 && images.length && /image|vision|multimodal|content/i.test(result.text)) {
+        messages = [{ role: 'system', content: systemMessage }, ...kept, { role: 'user', content: effectivePrompt }];
+        result = await callGateway(lovableApiKey, gatewayId, effort, messages, timeoutMs);
       }
 
       if (!result.ok) {
@@ -612,6 +705,7 @@ IMPORTANT: You are in Process Teaching Mode.
       effort: answered ? usedEffort : undefined,
       requestedModel: requestedModel ? normalizeModel(requestedModel) : null,
       notice: notice ?? undefined,
+      library: libraryUse ?? undefined,
     },
   });
 });

@@ -11,6 +11,7 @@ export type Command = {
 export const COMMANDS: Command[] = [
   { name: "new", description: "Start a fresh chat", group: "Chat" },
   { name: "rename", args: "<title>", description: "Rename this chat", group: "Chat", takesInput: true },
+  { name: "files", description: "Open this chat's files and context library", group: "Chat" },
   { name: "export", description: "Download this chat as a Markdown file", group: "Chat" },
   { name: "archive", description: "Archive this chat and start a new one", group: "Chat" },
   { name: "compact", description: "Summarise this chat so far to keep answers focused", group: "Chat" },
