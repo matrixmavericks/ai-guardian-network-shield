@@ -3,12 +3,13 @@ import {
   Archive, ArrowUp, Beaker, BookMarked, BookOpen, Calculator, Check, ChevronDown, Copy, FileText, Languages,
   LayoutGrid, Lightbulb, Loader2, LogOut, Menu, MessageSquare, PanelLeftClose, PanelLeftOpen, PenTool, Plus,
   Puzzle, Route, Search, Sparkles, Terminal, Users, X, Briefcase, Layers, RotateCcw, Paperclip, Library as LibraryIcon,
-  AlertCircle, Upload as UploadIcon,
+  AlertCircle, Upload as UploadIcon, Presentation,
 } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import { useChatLibrary } from "@/components/assistant/files/library";
 import { LibraryPanel, itemIcon } from "@/components/assistant/files/LibraryPanel";
 import { FileCard } from "@/components/assistant/files/FileCard";
+import { DeckCard } from "@/components/assistant/files/DeckCard";
 import { splitReply } from "@/components/assistant/files/outputs";
 import { ACCEPT } from "@/components/assistant/files/extract";
 import { fetchDriveFile, pickDriveFiles } from "@/components/assistant/files/google";
@@ -59,6 +60,8 @@ interface ChatMessage {
   library?: { items: number; used: number; mode: "full" | "excerpts"; names?: string[] };
   /** Tokens the reply used, as reported by the AI provider */
   usage?: { prompt: number; completion: number };
+  /** Arrived in this visit (a presentation in it opens straight away) */
+  fresh?: boolean;
 }
 
 interface ChatSession {
@@ -86,8 +89,8 @@ const STARTERS = [
 const TEACHER_STARTERS = [
   { title: "Plan a lesson", body: "Plan a 60-minute lesson on [topic] for [year group], with a starter, main activities, differentiation and an exit ticket.", subject: "general", icon: Route },
   { title: "Make a worksheet", body: "Make a worksheet on [topic] for [year group] with a mix of recall and extended questions, plus an answer key.", subject: "general", icon: FileText },
+  { title: "Build a presentation", body: "Make a 10-slide presentation on [topic] for [year group], with images, a quick quiz and speaker notes.", subject: "general", icon: Presentation },
   { title: "Write a rubric", body: "Write an MYP criterion-based rubric for [task], with descriptors for each band.", subject: "general", icon: Layers },
-  { title: "Differentiate a task", body: "Rewrite this task in three versions: support, core and extension. Here's the task:", subject: "general", icon: Users },
 ];
 
 const NOTES_PROMPT =
@@ -190,6 +193,13 @@ const StudentInterface = () => {
     const resDesc = searchParams.get("resourceDesc");
     const resUrl = searchParams.get("resourceUrl");
     const draft = searchParams.get("prompt");
+    // Coming back from a presentation made in a chat
+    const back = searchParams.get("session");
+    if (back) {
+      loadSession(back);
+      searchParams.delete("session");
+      setSearchParams(searchParams, { replace: true });
+    }
     if (resTitle || draft) {
       if (resTitle) setResourceContext({ title: resTitle, description: resDesc || "", url: resUrl || undefined });
       // A starter message from a study page (e.g. Teach Refyn), left for the student to finish
@@ -490,6 +500,7 @@ const StudentInterface = () => {
         notice: typeof meta.notice === "string" ? meta.notice : undefined,
         library: meta.library && typeof meta.library === "object" ? meta.library : undefined,
         usage: meta.usage && typeof meta.usage === "object" ? meta.usage : undefined,
+        fresh: true,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -1374,6 +1385,15 @@ const StudentInterface = () => {
                               <div key={k} className="lp-md">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{seg.text}</ReactMarkdown>
                               </div>
+                            ) : seg.type === "deck" ? (
+                              <DeckCard
+                                key={k}
+                                deck={seg.deck}
+                                userId={user?.id}
+                                sessionId={currentSessionId}
+                                canBuild={teacherMode}
+                                autoStart={teacherMode && msg.fresh && i === messages.length - 1}
+                              />
                             ) : (
                               <FileCard
                                 key={k}

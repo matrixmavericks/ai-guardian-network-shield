@@ -28,6 +28,7 @@ import {
   X,
   Award,
   History,
+  Presentation,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isStudentId } from "@/lib/studentIds";
@@ -85,6 +86,7 @@ const TEACHER_GROUPS: NavGroup[] = [
     label: "Teaching",
     items: [
       { title: "Planner", href: "/teacher-plan-generator", icon: NotebookPen },
+      { title: "Presentations", href: "/decks", icon: Presentation },
       { title: "MYP Courses", href: "/my-courses", icon: GraduationCap },
       { title: "Content Library", href: "/library", icon: Library },
       { title: "Learning Paths", href: "/learning-paths", icon: Book },

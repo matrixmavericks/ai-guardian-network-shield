@@ -11,7 +11,8 @@ import { splitSheets, toCsv, writeXlsx, type Sheet } from "./office";
 
 export type FileFormat = "docx" | "pdf" | "md" | "xlsx" | "csv";
 export type OutputFile = { name: string; base: string; format: FileFormat; kind: "document" | "sheet"; content: string };
-export type Segment = { type: "text"; text: string } | { type: "file"; file: OutputFile; complete: boolean };
+export type DeckSpec = { title: string; slides: number; audience?: string; brief: string };
+export type Segment = { type: "text"; text: string } | { type: "file"; file: OutputFile; complete: boolean } | { type: "deck"; deck: DeckSpec };
 
 const FORMATS: FileFormat[] = ["docx", "pdf", "md", "xlsx", "csv"];
 
@@ -26,24 +27,32 @@ export const fileFrom = (rawName: string, content: string): OutputFile => {
 /** Split an assistant reply into prose and file blocks. */
 export const splitReply = (reply: string): Segment[] => {
   const out: Segment[] = [];
-  const re = /<<<\s*FILE\s+name\s*=\s*"([^"]+)"\s*>>>\n?([\s\S]*?)(?:<<<\s*END\s*FILE\s*>>>|$)/gi;
+  const re = /<<<\s*(FILE|DECK)\s+([^>]*?)>>>\n?([\s\S]*?)(?:<<<\s*END\s*(?:FILE|DECK)\s*>>>|$)/gi;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(reply))) {
     if (m.index > last) out.push({ type: "text", text: reply.slice(last, m.index) });
-    out.push({ type: "file", file: fileFrom(m[1], m[2]), complete: /<<<\s*END\s*FILE\s*>>>$/i.test(m[0]) });
+    const attrs = m[2];
+    const attr = (k: string) => attrs.match(new RegExp(`${k}\\s*=\\s*"([^"]*)"`, "i"))?.[1];
+    if (m[1].toUpperCase() === "DECK") {
+      out.push({ type: "deck", deck: { title: (attr("title") || "Presentation").slice(0, 120), slides: Math.min(20, Math.max(4, Number(attr("slides")) || 10)), audience: attr("audience"), brief: m[3].trim() } });
+    } else {
+      out.push({ type: "file", file: fileFrom(attr("name") || "Refyn file.docx", m[3]), complete: /<<<\s*END\s*FILE\s*>>>$/i.test(m[0]) });
+    }
     last = re.lastIndex;
     if (m[0].length === 0) break;
   }
   if (last < reply.length) out.push({ type: "text", text: reply.slice(last) });
-  return out.filter((s) => s.type === "file" || s.text.trim());
+  return out.filter((s) => s.type !== "text" || s.text.trim());
 };
 
-export const hasFiles = (reply: string) => /<<<\s*FILE\s+name\s*=/i.test(reply);
+export const hasFiles = (reply: string) => /<<<\s*(FILE|DECK)\s/i.test(reply);
 
 /** A reply with file blocks shortened to a mention, for history and copying. */
 export const replyForHistory = (reply: string) =>
-  reply.replace(/<<<\s*FILE\s+name\s*=\s*"([^"]+)"\s*>>>[\s\S]*?(?:<<<\s*END\s*FILE\s*>>>|$)/gi, (_, n) => `[File: ${n}]`);
+  reply
+    .replace(/<<<\s*FILE\s+name\s*=\s*"([^"]+)"\s*>>>[\s\S]*?(?:<<<\s*END\s*FILE\s*>>>|$)/gi, (_, n) => `[File: ${n}]`)
+    .replace(/<<<\s*DECK\s+title\s*=\s*"([^"]+)"[^>]*>>>[\s\S]*?(?:<<<\s*END\s*DECK\s*>>>|$)/gi, (_, n) => `[Presentation: ${n}]`);
 
 /* ---------- markdown → HTML ---------- */
 

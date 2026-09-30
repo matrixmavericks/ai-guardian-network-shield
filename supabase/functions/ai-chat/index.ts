@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { AI_MODELS, BASIC_PLANS, DEFAULT_MODEL, FALLBACK_MODELS, findModel, normalizeModel, type AiModel, type Effort } from "../_shared/aiModels.ts";
-import { FILE_INSTRUCTIONS, LIBRARY_RULES, buildLibrary, historyBudget, libraryBudget, type LibraryUse } from "../_shared/chatLibrary.ts";
+import { DECK_INSTRUCTIONS, FILE_INSTRUCTIONS, LIBRARY_RULES, buildLibrary, historyBudget, libraryBudget, type LibraryUse } from "../_shared/chatLibrary.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -508,7 +508,7 @@ CRITICAL MATH FORMATTING RULES:
 
   const forceProcessMode = !staff && schoolSettings?.process_mode_enabled === true;
   if (staff) {
-    systemMessage += `\nThis is teacher mode: give complete, direct, finished work.`;
+    systemMessage += `\nThis is teacher mode: give complete, direct, finished work.` + DECK_INSTRUCTIONS;
   } else if (processTeaching || forceProcessMode || moderationStatus === 'rewritten') {
     systemMessage += `
 IMPORTANT: You are in Process Teaching Mode.

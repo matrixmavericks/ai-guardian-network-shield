@@ -71,10 +71,10 @@ const DOC = "application/vnd.google-apps.document";
 const SHEET = "application/vnd.google-apps.spreadsheet";
 const SLIDES = "application/vnd.google-apps.presentation";
 
-/** Upload a file to the teacher's Drive, converting it to a Google Doc or Sheet. */
-export async function saveToDrive(blob: Blob, name: string, as: "doc" | "sheet"): Promise<{ id: string; url: string }> {
+/** Upload a file to the teacher's Drive, converting it to a Google Doc, Sheet or Slides. */
+export async function saveToDrive(blob: Blob, name: string, as: "doc" | "sheet" | "slides"): Promise<{ id: string; url: string }> {
   const access = await driveToken();
-  const meta = { name, mimeType: as === "doc" ? DOC : SHEET };
+  const meta = { name, mimeType: as === "doc" ? DOC : as === "sheet" ? SHEET : SLIDES };
   const form = new FormData();
   form.append("metadata", new Blob([JSON.stringify(meta)], { type: "application/json" }));
   form.append("file", blob);
@@ -86,7 +86,7 @@ export async function saveToDrive(blob: Blob, name: string, as: "doc" | "sheet")
   if (res.status === 401) { token = null; throw new Error("Google sign-in expired. Try again."); }
   if (!res.ok) throw new Error(`Google Drive said no (${res.status}).`);
   const data = await res.json();
-  return { id: data.id, url: data.webViewLink ?? `https://docs.google.com/${as === "doc" ? "document" : "spreadsheets"}/d/${data.id}/edit` };
+  return { id: data.id, url: data.webViewLink ?? `https://docs.google.com/${as === "doc" ? "document" : as === "sheet" ? "spreadsheets" : "presentation"}/d/${data.id}/edit` };
 }
 
 export type DriveFile = { id: string; name: string; mimeType: string; url: string };
