@@ -12,6 +12,8 @@ import { FileCard } from "@/components/assistant/files/FileCard";
 import { splitReply } from "@/components/assistant/files/outputs";
 import { ACCEPT } from "@/components/assistant/files/extract";
 import { fetchDriveFile, pickDriveFiles } from "@/components/assistant/files/google";
+import { totalChars } from "@/components/assistant/files/library";
+import { AUTO_COMPACT_AT, UsageButton, estimateContext, historyBudget } from "@/components/assistant/UsagePanel";
 import { useToast } from "@/components/ui/use-toast";
 import FeatureGate from "@/components/FeatureGate";
 import { IN_ANDROID_APP } from "@/lib/appShell";
@@ -55,6 +57,8 @@ interface ChatMessage {
   attachments?: string[];
   /** How much of the chat library the reply read */
   library?: { items: number; used: number; mode: "full" | "excerpts"; names?: string[] };
+  /** Tokens the reply used, as reported by the AI provider */
+  usage?: { prompt: number; completion: number };
 }
 
 interface ChatSession {
@@ -77,6 +81,13 @@ const STARTERS = [
   { title: "Explain a concept", body: "Break a topic I'm stuck on into steps I can follow.", subject: "general", icon: Lightbulb },
   { title: "Check my working", body: "Look at how I solved a problem and show me where it went wrong.", subject: "math", icon: Calculator },
   { title: "Quiz me", body: "Ask me questions to test what I know before a test.", subject: "science", icon: Sparkles },
+];
+
+const TEACHER_STARTERS = [
+  { title: "Plan a lesson", body: "Plan a 60-minute lesson on [topic] for [year group], with a starter, main activities, differentiation and an exit ticket.", subject: "general", icon: Route },
+  { title: "Make a worksheet", body: "Make a worksheet on [topic] for [year group] with a mix of recall and extended questions, plus an answer key.", subject: "general", icon: FileText },
+  { title: "Write a rubric", body: "Write an MYP criterion-based rubric for [task], with descriptors for each band.", subject: "general", icon: Layers },
+  { title: "Differentiate a task", body: "Rewrite this task in three versions: support, core and extension. Here's the task:", subject: "general", icon: Users },
 ];
 
 const NOTES_PROMPT =
@@ -162,6 +173,9 @@ const StudentInterface = () => {
   const [modelAccess, setModelAccess] = useState<ModelAccess | null>(null);
   const [retryMenu, setRetryMenu] = useState(false);
   const [pendingModel, setPendingModel] = useState<string | null>(null);
+
+  // Teachers get the planning and content assistant; students the guided tutor
+  const teacherMode = user?.role === "teacher" || user?.role === "admin";
 
   // Chat library: files, notes and saved replies Refyn reads on every reply
   const lib = useChatLibrary(user?.id ?? null, currentSessionId);
@@ -268,7 +282,7 @@ const StudentInterface = () => {
       .order('created_at', { ascending: true });
 
     if (data) {
-      type Row = { id: string; role: string; content: string; created_at: string; metadata: { model?: string; effort?: string | null; notice?: string; attachments?: string[]; library?: ChatMessage["library"] } | null };
+      type Row = { id: string; role: string; content: string; created_at: string; metadata: { model?: string; effort?: string | null; notice?: string; attachments?: string[]; library?: ChatMessage["library"]; usage?: ChatMessage["usage"] } | null };
       setMessages(data.map((m: Row) => ({
         id: m.id,
         role: m.role as "user" | "assistant",
@@ -279,6 +293,7 @@ const StudentInterface = () => {
         notice: m.metadata?.notice,
         attachments: m.metadata?.attachments,
         library: m.metadata?.library,
+        usage: m.metadata?.usage,
       })));
     }
     const session = sessions.find(s => s.id === sessionId);
@@ -338,15 +353,19 @@ const StudentInterface = () => {
   const currentTitle = sessions.find(s => s.id === currentSessionId)?.title || "New chat";
 
   /** Prior turns sent for context; after /compact, earlier turns are replaced by the summary. */
-  const buildHistory = (list: ChatMessage[] = messages) => {
+  const buildHistory = (list: ChatMessage[] = messages, c: typeof compact = compact) => {
     const turns = (l: ChatMessage[]) => l.map(m => ({ role: m.role, content: m.content }));
-    if (!compact) return turns(list);
+    if (!c) return turns(list);
     return [
       { role: "user" as const, content: "Here is a summary of our conversation so far." },
-      { role: "assistant" as const, content: compact.summary },
-      ...turns(list.slice(compact.index)),
+      { role: "assistant" as const, content: c.summary },
+      ...turns(list.slice(c.index)),
     ];
   };
+
+  /** Characters of conversation the next reply would carry. */
+  const conversationChars = (list: ChatMessage[] = messages, c: typeof compact = compact) =>
+    buildHistory(list, c).reduce((a, m) => a + m.content.length, 0);
 
   const resourceText = () =>
     resourceContext
@@ -421,8 +440,14 @@ const StudentInterface = () => {
         await db.from('ai_chat_sessions').update({ title }).eq('id', sessionId);
       }
 
+      // Auto-compact: once the conversation nears what one reply can read, summarise the earlier part
+      let activeCompact = compact;
+      if (!opts.retry && base.length >= 6 && conversationChars(base) > historyBudget(info?.price.input ?? 0.3) * AUTO_COMPACT_AT) {
+        activeCompact = (await compactChat({ auto: true, list: base })) ?? compact;
+      }
+
       // Build conversation history (prior turns) to send for context
-      const history = buildHistory(base);
+      const history = buildHistory(base, activeCompact);
 
       // Class resource + any skills, sent as extra context for this reply
       const context = [resourceText(), skillContext(activeSkills)].filter(Boolean).join("\n\n") || null;
@@ -433,7 +458,7 @@ const StudentInterface = () => {
           prompt: sentPrompt,
           subject: activeSubject,
           gradeLevel: "high-school",
-          processTeaching: isProcessTeaching,
+          processTeaching: teacherMode ? false : isProcessTeaching,
           sessionId,
           history,
           resourceContext: context,
@@ -464,6 +489,7 @@ const StudentInterface = () => {
         effort: typeof meta.effort === "string" ? meta.effort : null,
         notice: typeof meta.notice === "string" ? meta.notice : undefined,
         library: meta.library && typeof meta.library === "object" ? meta.library : undefined,
+        usage: meta.usage && typeof meta.usage === "object" ? meta.usage : undefined,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -515,36 +541,41 @@ const StudentInterface = () => {
     setDrawerOpen(false);
   };
 
-  /** /compact: ask for a summary and use it in place of the earlier turns. */
-  const compactChat = async () => {
-    if (messages.length < 4) {
-      toast({ title: "Not much to compact yet", description: "Compacting helps once a chat gets long." });
-      return;
-    }
-    if (plan && !canUseTokens(1)) {
-      toast({ title: "Token limit reached", description: "You've used all your tokens this month.", variant: "destructive" });
-      return;
+  /**
+   * /compact (or automatically as a chat fills up): summarise the conversation,
+   * use the summary in place of the earlier turns, and keep it, pinned, in the
+   * chat's files so it survives reloads.
+   */
+  const compactChat = async (opts: { auto?: boolean; list?: ChatMessage[] } = {}): Promise<{ index: number; summary: string } | null> => {
+    const list = opts.list ?? messages;
+    if (list.length < 4) {
+      if (!opts.auto) toast({ title: "Not much to compact yet", description: "Compacting helps once a chat gets long." });
+      return null;
     }
     setCompacting(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-chat", {
         body: {
-          prompt: "Summarise our conversation so far in under 150 words: what I'm working on, what I've understood, and what's still open. Write it as notes, not as a reply to me.",
+          prompt: "Summarise our conversation so far in under 220 words, as notes for yourself: the goal, key facts and decisions, anything already produced (files, plans, answers), and what's still open. Write notes, not a reply.",
           subject: activeSubject,
           gradeLevel: "high-school",
           processTeaching: false,
           sessionId: currentSessionId,
-          history: buildHistory(),
+          history: buildHistory(list),
           resourceContext: resourceText(),
         },
       });
       const summary = data?.reply || data?.response;
-      if (error || !summary) throw new Error(error?.message || "Couldn't summarise this chat");
-      setCompact({ index: messages.length, summary });
+      if (error || !summary || data?.success === false) throw new Error(error?.message || "Couldn't summarise this chat");
+      const next = { index: list.length, summary };
+      setCompact(next);
       setShowSummary(false);
-      toast({ title: "Chat compacted", description: "Earlier messages are summarised, so replies stay focused." });
+      lib.addText("note", `Summary of earlier messages (${format(new Date(), "d MMM, p")})`, summary, ensureSession, { compaction: true }, true).catch(() => undefined);
+      toast({ title: opts.auto ? "Chat compacted automatically" : "Chat compacted", description: "Earlier messages are summarised and pinned in this chat's files." });
+      return next;
     } catch (e: unknown) {
-      toast({ title: "Couldn't compact", description: (e as { message?: string } | null)?.message || "Please try again.", variant: "destructive" });
+      if (!opts.auto) toast({ title: "Couldn't compact", description: (e as { message?: string } | null)?.message || "Please try again.", variant: "destructive" });
+      return null;
     } finally {
       setCompacting(false);
     }
@@ -607,7 +638,9 @@ const StudentInterface = () => {
       case "notebook": done(); setNotebookFocus(null); setPanel("notebook"); break;
       case "files": done(); setPanel("files"); break;
       case "help": done(); setPanel("commands"); break;
-      case "guided": done(); setIsProcessTeaching(true); toast({ title: "Guided mode on", description: "Refyn will help you work it out." }); break;
+      case "guided":
+        if (teacherMode) { done(); toast({ title: "You're in teacher mode", description: "Refyn writes complete materials for you. Guided mode is for students." }); break; }
+        done(); setIsProcessTeaching(true); toast({ title: "Guided mode on", description: "Refyn will help you work it out." }); break;
       case "direct": done(); setIsProcessTeaching(false); toast({ title: "Direct mode on", description: "Refyn will explain things clearly and directly." }); break;
       case "subject": {
         const s = SUBJECTS.find(x => x.id === arg.toLowerCase() || x.name.toLowerCase() === arg.toLowerCase());
@@ -726,6 +759,16 @@ const StudentInterface = () => {
 
   const toggleSkill = (slug: string) =>
     setInstalledSkills(prev => (prev.includes(slug) ? prev.filter(s => s !== slug) : prev.length >= MAX_INSTALLED ? prev : [...prev, slug]));
+
+  const lastUsage = compact ? null : [...messages].reverse().find(m => m.role === "assistant" && m.usage)?.usage ?? null;
+  const contextEstimate = estimateContext({
+    model: activeModel,
+    teacher: teacherMode,
+    libraryChars: totalChars(lib.items),
+    conversationChars: conversationChars(),
+    images: readyUploads.filter(u => u.image).length,
+    lastPromptTokens: lastUsage?.prompt ?? null,
+  });
 
   const activeSubjectData = SUBJECTS.find(s => s.id === activeSubject)!;
   const SubjectIcon = activeSubjectData.icon;
@@ -978,7 +1021,7 @@ const StudentInterface = () => {
           }}
           rows={1}
           aria-label="Message Refyn"
-          placeholder={readyUploads.length ? "Ask about your files, or send them as they are" : resourceContext ? `Ask about "${resourceContext.title}"…` : `Ask Refyn about ${activeSubjectData.name.toLowerCase()}, or type / for commands`}
+          placeholder={readyUploads.length ? "Ask about your files, or send them as they are" : teacherMode && !resourceContext ? "Ask Refyn to plan, write or mark something, or type / for commands" : resourceContext ? `Ask about "${resourceContext.title}"…` : `Ask Refyn about ${activeSubjectData.name.toLowerCase()}, or type / for commands`}
           className="block max-h-[200px] min-h-[48px] w-full resize-none bg-transparent px-3.5 pb-1 pt-3 text-[15.5px] leading-relaxed text-white placeholder:text-lp-mute outline-none"
         />
         <div className="flex items-center justify-between gap-2 px-1.5 pb-1 pt-1">
@@ -1070,7 +1113,15 @@ const StudentInterface = () => {
               }
             />
 
-            {/* Guided mode (process teaching) */}
+            {/* Guided mode (process teaching) — students only */}
+            {teacherMode ? (
+              <span
+                title="Teacher mode: Refyn writes complete materials, with answer keys, model answers and mark schemes"
+                className="flex h-9 items-center gap-1.5 rounded-full border border-lp-green/40 bg-lp-green/10 px-3 text-[13px] font-medium text-lp-green"
+              >
+                <PenTool className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Teacher mode</span>
+              </span>
+            ) : (
             <button
               type="button"
               role="switch"
@@ -1087,6 +1138,7 @@ const StudentInterface = () => {
               </span>
               <span className="hidden sm:inline">{isProcessTeaching ? "Guided" : "Direct"}</span>
             </button>
+            )}
 
             {/* Skills that will shape this message */}
             {previewSkills.map(s => (
@@ -1107,7 +1159,7 @@ const StudentInterface = () => {
         </div>
       </div>
       <p className="mt-2.5 text-center text-[12px] text-lp-mute">
-        {isProcessTeaching ? "Guided mode is on: Refyn helps you work it out." : "Direct mode: clear, detailed explanations."}{" "}
+        {teacherMode ? "Teacher mode: Refyn plans and writes complete materials, answers included." : isProcessTeaching ? "Guided mode is on: Refyn helps you work it out." : "Direct mode: clear, detailed explanations."}{" "}
         Type <code className="text-lp-sky">/</code> for commands and <code className="text-lp-sky">@</code> for skills.
         <span className="hidden sm:inline"> AI can make mistakes, so double-check.</span>
       </p>
@@ -1190,12 +1242,15 @@ const StudentInterface = () => {
               <h1 className="truncate text-[15px] font-medium text-white">{currentTitle}</h1>
             </div>
             <div className="flex items-center gap-2">
-              {plan && Number.isFinite(tokensRemaining) && (
-                <span className="hidden items-center gap-1.5 rounded-full border border-lp-line bg-lp-surface/70 px-3 py-1 text-[12px] text-lp-soft xl:flex" title="Tokens left this month">
-                  <Sparkles className="h-3.5 w-3.5 text-lp-cyan" />
-                  {tokensRemaining.toLocaleString()} tokens left
-                </span>
-              )}
+              <UsageButton
+                ctx={contextEstimate}
+                userId={user?.id ?? null}
+                sessionId={currentSessionId}
+                refreshKey={messages.length}
+                canCompact={messages.length >= 4}
+                compacting={compacting}
+                onCompact={() => compactChat()}
+              />
               {tools.map(t => {
                 const Icon = t.icon;
                 return (
@@ -1224,16 +1279,18 @@ const StudentInterface = () => {
                 <h2 className="lp-fade text-[40px] font-medium leading-[1.05] tracking-[-0.045em] sm:text-[56px]">
                   <span className="bg-gradient-to-r from-lp-sky via-[#A5CCFF] to-lp-cyan bg-clip-text text-transparent">Hello, {firstName}</span>
                   <br />
-                  <span className="text-lp-mute">What are we working on?</span>
+                  <span className="text-lp-mute">{teacherMode ? "What are we making today?" : "What are we working on?"}</span>
                 </h2>
                 <p className="lp-fade mt-4 max-w-[34rem] text-[15.5px] text-lp-soft" style={{ animationDelay: "60ms", animationFillMode: "both" }}>
-                  {isProcessTeaching
-                    ? "Ask about anything you're studying. I'll guide you through the thinking, step by step."
-                    : "Ask about anything you're studying and I'll explain it clearly."}
+                  {teacherMode
+                    ? "Plans, worksheets, quizzes with answer keys, rubrics, feedback and emails. Add your files and I'll build from them."
+                    : isProcessTeaching
+                      ? "Ask about anything you're studying. I'll guide you through the thinking, step by step."
+                      : "Ask about anything you're studying and I'll explain it clearly."}
                 </p>
 
                 <div className="mt-9 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                  {STARTERS.map((s, i) => {
+                  {(teacherMode ? TEACHER_STARTERS : STARTERS).map((s, i) => {
                     const Icon = s.icon;
                     return (
                       <button
@@ -1440,7 +1497,7 @@ const StudentInterface = () => {
                       <span className="lp-dots flex items-center gap-1"><span /><span /><span /></span>
                       {compacting
                         ? "Summarising this chat…"
-                        : `${findModel(pendingModel ?? activeModel)?.name ?? "Refyn"} is ${isProcessTeaching ? "working out how to guide you" : "thinking"}…`}
+                        : `${findModel(pendingModel ?? activeModel)?.name ?? "Refyn"} is ${!teacherMode && isProcessTeaching ? "working out how to guide you" : "thinking"}…`}
                     </div>
                   </div>
                 )}

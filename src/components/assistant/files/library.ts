@@ -116,13 +116,13 @@ export function useChatLibrary(userId: string | null, sessionId: string | null) 
     );
   };
 
-  const addText = async (kind: "note" | "output" | "message", name: string, content: string, ensureSession: () => Promise<string | null>, meta: Record<string, unknown> = {}) => {
+  const addText = async (kind: "note" | "output" | "message", name: string, content: string, ensureSession: () => Promise<string | null>, meta: Record<string, unknown> = {}, pinned = false) => {
     if (!userId || !content.trim()) return null;
     const sid = await ensureSession();
     if (!sid) throw new Error("Couldn't start a chat to save this in.");
     const { data, error } = await db
       .from("chat_context_items")
-      .insert({ session_id: sid, user_id: userId, kind, name: name.trim().slice(0, 300) || "Untitled", content, meta })
+      .insert({ session_id: sid, user_id: userId, kind, name: name.trim().slice(0, 300) || "Untitled", content, meta, pinned })
       .select(COLUMNS)
       .single();
     if (error) throw new Error("Couldn't save it to this chat.");

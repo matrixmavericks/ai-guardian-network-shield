@@ -85,6 +85,25 @@ async function getSchoolSettings(userId: string): Promise<any | null> {
   return settings;
 }
 
+/** Teachers and admins get the content-creation assistant, never guided mode. */
+async function isStaff(userId: string): Promise<boolean> {
+  try {
+    const { data } = await getAdminClient().from('user_roles').select('role').eq('user_id', userId);
+    return (data || []).some((r: any) => r.role === 'teacher' || r.role === 'admin');
+  } catch {
+    return false;
+  }
+}
+
+const TEACHER_PROMPT = (subject: string) => `You are Refyn, a planning and content-creation assistant for teachers. The person you are working with is a teacher, not a student. Subject focus: ${subject === 'general' ? 'any subject' : subject}.
+
+Do the work they ask for, completely and directly: lesson and unit plans, schemes of work, worksheets, question banks, quizzes and tests with answer keys, mark schemes and rubrics, model and exemplar answers, differentiated versions for support and extension, feedback and comments on student work, report comments, parent emails, and explanations of content at any level.
+- Never withhold answers, never switch to guiding questions or Socratic tutoring, and don't remind them about academic integrity: they are the teacher, and answer keys and model answers are part of the job.
+- Where it fits, align to the IB MYP (criteria A–D, command terms, global contexts, ATL skills) or to the curriculum they name.
+- Be practical and classroom-ready: timings, materials, success criteria, differentiation and assessment.
+- If a request is ambiguous, make sensible assumptions, state them in one line, and deliver; offer to adjust afterwards instead of asking a list of questions first.
+- When they want a resource they will use (a worksheet, plan, rubric, quiz, letter, spreadsheet), deliver it as a file block (see MAKING FILES).`;
+
 async function getSchoolTrainingExamples(trainingDataIds: string[]): Promise<string> {
   if (!trainingDataIds || trainingDataIds.length === 0) return '';
   const adminClient = getAdminClient();
@@ -398,6 +417,10 @@ Do not answer, solve or grade anything in the image: only transcribe and describ
     return json({ success: false, reply: 'Please enter a question.', error: 'Empty prompt', meta: null }, 400);
   }
 
+  // --- Who is asking: teachers get the planning assistant, students the guided tutor ---
+  const staff = userId ? await isStaff(userId) : false;
+  if (staff) processTeaching = false;
+
   // --- Quota check ---
   if (userId) {
     try {
@@ -412,7 +435,7 @@ Do not answer, solve or grade anything in the image: only transcribe and describ
 
   // --- Moderation ---
   const lowerPrompt = prompt.toLowerCase();
-  const flaggedKeywords = BLOCKED_KEYWORDS.filter(kw => lowerPrompt.includes(kw));
+  const flaggedKeywords = staff ? [] : BLOCKED_KEYWORDS.filter(kw => lowerPrompt.includes(kw));
   let moderationStatus: 'approved' | 'rewritten' | 'flagged' = 'approved';
   let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
   let effectivePrompt = prompt;
@@ -430,7 +453,7 @@ Do not answer, solve or grade anything in the image: only transcribe and describ
   if (userId) {
     try {
       schoolSettings = await getSchoolSettings(userId);
-      if (schoolSettings) {
+      if (schoolSettings && !staff) {
         // Check if student chat is allowed
         if (schoolSettings.allow_student_chat === false) {
           return json({ success: false, reply: 'AI chat is not enabled for your school. Please contact your administrator.', error: 'school_chat_disabled', meta: null }, 403);
@@ -469,6 +492,7 @@ Do not answer, solve or grade anything in the image: only transcribe and describ
   let systemMessage = schoolSettings?.custom_system_prompt 
     ? `${schoolSettings.custom_system_prompt}\n\nSubject: ${subject}. Grade level: ${gradeLevel}.`
     : `You are an educational AI assistant. Subject: ${subject}. Grade level: ${gradeLevel}.`;
+  if (staff) systemMessage = TEACHER_PROMPT(subject);
   
   systemMessage += `
 Use markdown formatting. Use **bold** for key terms. Use bullet points and numbered lists. Keep explanations clear and age-appropriate.
@@ -482,8 +506,10 @@ CRITICAL MATH FORMATTING RULES:
 - For complex formulas, use code blocks with plain text formatting.`;
   systemMessage += FILE_INSTRUCTIONS;
 
-  const forceProcessMode = schoolSettings?.process_mode_enabled === true;
-  if (processTeaching || forceProcessMode || moderationStatus === 'rewritten') {
+  const forceProcessMode = !staff && schoolSettings?.process_mode_enabled === true;
+  if (staff) {
+    systemMessage += `\nThis is teacher mode: give complete, direct, finished work.`;
+  } else if (processTeaching || forceProcessMode || moderationStatus === 'rewritten') {
     systemMessage += `
 IMPORTANT: You are in Process Teaching Mode.
 1. NEVER give direct answers
@@ -501,7 +527,7 @@ IMPORTANT: You are in Process Teaching Mode.
     languages: '\nFor languages: Help with grammar rules, translation concepts, cultural context.',
     science: '\nFor science: Explain with evidence-based reasoning, encourage hypothesis formation.',
   };
-  if (subjectInstructions[subject]) {
+  if (!staff && subjectInstructions[subject]) {
     systemMessage += subjectInstructions[subject];
   }
 
@@ -706,6 +732,8 @@ IMPORTANT: You are in Process Teaching Mode.
       requestedModel: requestedModel ? normalizeModel(requestedModel) : null,
       notice: notice ?? undefined,
       library: libraryUse ?? undefined,
+      usage: answered ? { prompt: promptTokens, completion: completionTokens } : undefined,
+      mode: staff ? 'teacher' : processTeaching || forceProcessMode ? 'guided' : 'direct',
     },
   });
 });
