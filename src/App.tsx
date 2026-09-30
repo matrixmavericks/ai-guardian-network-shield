@@ -40,6 +40,7 @@ import SchoolRoutes from './pages/SchoolRoutes';
 import ContentLibraryPage from './pages/ContentLibraryPage';
 import MyCoursesPage from './pages/MyCoursesPage';
 import DecksPage from './pages/DecksPage';
+import PastPapersPage from './pages/PastPapersPage';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as Sonner } from './components/ui/sonner';
 import AppAccountNotice from './components/AppAccountNotice';
@@ -156,6 +157,7 @@ function App() {
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><DashboardRouter /></ProtectedRoute>} />
           <Route path="/decks" element={<ProtectedRoute allowedRoles={['teacher','admin']}><DecksPage /></ProtectedRoute>} />
           <Route path="/decks/:id" element={<ProtectedRoute allowedRoles={['teacher','admin']}><DecksPage /></ProtectedRoute>} />
+          <Route path="/past-papers" element={<ProtectedRoute allowedRoles={['teacher','admin']}><PastPapersPage /></ProtectedRoute>} />
           <Route path="/studio" element={<ProtectedRoute allowedRoles={['teacher','admin']}><StudioHome /></ProtectedRoute>} />
           <Route path="/studio/create" element={<ProtectedRoute allowedRoles={['teacher','admin']}><PrintableMaker /></ProtectedRoute>} />
           <Route path="/studio/diagrams" element={<ProtectedRoute allowedRoles={['teacher','admin']}><DiagramLab /></ProtectedRoute>} />

@@ -16,7 +16,7 @@ export const SCIENCE_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Describe", "A", 3, "Describe three differences between a plant cell and an animal cell.", ["Plant cells have a cell wall (cellulose); animal cells do not", "Plant cells have chloroplasts for photosynthesis", "Plant cells have a large permanent vacuole"]],
-        ["Calculate", "C", 3, "An image of a mitochondrion is 15 mm long. The actual mitochondrion is 3 µm long. Calculate the magnification. (1 mm = 1000 µm)", ["Converts 15 mm to 15 000 µm", "Uses magnification = image ÷ actual", "×5000"]],
+        ["Calculate", "A", 3, "An image of a mitochondrion is 15 mm long. The actual mitochondrion is 3 µm long. Calculate the magnification. (1 mm = 1000 µm)", ["Converts 15 mm to 15 000 µm", "Uses magnification = image ÷ actual", "×5000"]],
       ],
       mistakes: ["Forgetting to convert units before using the magnification equation.", "Saying plant cells have no mitochondria: they do.", "Confusing the cell wall with the cell membrane."],
     },
@@ -79,7 +79,7 @@ export const SCIENCE_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Explain", "A", 4, "Explain why the rate of an enzyme reaction falls above the optimum temperature.", ["High temperature breaks bonds holding the enzyme's shape", "The active site changes shape", "The substrate no longer fits (not complementary)", "The enzyme is denatured, so fewer enzyme–substrate complexes form"]],
-        ["Design", "B", 4, "Outline a method to investigate the effect of pH on amylase.", ["Use buffers at a range of pH values (e.g. 4, 5, 6, 7, 8)", "Keep temperature, volumes and concentrations constant", "Test samples with iodine at regular intervals until it stays orange", "Repeat each pH three times and calculate a mean"]],
+        ["Outline", "B", 4, "Outline a method to investigate the effect of pH on amylase.", ["Use buffers at a range of pH values (e.g. 4, 5, 6, 7, 8)", "Keep temperature, volumes and concentrations constant", "Test samples with iodine at regular intervals until it stays orange", "Repeat each pH three times and calculate a mean"]],
       ],
       mistakes: ["Saying enzymes are 'killed': they are denatured, they were never alive.", "Saying the substrate is denatured.", "Forgetting to control temperature when testing pH."],
     },
@@ -159,7 +159,7 @@ export const SCIENCE_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Explain", "A", 3, "Explain why food chains rarely have more than five trophic levels.", ["Energy is lost at each level (heat from respiration, movement, egestion)", "Only about 10% passes on", "Too little energy remains to support another level"]],
-        ["Predict", "D", 2, "Predict what happens to a food web if the frog population falls sharply.", ["Insects (their prey) increase", "Predators of frogs (e.g. snakes) decrease or switch prey"]],
+        ["Predict", "A", 2, "Predict what happens to a food web if the frog population falls sharply.", ["Insects (their prey) increase", "Predators of frogs (e.g. snakes) decrease or switch prey"]],
       ],
       mistakes: ["Drawing arrows the wrong way: they point to the animal that eats.", "Saying energy is 'used up': it is transferred to the surroundings.", "Confusing a population with a community."],
     },
@@ -176,7 +176,7 @@ export const SCIENCE_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Define", "A", 2, "Define the terms genotype and phenotype.", ["Genotype: the alleles an organism has (e.g. Bb)", "Phenotype: the characteristic that shows (e.g. brown eyes)"]],
-        ["Calculate", "C", 3, "A homozygous recessive plant (tt) is crossed with a heterozygous plant (Tt). Calculate the percentage of tall offspring (T = tall).", ["Gametes t and T/t", "Offspring Tt, Tt, tt, tt", "50% tall"]],
+        ["Calculate", "A", 3, "A homozygous recessive plant (tt) is crossed with a heterozygous plant (Tt). Calculate the percentage of tall offspring (T = tall).", ["Gametes t and T/t", "Offspring Tt, Tt, tt, tt", "50% tall"]],
       ],
       mistakes: ["Writing the recessive allele as a different letter instead of lower case.", "Forgetting a 3:1 ratio is only a probability.", "Mixing up homozygous and heterozygous."],
     },
@@ -201,7 +201,7 @@ export const SCIENCE_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Describe", "A", 3, "Describe the arrangement and movement of particles in a liquid.", ["Particles close together", "Randomly arranged", "Move around each other (slide past)"]],
-        ["Interpret", "C", 2, "Use the heating curve to state the melting point and the boiling point.", ["Melting point 0 °C", "Boiling point 100 °C"], { kind: "graph", x: [0, 16], y: [-30, 130], xStep: 2, yStep: 20, segments: [{ from: [0, -20], to: [2, 0] }, { from: [2, 0], to: [6, 0] }, { from: [6, 0], to: [8, 100] }, { from: [8, 100], to: [14, 100] }, { from: [14, 100], to: [16, 120] }], xLabel: "time (min)", yLabel: "temperature (°C)" }],
+        ["State", "C", 2, "Use the heating curve to state the melting point and the boiling point.", ["Melting point 0 °C", "Boiling point 100 °C"], { kind: "graph", x: [0, 16], y: [-30, 130], xStep: 2, yStep: 20, segments: [{ from: [0, -20], to: [2, 0] }, { from: [2, 0], to: [6, 0] }, { from: [6, 0], to: [8, 100] }, { from: [8, 100], to: [14, 100] }, { from: [14, 100], to: [16, 120] }], xLabel: "time (min)", yLabel: "temperature (°C)" }],
       ],
       mistakes: ["Saying particles in a solid do not move: they vibrate.", "Saying particles expand when heated: the gaps between them grow.", "Confusing evaporation with boiling."],
     },
@@ -218,7 +218,7 @@ export const SCIENCE_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Define", "A", 2, "Define the term isotope.", ["Atoms of the same element (same number of protons)", "With different numbers of neutrons"]],
-        ["Deduce", "C", 3, "Chlorine is 75% ³⁵Cl and 25% ³⁷Cl. Calculate its relative atomic mass.", ["(35 × 75) + (37 × 25)", "= 3550 ÷ 100", "= 35.5"]],
+        ["Calculate", "A", 3, "Chlorine is 75% ³⁵Cl and 25% ³⁷Cl. Calculate its relative atomic mass.", ["(35 × 75) + (37 × 25)", "= 3550 ÷ 100", "= 35.5"]],
       ],
       mistakes: ["Adding electrons to the mass number.", "Thinking isotopes have different chemical properties: they react the same way.", "Filling the first shell with 8 electrons instead of 2."],
     },
@@ -274,8 +274,8 @@ export const SCIENCE_DEPTH = Object.fromEntries([
         answer: "CH₄ + 2O₂ → CO₂ + 2H₂O",
       },
       exam: [
-        ["Balance", "A", 2, "Balance the equation: Mg + HCl → MgCl₂ + H₂", ["Mg + 2HCl → MgCl₂ + H₂", "Correct formulae unchanged"]],
-        ["Explain", "C", 3, "When magnesium burns in air, the product is heavier than the magnesium. Explain why this does not break the law of conservation of mass.", ["Magnesium reacts with oxygen from the air", "The oxygen atoms add mass to the product (magnesium oxide)", "Total mass of reactants equals total mass of products"]],
+        ["Deduce", "A", 2, "Deduce the balanced equation for the reaction: Mg + HCl → MgCl₂ + H₂", ["Mg + 2HCl → MgCl₂ + H₂", "Correct formulae unchanged"]],
+        ["Explain", "A", 3, "When magnesium burns in air, the product is heavier than the magnesium. Explain why this does not break the law of conservation of mass.", ["Magnesium reacts with oxygen from the air", "The oxygen atoms add mass to the product (magnesium oxide)", "Total mass of reactants equals total mass of products"]],
       ],
       mistakes: ["Changing small numbers in formulae to balance (e.g. H₂O₂).", "Forgetting diatomic elements (O₂, H₂, Cl₂).", "Missing state symbols when asked."],
     },
@@ -318,7 +318,7 @@ export const SCIENCE_DEPTH = Object.fromEntries([
       },
       exam: [
         ["State", "A", 2, "State the ions that make a solution acidic and alkaline.", ["Acids: H⁺ ions", "Alkalis: OH⁻ ions"]],
-        ["Write", "A", 2, "Write the ionic equation for neutralisation.", ["H⁺(aq) + OH⁻(aq)", "→ H₂O(l)"]],
+        ["State", "A", 2, "State the ionic equation for neutralisation.", ["H⁺(aq) + OH⁻(aq)", "→ H₂O(l)"]],
       ],
       mistakes: ["Saying pH 1 is weakly acidic (it is strongly acidic).", "Mixing up salt names (chlorides come from hydrochloric acid).", "Thinking all bases are alkalis: only soluble ones are."],
     },
@@ -358,7 +358,7 @@ export const SCIENCE_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Calculate", "A", 2, "Calculate the relative formula mass of CaCO₃. (Ca = 40, C = 12, O = 16)", ["40 + 12 + (3 × 16)", "= 100"]],
-        ["Calculate", "C", 4, "Calculate the mass of CO₂ made when 50 g of CaCO₃ decomposes. CaCO₃ → CaO + CO₂", ["Moles of CaCO₃ = 50 ÷ 100 = 0.5 mol", "Ratio 1 : 1, so 0.5 mol CO₂", "Mr of CO₂ = 44", "Mass = 0.5 × 44 = 22 g"]],
+        ["Calculate", "A", 4, "Calculate the mass of CO₂ made when 50 g of CaCO₃ decomposes. CaCO₃ → CaO + CO₂", ["Moles of CaCO₃ = 50 ÷ 100 = 0.5 mol", "Ratio 1 : 1, so 0.5 mol CO₂", "Mr of CO₂ = 44", "Mass = 0.5 × 44 = 22 g"]],
       ],
       mistakes: ["Forgetting to multiply by the number of atoms in the formula.", "Using the ratio of masses instead of moles.", "Dropping units (g, g/mol, mol)."],
     },
@@ -504,7 +504,7 @@ export const SCIENCE_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Calculate", "A", 2, "A motor has an input of 500 W and a useful output of 350 W. Calculate its efficiency.", ["350 ÷ 500", "= 0.7 or 70%"]],
-        ["Suggest", "D", 2, "Suggest two ways to reduce wasted energy in a home.", ["Insulation (loft, cavity walls, double glazing) reduces heat loss", "Efficient appliances / LED bulbs / switching devices off"]],
+        ["Suggest", "A", 2, "Suggest two ways to reduce wasted energy in a home.", ["Insulation (loft, cavity walls, double glazing) reduces heat loss", "Efficient appliances / LED bulbs / switching devices off"]],
       ],
       mistakes: ["Getting an efficiency above 100%.", "Swapping useful and total.", "Forgetting wasted energy usually ends up as heat."],
     },

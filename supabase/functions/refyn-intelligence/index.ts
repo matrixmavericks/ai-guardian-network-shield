@@ -1,6 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logAiUsage } from "../_shared/aiUsage.ts";
+import { DP_ECONOMICS, DP_SCIENCES, mypCriteriaList } from "../_shared/myp.ts";
+
+const IB_REFERENCE = `MYP assessment criteria by subject group (exact IB names; use only these, each marked 0–8):
+${mypCriteriaList()}
+${DP_SCIENCES}
+${DP_ECONOMICS}`;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -173,7 +179,9 @@ For each criterion/strand identified, rate Coverage as Strong / Partial / Gap wi
 ## Teacher Talking Points
 2-3 sentences a teacher can paste into a planner or parent note.
 
-CRITICAL: Use real IB vocabulary. NEVER invent criteria. NEVER use LaTeX. Use Unicode (× ÷ ² √ π).`,
+CRITICAL: Use real IB vocabulary. NEVER invent criteria. NEVER use LaTeX. Use Unicode (× ÷ ² √ π).
+
+${IB_REFERENCE}`,
     targetRole: "teacher",
   },
   subject_lab: {
@@ -181,11 +189,11 @@ CRITICAL: Use real IB vocabulary. NEVER invent criteria. NEVER use LaTeX. Use Un
 
 Supported lab types:
 - physics_uncertainty: a worked uncertainty calculation (absolute, fractional, percentage) for the given measurements, then a 5-step IA-style write-up snippet (Aim, Method note, Raw data table sketch, Processed data with propagated uncertainty, Conclusion line).
-- physics_ia_review: review a student's Physics IA draft against IB DP Physics IA criteria (Personal engagement, Exploration, Analysis, Evaluation, Communication) with 1-6 marks each and 2 sentences of feedback per criterion.
+- physics_ia_review: review a student's Physics IA draft against the IB DP physics IA criteria for first assessment 2025 (Research design, Data analysis, Conclusion, Evaluation; 0-6 marks each in bands 1-2, 3-4, 5-6; total 24; never the old personal engagement/exploration/communication criteria) with 0-6 marks each and 2 sentences of feedback per criterion.
 - math_exploration_ideas: 5 Math AA/AI exploration (IA) ideas tuned to the student's interests, each with research question, mathematical content (HL/SL fit), real-world hook, and difficulty rating.
 - math_step_solver: solve the given problem with notation-aware, step-by-step working suitable for an IB Math student. Use Unicode math (× ÷ ² √ π ∫ Σ).
-- is_case_study: build a structured I&S case study on the given topic with global context, key concept, 6 inquiry questions, source pack (3 categories of real sources), and a Criterion D reflective task.
-- econ_data_response: build a DP Economics paper-2 data response on the given topic: stimulus paragraph, 4-part questions (a/b/c/d) using real command terms (Define, Explain, Calculate, Discuss/Evaluate) with mark allocations totaling 17, and a markscheme.
+- is_case_study: build a structured I&S case study on the given topic with global context, key concept, 6 inquiry questions, source pack (3 categories of real sources), and a Criterion D (Thinking critically) task: evaluating sources by origin and purpose and a "To what extent…" extended response.
+- econ_data_response: build one DP Economics Paper 2 data-response question on the given topic, in the structure of the guide for first assessment 2022: a text/data stimulus (short extracts plus a table or chart), then parts (a)(i) and (a)(ii) at 2 marks each (e.g. define terms), (b) 5 marks (quantitative; may be split 3 + 2), (c), (d), (e) and (f) at 4 marks each (explain/analyse, with a diagram where appropriate), and (g) 15 marks ("Using information from the text/data and your knowledge of economics, evaluate/discuss…", marked with markbands); total 40 marks. Use real IB command terms and give an analytic markscheme for (a)–(f) and markband guidance for (g).
 
 Output in clean markdown with appropriate H2/H3 headers for the lab type. Always end with "## Teacher Use Notes" with 2-3 bullets on how to deploy in class tomorrow.
 

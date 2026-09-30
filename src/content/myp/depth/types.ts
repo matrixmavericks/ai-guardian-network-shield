@@ -1,4 +1,5 @@
 import type { DiagramSpec } from "@/components/studio/diagrams";
+import { MYP, type MypGroup } from "@/lib/myp";
 
 /** MYP assessment criteria letters; their names differ by subject group. */
 export type Criterion = "A" | "B" | "C" | "D";
@@ -46,11 +47,15 @@ export const depth = (
   },
 ];
 
-export const CRITERIA: Record<string, Record<Criterion, string>> = {
-  Sciences: { A: "Knowing and understanding", B: "Inquiring and designing", C: "Processing and evaluating", D: "Reflecting on the impacts of science" },
-  Mathematics: { A: "Knowing and understanding", B: "Investigating patterns", C: "Communicating", D: "Applying mathematics in real-life contexts" },
-  "Individuals & Societies": { A: "Knowing and understanding", B: "Investigating", C: "Communicating", D: "Thinking critically" },
-  "Language & Literature": { A: "Analysing", B: "Organizing", C: "Producing text", D: "Using language" },
+/** Course subject groups → the shared, verified MYP reference. */
+export const GROUP_KEY: Record<string, MypGroup> = {
+  Sciences: "sciences",
+  Mathematics: "mathematics",
+  "Individuals & Societies": "individuals-societies",
+  "Language & Literature": "language-literature",
 };
 
-export const criterionName = (group: string, c: Criterion) => (CRITERIA[group] ?? CRITERIA["Individuals & Societies"])[c];
+export const criterionName = (group: string, c: Criterion) => {
+  const g = GROUP_KEY[group];
+  return g ? MYP[g].criteria[c].name : `Criterion ${c}`;
+};

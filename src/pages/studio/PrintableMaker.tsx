@@ -54,6 +54,7 @@ import {
   type Worksheet,
 } from "@/components/studio/worksheet";
 import { useTeacherData } from "@/components/teacher/data";
+import { MYP, detectGroups, programmeOf, type Letter } from "@/lib/myp";
 
 const KINDS: { id: PrintKind; label: string; body: string; icon: React.ElementType }[] = [
   { id: "worksheet", label: "Worksheet", body: "Sections, mixed questions, challenge", icon: FileText },
@@ -92,6 +93,9 @@ const PrintableMaker = () => {
   const [params, setParams] = useSearchParams();
   const lib = useLibrary();
   const { data: teacher } = useTeacherData(!!config);
+  // The teacher's MYP subject group (for criterion names) and whether this band is DP
+  const mypGroup = config ? detectGroups(config.subjectLabel)[0] : undefined;
+  const programme = programmeOf("", band);
   const paperRef = useRef<HTMLDivElement>(null);
 
   const [gen, setGen] = useStoredState<Omit<GenOptions, "band">>(user ? `refyn:${user.id}:studio:gen` : null, {
@@ -203,7 +207,7 @@ const PrintableMaker = () => {
 
   const generate = async (override?: Partial<GenOptions>) => {
     if (!config) return;
-    const o: GenOptions = { ...gen, ...override, band };
+    const o: GenOptions = { ...gen, ...override, band, group: mypGroup, programme, criterion: programme === "dp" ? undefined : (override?.criterion ?? gen.criterion) };
     if (!o.topic.trim()) {
       toast.error("Add a topic first");
       return;
@@ -485,17 +489,21 @@ const PrintableMaker = () => {
                       Time (min)
                       <input type="number" min={5} max={180} value={gen.minutes ?? ""} onChange={(e) => setG({ minutes: Number(e.target.value) || undefined })} className={cn(inputCls, "mt-1 h-9 py-1")} />
                     </label>
-                    <label className="block text-[12px] text-lp-mute">
-                      MYP criterion
-                      <select value={gen.criterion ?? ""} onChange={(e) => setG({ criterion: e.target.value })} className={cn(inputCls, "mt-1 h-9 py-1")}>
-                        <option value="">Any</option>
-                        {["A", "B", "C", "D"].map((c) => (
-                          <option key={c} value={c}>
-                            Criterion {c}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    {programme === "dp" ? (
+                      <p className="self-end pb-2 text-[11.5px] leading-snug text-lp-mute">DP work uses markschemes, not MYP criteria.</p>
+                    ) : (
+                      <label className="block text-[12px] text-lp-mute">
+                        MYP criterion
+                        <select value={gen.criterion ?? ""} onChange={(e) => setG({ criterion: e.target.value })} className={cn(inputCls, "mt-1 h-9 py-1")} title={mypGroup && gen.criterion ? MYP[mypGroup].criteria[gen.criterion as Letter]?.name : undefined}>
+                          <option value="">Any</option>
+                          {(["A", "B", "C", "D"] as const).map((c) => (
+                            <option key={c} value={c}>
+                              {c}{mypGroup ? ` · ${MYP[mypGroup].criteria[c].name}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                   </div>
                 )}
                 <label className="block text-[12px] text-lp-mute">

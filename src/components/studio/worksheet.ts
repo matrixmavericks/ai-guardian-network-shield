@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { DIAGRAM_SCHEMA, isDiagram, type DiagramSpec } from "./diagrams";
+import { MYP, type Letter, type MypGroup } from "@/lib/myp";
 
 /* ---------- Types ---------- */
 
@@ -19,6 +20,8 @@ export type Question = {
   lines?: number;
   parts?: Part[];
   answer?: string;
+  /** MYP criterion this question assesses */
+  criterion?: "A" | "B" | "C" | "D";
 };
 
 export type Section = { id: string; title: string; intro?: string; wordBank?: string[]; questions: Question[] };
@@ -73,6 +76,8 @@ export const normQuestion = (raw: unknown): Question | null => {
   const prompt = str(r.prompt ?? r.question ?? r.text);
   const q: Question = { id: uid(), type, prompt, marks: num(r.marks, type === "long" ? 6 : type === "mcq" || type === "truefalse" ? 1 : 2, 0, 40) };
   if (isDiagram(r.diagram)) q.diagram = r.diagram;
+  const crit = String(r.criterion ?? "").trim().toUpperCase().replace(/^CRITERION\s*/, "");
+  if (/^[ABCD]$/.test(crit)) q.criterion = crit as Question["criterion"];
   if (type === "mcq") {
     const opts = Array.isArray(r.options) ? r.options.map((o) => str(o, 300)).filter(Boolean).slice(0, 6) : [];
     if (opts.length >= 2) q.options = opts.map((o) => o.replace(/^[A-F][).:]\s+/, ""));
@@ -191,6 +196,9 @@ export type GenOptions = {
   diagrams: boolean;
   minutes?: number;
   criterion?: string;
+  /** Subject group and programme, from the teacher's subject and grade band */
+  group?: MypGroup;
+  programme?: "myp" | "dp";
   source?: string;
   notes?: string;
 };
@@ -201,15 +209,31 @@ const LEVEL: Record<GenOptions["level"], string> = {
   stretch: "STRETCH level: challenging application, multi-step reasoning, unfamiliar contexts, evaluation",
 };
 
-export const QUESTION_SHAPE = `Question object: {"type":"mcq|short|long|working|fill|truefalse|match|table","prompt":"...","marks":2,"options":["...","...","...","..."] (mcq only, no letters),"pairs":[["term","definition"]] (match only),"table":{"headers":["x","y"],"rows":[["1",""],["2",""]]} (table only; "" = blank for students),"lines":3 (answer lines),"parts":[{"label":"a","prompt":"...","marks":2,"lines":2,"working":true,"answer":"..."}] (optional sub-parts),"diagram":{...} (optional),"answer":"mark scheme / correct answer"}
+export const QUESTION_SHAPE = `Question object: {"type":"mcq|short|long|working|fill|truefalse|match|table","prompt":"...","marks":2,"options":["...","...","...","..."] (mcq only, no letters),"pairs":[["term","definition"]] (match only),"table":{"headers":["x","y"],"rows":[["1",""],["2",""]]} (table only; "" = blank for students),"lines":3 (answer lines),"parts":[{"label":"a","prompt":"...","marks":2,"lines":2,"working":true,"answer":"..."}] (optional sub-parts),"diagram":{...} (optional),"answer":"mark scheme / correct answer","criterion":"A" (MYP only: the criterion the question assesses)}
 For "fill" put ___ where each blank goes. For truefalse the prompt is the statement.`;
+
+/** What the AI must know about MYP criteria (or DP) for this printable. */
+const assessmentLine = (o: GenOptions) => {
+  if (o.programme === "dp") return "This is IB Diploma Programme work: do not use MYP criteria A–D; use DP-style questions, command terms and markschemes, and leave \"criterion\" out.";
+  const g = o.group ? MYP[o.group] : null;
+  const lines = [
+    g
+      ? `This is IB MYP ${g.name}. Its assessment criteria are exactly: ${(["A", "B", "C", "D"] as const).map((l) => `${l} ${g.criteria[l].name}`).join("; ")}. Give every question a "criterion" field with the criterion it actually assesses.`
+      : `This is IB MYP work. Give every question a "criterion" field (A–D) for the subject group's own criteria; never borrow another group's criterion names.`,
+  ];
+  if (o.criterion && g) {
+    const c = g.criteria[o.criterion as Letter];
+    if (c) lines.push(`Focus on criterion ${o.criterion}: ${c.name}, which assesses ${c.focus}.${c.strands ? ` Cover its strands: ${c.strands.join("; ")}.` : ""}`);
+  } else if (o.criterion) lines.push(`Focus on MYP criterion ${o.criterion} for this subject group.`);
+  return lines.join(" ");
+};
 
 export const buildPrompt = (o: GenOptions, systemContext: string) => {
   const base = [
     systemContext,
     `Create a classroom-ready ${o.kind === "test" ? "test paper" : o.kind === "exit" ? "exit ticket" : o.kind === "flashcards" ? "set of flashcards" : "worksheet"} for ${o.band} on: "${o.topic}".`,
     LEVEL[o.level],
-    o.criterion ? `Focus on IB MYP assessment criterion ${o.criterion}.` : "",
+    assessmentLine(o),
     o.source ? `Base it on this material from the teacher:\n"""${o.source.slice(0, 4000)}"""` : "",
     o.notes ? `Teacher's extra instructions: ${o.notes.slice(0, 600)}` : "",
     "Use accurate, specific content with real numbers and contexts. Use plain Unicode maths (×, ÷, ², √, π, °, ≤) and never LaTeX or $ signs. British spelling.",
@@ -226,7 +250,7 @@ export const buildPrompt = (o: GenOptions, systemContext: string) => {
   } else {
     base.push(
       `About ${o.count} questions in 2-4 titled sections that ramp in difficulty. Use these question types: ${o.types.join(", ")}.`,
-      o.kind === "test" ? `It is a formal test: include marks for every question and realistic command terms (state, describe, explain, calculate, evaluate).` : `Include a short "extension" challenge at the end.`,
+      o.kind === "test" ? `It is a formal test: include marks for every question, start each question with an IB command term used in its IB meaning, and match the marks to the demand.` : `Include a short "extension" challenge at the end.`,
       o.minutes ? `It should take about ${o.minutes} minutes.` : "",
       QUESTION_SHAPE,
       o.diagrams ? DIAGRAM_SCHEMA : "Do not include diagrams.",
@@ -245,7 +269,7 @@ export const toPlainText = (p: Printable, withAnswers = false) => {
     return out.join("\n");
   }
   const qText = (q: Question, n: string) => {
-    const lines = [`${n} ${q.prompt}${q.marks && !q.parts?.length ? ` [${q.marks}]` : ""}`];
+    const lines = [`${n} ${q.prompt}${q.marks && !q.parts?.length ? ` [${q.marks}]` : ""}${q.criterion ? ` (Criterion ${q.criterion})` : ""}`];
     q.options?.forEach((o, i) => lines.push(`   ${String.fromCharCode(65 + i)}. ${o}`));
     q.pairs?.forEach(([a, b], i) => lines.push(`   ${i + 1}. ${a}  —  ${String.fromCharCode(65 + i)}. ${b}`));
     if (q.table) lines.push(`   ${q.table.headers.join(" | ")}`, ...q.table.rows.map((r) => `   ${r.map((c) => c || "____").join(" | ")}`));

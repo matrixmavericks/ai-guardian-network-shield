@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { AI_MODELS, BASIC_PLANS, DEFAULT_MODEL, FALLBACK_MODELS, findModel, normalizeModel, type AiModel, type Effort } from "../_shared/aiModels.ts";
 import { DECK_INSTRUCTIONS, FILE_INSTRUCTIONS, LIBRARY_RULES, buildLibrary, historyBudget, libraryBudget, type LibraryUse } from "../_shared/chatLibrary.ts";
+import { ASSESSMENT_INTENT, detectGroups, mypGuidance, programmeOf } from "../_shared/myp.ts";
+import { PAST_PAPER_INTENT, pastPaperBlock } from "../_shared/pastPapers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,7 +101,7 @@ const TEACHER_PROMPT = (subject: string) => `You are Refyn, a planning and conte
 
 Do the work they ask for, completely and directly: lesson and unit plans, schemes of work, worksheets, question banks, quizzes and tests with answer keys, mark schemes and rubrics, model and exemplar answers, differentiated versions for support and extension, feedback and comments on student work, report comments, parent emails, and explanations of content at any level.
 - Never withhold answers, never switch to guiding questions or Socratic tutoring, and don't remind them about academic integrity: they are the teacher, and answer keys and model answers are part of the job.
-- Where it fits, align to the IB MYP (criteria A–D, command terms, global contexts, ATL skills) or to the curriculum they name.
+- Where it fits, align to the IB MYP (the subject group's own criteria A–D, command terms, global contexts, ATL skills) or to the curriculum they name. When an IB MYP ASSESSMENT reference is given below, follow it exactly; never guess criterion names or strands.
 - Be practical and classroom-ready: timings, materials, success criteria, differentiation and assessment.
 - If a request is ambiguous, make sensible assumptions, state them in one line, and deliver; offer to adjust afterwards instead of asking a list of questions first.
 - When they want a resource they will use (a worksheet, plan, rubric, quiz, letter, spreadsheet), deliver it as a file block (see MAKING FILES).`;
@@ -541,6 +543,11 @@ IMPORTANT: You are in Process Teaching Mode.
     systemMessage += schoolTrainingContext;
   }
 
+  // IB assessment accuracy: the verified MYP criteria and rules for assessment requests
+  const assessText = `${prompt}\n${resourceContext ?? ''}\n${subject}`;
+  const mypRef = mypGuidance(assessText, subject, staff ? 'staff' : 'student', gradeLevel);
+  if (mypRef) systemMessage += `\n\n${mypRef}`;
+
   // --- Call AI with timeout ---
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!lovableApiKey) {
@@ -580,6 +587,29 @@ IMPORTANT: You are in Process Teaching Mode.
       }
     } catch (e) {
       console.error('Library load failed (non-fatal):', e);
+    }
+  }
+
+  // Past papers (teachers only): the school's own IB papers, when the request is about assessment
+  let pastPapersUsed: string[] = [];
+  if (staff && userId && (PAST_PAPER_INTENT.test(prompt) || ASSESSMENT_INTENT.test(prompt))) {
+    try {
+      const programme = programmeOf(assessText, gradeLevel);
+      const groups = programme === 'dp' ? 'dp' as const : detectGroups(assessText, subject);
+      const explicit = PAST_PAPER_INTENT.test(prompt);
+      // Without a clear subject, only search every paper when past papers were asked for
+      if (explicit || groups === 'dp' || groups.length) {
+        const recent = history.filter((h) => h.role === 'user').slice(-2).map((h) => h.content).join('\n');
+        const block = await pastPaperBlock(getAdminClient(), userId, `${prompt}\n${prompt}\n${recent}`, groups, Math.min(120_000, Math.round(libraryBudget(priceIn) / 3)));
+        if (block) {
+          pastPapersUsed = block.used;
+          systemMessage += `\n\n${block.text}`;
+        } else if (explicit) {
+          systemMessage += `\n\nPAST PAPERS: the teacher has no past papers in Refyn for this subject yet. Say so plainly, point them to Past papers in the sidebar to add their school's copies, and offer clearly labelled IB-style questions meanwhile. Never present invented questions as past-paper questions.`;
+        }
+      }
+    } catch (e) {
+      console.error('Past papers load failed (non-fatal):', e);
     }
   }
 
@@ -732,6 +762,8 @@ IMPORTANT: You are in Process Teaching Mode.
       requestedModel: requestedModel ? normalizeModel(requestedModel) : null,
       notice: notice ?? undefined,
       library: libraryUse ?? undefined,
+      pastPapers: pastPapersUsed.length ? pastPapersUsed : undefined,
+      ibReference: mypRef ? true : undefined,
       usage: answered ? { prompt: promptTokens, completion: completionTokens } : undefined,
       mode: staff ? 'teacher' : processTeaching || forceProcessMode ? 'guided' : 'direct',
     },

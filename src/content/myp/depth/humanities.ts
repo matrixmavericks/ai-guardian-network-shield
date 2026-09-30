@@ -22,7 +22,7 @@ export const HUMANITIES_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Explain", "A", 4, "Explain how the alliance system turned a local crisis into a world war.", ["Austria-Hungary declared war on Serbia after Sarajevo", "Russia mobilised to support Serbia", "Germany declared war on Russia and France (its ally)", "Germany invaded Belgium, bringing Britain in"]],
-        ["Evaluate", "D", 6, "'Militarism was the main cause of the First World War.' How far do you agree?", ["Explains militarism with evidence (arms race, Dreadnoughts, Schlieffen Plan)", "Explains at least one other cause with evidence", "Links causes together", "Balanced argument", "Clear judgement", "Supported conclusion"]],
+        ["To what extent", "D", 6, "To what extent do you agree that militarism was the main cause of the First World War?", ["Explains militarism with evidence (arms race, Dreadnoughts, Schlieffen Plan)", "Explains at least one other cause with evidence", "Links causes together", "Balanced argument", "Clear judgement", "Supported conclusion"]],
       ],
       mistakes: ["Listing causes without explaining how they led to war.", "Saying the assassination alone caused the war.", "Mixing up the Triple Alliance and the Triple Entente."],
     },
@@ -56,7 +56,7 @@ export const HUMANITIES_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Explain", "A", 4, "Explain why many Germans called the treaty a 'Diktat'.", ["Germany was not invited to the negotiations", "The terms were imposed / Germany had to sign", "The War Guilt Clause blamed Germany alone", "Reparations and losses felt humiliating"]],
-        ["Evaluate", "D", 6, "'The Treaty of Versailles was too harsh on Germany.' How far do you agree?", ["Evidence of harshness (LAMB terms)", "Counter-evidence (e.g. Germany's harsh Treaty of Brest-Litovsk; France's losses)", "Considers the aims of the Big Three", "Balanced argument", "Clear judgement", "Supported conclusion"]],
+        ["To what extent", "D", 6, "To what extent do you agree that the Treaty of Versailles was too harsh on Germany?", ["Evidence of harshness (LAMB terms)", "Counter-evidence (e.g. Germany's harsh Treaty of Brest-Litovsk; France's losses)", "Considers the aims of the Big Three", "Balanced argument", "Clear judgement", "Supported conclusion"]],
       ],
       mistakes: ["Getting the reparation figure or army limit wrong.", "Only giving the German view.", "Forgetting the Big Three wanted different things."],
     },
@@ -79,7 +79,7 @@ export const HUMANITIES_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Explain", "A", 4, "Explain how the Wall Street Crash affected Germany.", ["American banks recalled loans (from the Dawes Plan)", "German businesses closed and unemployment soared (about 6 million by 1932)", "People lost faith in the Weimar government", "Extremist parties like the Nazis and Communists gained votes"]],
-        ["Describe", "C", 2, "Describe the trend in the graph.", ["Unemployment rose steeply", "From 3.2% (1929) to 24.9% (1933)"], { kind: "chart", type: "line", labels: ["1929", "1930", "1931", "1932", "1933"], series: [{ name: "US unemployment (%)", values: [3.2, 8.7, 15.9, 23.6, 24.9] }], yLabel: "unemployment (%)" }],
+        ["Describe", "A", 2, "Describe the trend in the graph.", ["Unemployment rose steeply", "From 3.2% (1929) to 24.9% (1933)"], { kind: "chart", type: "line", labels: ["1929", "1930", "1931", "1932", "1933"], series: [{ name: "US unemployment (%)", values: [3.2, 8.7, 15.9, 23.6, 24.9] }], yLabel: "unemployment (%)" }],
       ],
       mistakes: ["Saying the Crash alone caused the Depression.", "Describing a graph without quoting figures.", "Forgetting the link from the US economy to Europe."],
     },
@@ -102,7 +102,7 @@ export const HUMANITIES_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Explain", "A", 4, "Explain how the Nazis used terror to control Germany.", ["The SS and Gestapo arrested opponents", "Concentration camps held political prisoners", "People were encouraged to inform on each other", "Fear stopped open opposition"]],
-        ["Analyse", "B", 4, "A Nazi poster shows smiling workers under the slogan 'One People, One Reich, One Leader'. Analyse its message and purpose.", ["Message of unity behind Hitler", "Workers shown as happy / employment successes", "Purpose: build loyalty and support for the regime", "Links to Goebbels' propaganda aims"]],
+        ["Analyse", "D", 4, "A Nazi poster shows smiling workers under the slogan 'One People, One Reich, One Leader'. Analyse its message and purpose.", ["Message of unity behind Hitler", "Workers shown as happy / employment successes", "Purpose: build loyalty and support for the regime", "Links to Goebbels' propaganda aims"]],
       ],
       mistakes: ["Saying Hitler seized power in a coup in 1933 (he was appointed).", "Mixing up the SA and the SS.", "Describing propaganda without explaining its purpose."],
     },
@@ -125,7 +125,7 @@ export const HUMANITIES_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Explain", "A", 4, "Explain why the Nazi-Soviet Pact made war more likely.", ["Germany no longer feared a war on two fronts", "The USSR agreed not to fight Germany", "They secretly agreed to divide Poland", "So Hitler felt free to invade Poland"]],
-        ["Evaluate", "D", 6, "'Appeasement caused the Second World War.' How far do you agree?", ["Explains how appeasement encouraged Hitler", "Explains other causes (Hitler's aims, Versailles, League of Nations failure)", "Uses specific events as evidence", "Balanced argument", "Clear judgement", "Supported conclusion"]],
+        ["To what extent", "D", 6, "To what extent do you agree that appeasement caused the Second World War?", ["Explains how appeasement encouraged Hitler", "Explains other causes (Hitler's aims, Versailles, League of Nations failure)", "Uses specific events as evidence", "Balanced argument", "Clear judgement", "Supported conclusion"]],
       ],
       mistakes: ["Muddling the order of events in 1938–39.", "Blaming appeasement without considering Hitler's aims.", "Forgetting the USSR's role."],
     },
@@ -141,8 +141,8 @@ export const HUMANITIES_DEPTH = Object.fromEntries([
         answer: "Valuable for government attitudes; limited as evidence of reality.",
       },
       exam: [
-        ["Evaluate", "B", 4, "Evaluate the value and limitations of a soldier's private diary from the Somme, 1916, for studying trench life.", ["Origin: an eyewitness, written at the time", "Value: personal, detailed and unlikely to be censored", "Limitation: one person's experience, may not be typical", "Limitation: may be emotional or incomplete"]],
-        ["Explain", "B", 2, "Explain why a biased source can still be useful to a historian.", ["It shows the attitudes / views of its creator", "It can reveal purpose, e.g. what propaganda wanted people to believe"]],
+        ["Evaluate", "D", 4, "Evaluate the value and limitations of a soldier's private diary from the Somme, 1916, for studying trench life.", ["Origin: an eyewitness, written at the time", "Value: personal, detailed and unlikely to be censored", "Limitation: one person's experience, may not be typical", "Limitation: may be emotional or incomplete"]],
+        ["Explain", "D", 2, "Explain why a biased source can still be useful to a historian.", ["It shows the attitudes / views of its creator", "It can reveal purpose, e.g. what propaganda wanted people to believe"]],
       ],
       mistakes: ["Saying a source is useless because it is biased.", "Only describing content without provenance.", "Confusing value with reliability."],
     },
@@ -188,7 +188,7 @@ export const HUMANITIES_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Explain", "A", 4, "Explain why Britain agreed to Indian independence in 1947.", ["Britain was weakened economically by WW2", "Nationalist pressure (e.g. Quit India) made rule difficult", "The Labour government supported independence", "Unrest, e.g. the 1946 naval mutiny, showed control was slipping"]],
-        ["Evaluate", "D", 6, "'Gandhi was the most important reason India gained independence.' How far do you agree?", ["Explains Gandhi's role and methods with evidence", "Explains other factors (Nehru, Bose, Congress, WW2, British weakness)", "Considers the role of the Muslim League / Jinnah", "Balanced argument", "Clear judgement", "Supported conclusion"]],
+        ["To what extent", "D", 6, "To what extent do you agree that Gandhi was the most important reason India gained independence?", ["Explains Gandhi's role and methods with evidence", "Explains other factors (Nehru, Bose, Congress, WW2, British weakness)", "Considers the role of the Muslim League / Jinnah", "Balanced argument", "Clear judgement", "Supported conclusion"]],
       ],
       mistakes: ["Presenting independence as the work of one person.", "Ignoring the violence and displacement of Partition.", "Getting key dates wrong."],
     },
@@ -229,7 +229,7 @@ export const HUMANITIES_DEPTH = Object.fromEntries([
         answer: "11 per 1000 (1.1% a year)",
       },
       exam: [
-        ["Describe", "C", 3, "Describe the shape of India's population pyramid.", ["Wide base: many young people", "Narrows towards the top: fewer elderly", "Slightly narrower 0-9 bar suggests falling birth rates"], { kind: "pyramid", groups: ["0-9", "10-19", "20-29", "30-39", "40-49", "50-59", "60-69", "70+"], male: [8.6, 9.2, 9.0, 8.1, 6.4, 4.9, 3.2, 1.9], female: [8.0, 8.5, 8.6, 7.8, 6.3, 4.9, 3.4, 2.2] }],
+        ["Describe", "A", 3, "Describe the shape of India's population pyramid.", ["Wide base: many young people", "Narrows towards the top: fewer elderly", "Slightly narrower 0-9 bar suggests falling birth rates"], { kind: "pyramid", groups: ["0-9", "10-19", "20-29", "30-39", "40-49", "50-59", "60-69", "70+"], male: [8.6, 9.2, 9.0, 8.1, 6.4, 4.9, 3.2, 1.9], female: [8.0, 8.5, 8.6, 7.8, 6.3, 4.9, 3.4, 2.2] }],
         ["Explain", "A", 4, "Explain two push and two pull factors for rural–urban migration in India.", ["Push: lack of jobs / low farm incomes", "Push: poor services (schools, healthcare) or drought", "Pull: jobs in cities / higher wages", "Pull: better education and healthcare / bright lights"]],
       ],
       mistakes: ["Reading pyramid bars as numbers instead of percentages.", "Mixing up push and pull factors.", "Forgetting migration affects both the origin and the destination."],
@@ -338,7 +338,7 @@ export const HUMANITIES_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Explain", "A", 4, "Explain how human activities enhance the greenhouse effect.", ["Burning fossil fuels releases CO₂", "Deforestation reduces CO₂ absorption", "Farming (cattle, rice) releases methane", "More greenhouse gases trap more heat, raising global temperatures"]],
-        ["Distinguish", "D", 2, "Distinguish between mitigation and adaptation, with an example of each.", ["Mitigation reduces the causes (e.g. solar power)", "Adaptation copes with the effects (e.g. drought-resistant crops, flood defences)"]],
+        ["Distinguish", "A", 2, "Distinguish between mitigation and adaptation, with an example of each.", ["Mitigation reduces the causes (e.g. solar power)", "Adaptation copes with the effects (e.g. drought-resistant crops, flood defences)"]],
       ],
       mistakes: ["Confusing the ozone hole with climate change.", "Saying the greenhouse effect is bad in itself (without it Earth would be frozen).", "Describing graphs without data."],
     },

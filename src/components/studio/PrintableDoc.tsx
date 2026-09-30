@@ -111,10 +111,12 @@ const QuestionBlock: React.FC<{
   const markEl =
     opts.showMarks && marks > 0 ? (
       exam || classic ? (
-        <span className="shrink-0 pl-3 font-semibold">[{marks}]</span>
+        <span className="shrink-0 pl-3 font-semibold">
+          [{marks}]{q.criterion && <span className="ml-1.5 text-[0.85em] font-medium opacity-70" title={`MYP criterion ${q.criterion}`}>Crit. {q.criterion}</span>}
+        </span>
       ) : (
         <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: `${accent}18`, color: accent }}>
-          {marks} {marks === 1 ? "mark" : "marks"}
+          {marks} {marks === 1 ? "mark" : "marks"}{q.criterion ? ` · Crit. ${q.criterion}` : ""}
         </span>
       )
     ) : null;

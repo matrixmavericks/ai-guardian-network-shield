@@ -10,6 +10,27 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { DEFAULT_MODEL, FALLBACK_MODELS, findModel } from "../_shared/aiModels.ts";
 import { buildLibrary } from "../_shared/chatLibrary.ts";
+import { detectGroups, mypGuidance, programmeOf } from "../_shared/myp.ts";
+import { PAST_PAPER_INTENT, pastPaperBlock } from "../_shared/pastPapers.ts";
+
+/** IB accuracy for question slides, plus the school's past papers when the brief asks for them. */
+async function assessmentContext(userId: string, text: string): Promise<string> {
+  let out = "";
+  const guidance = mypGuidance(text);
+  if (guidance) out += `\n\n${guidance}\nOn question slides, put the criterion in the eyebrow when the subject group is clear, e.g. "Quick check · Criterion A".`;
+  if (PAST_PAPER_INTENT.test(text)) {
+    try {
+      const groups = programmeOf(text) === "dp" ? ("dp" as const) : detectGroups(text);
+      const block = await pastPaperBlock(admin(), userId, text, groups, 60_000);
+      out += block
+        ? `\n\n${block.text}`
+        : `\n\nPAST PAPERS: the teacher has no past papers in Refyn for this subject yet, so write clearly labelled IB-style questions and never present them as past-paper questions.`;
+    } catch (e) {
+      console.error("past papers", e);
+    }
+  }
+  return out;
+}
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -239,7 +260,7 @@ Rules:
 - Be accurate. Don't invent statistics, quotes or sources; only use "stats" for well-established figures.
 - Audience: ${String(brief.audience || "secondary school students").slice(0, 120)}. Tone: ${String(brief.tone || "clear and engaging").slice(0, 80)}. Match vocabulary and examples to the age group; align with the IB MYP where it fits.
 - ${images ? `Give the title slide an image, and about half of the other slides too (split, image, bullets). Image prompts must be concrete and on-topic, in this style: ${style}.` : "Do not include any image fields."}
-- Pick the theme that best suits the topic.${library}`;
+- Pick the theme that best suits the topic.${library}${await assessmentContext(userId, `${topic}\n${brief.extra ?? ""}\n${brief.audience ?? ""}`)}`;
     const user = `Make a ${n}-slide presentation.\nTopic and brief: ${topic}${brief.extra ? `\nAlso: ${String(brief.extra).slice(0, 1500)}` : ""}`;
     return streamJsonLines(apiKey, [{ role: "system", content: system }, { role: "user", content: user }], userId);
   }
@@ -263,7 +284,7 @@ Rules:
 - Keep slide text short (titles up to 8 words, bullets up to 14 words) and keep or improve the speaker notes.
 - ${scope}
 
-${LAYOUT_GUIDE}`;
+${LAYOUT_GUIDE}${await assessmentContext(userId, `${instruction}\n${String(body.deck?.title ?? "")}`)}`;
     const user = `Current deck:\n${deck}\n\nInstruction: ${instruction}`;
     return streamJsonLines(apiKey, [{ role: "system", content: system }, { role: "user", content: user }], userId);
   }

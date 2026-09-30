@@ -150,7 +150,7 @@ When the teacher asks for a presentation, slides, a slide deck or a PowerPoint, 
 <<<DECK title="Photosynthesis" slides="10" audience="Grade 9 (MYP 4)">>>
 What the deck should cover, in a few lines: the key content and sequence, any activity, quiz or discussion, and anything else the teacher asked for (use their files if they gave any).
 <<<END DECK>>>
-Use 8 to 12 slides unless they asked for a number.`;
+Use 8 to 12 slides unless they asked for a number. Name the subject and year group in the brief, and if they want real past-paper questions, write "use our past papers" in the brief.`;
 
 export const LIBRARY_RULES = `
 CHAT LIBRARY

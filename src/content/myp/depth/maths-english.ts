@@ -15,7 +15,7 @@ export const MATHS_ENGLISH_DEPTH = Object.fromEntries([
         answer: "4x⁵",
       },
       exam: [
-        ["Evaluate", "A", 2, "Evaluate 27^(2/3) without a calculator.", ["Cube root of 27 is 3", "3² = 9"]],
+        ["Find", "A", 2, "Find the value of 27^(2/3) without a calculator.", ["Cube root of 27 is 3", "3² = 9"]],
         ["Simplify", "A", 3, "Rationalise the denominator of 6 ÷ √3 and simplify.", ["Multiply top and bottom by √3", "6√3 ÷ 3", "= 2√3"]],
       ],
       mistakes: ["Multiplying powers when you should add them (x² × x³ = x⁵, not x⁶).", "Thinking x⁰ = 0 (it is 1).", "Writing √a + √b = √(a + b)."],
@@ -57,7 +57,7 @@ export const MATHS_ENGLISH_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Solve", "A", 3, "Solve 2x² + 5x − 3 = 0.", ["Factorise: (2x − 1)(x + 3) = 0 (or use the formula)", "x = ½", "x = −3"]],
-        ["Find", "B", 3, "By completing the square, find the turning point of y = x² − 6x + 5.", ["y = (x − 3)² − 9 + 5", "y = (x − 3)² − 4", "Turning point (3, −4)"]],
+        ["Find", "A", 3, "By completing the square, find the turning point of y = x² − 6x + 5.", ["y = (x − 3)² − 9 + 5", "y = (x − 3)² − 4", "Turning point (3, −4)"]],
       ],
       mistakes: ["Getting the signs wrong when reading roots from brackets.", "Forgetting the ± in the quadratic formula.", "Dividing by x and losing the x = 0 solution."],
     },
@@ -115,7 +115,7 @@ export const MATHS_ENGLISH_DEPTH = Object.fromEntries([
         answer: "4n − 1",
       },
       exam: [
-        ["Find", "B", 2, "Is 101 a term in the sequence 4n − 1? Justify your answer.", ["4n − 1 = 101 gives n = 25.5", "Not a whole number, so 101 is not a term"]],
+        ["Justify", "A", 2, "Determine whether 101 is a term of the sequence with nth term 4n − 1. Justify your answer.", ["4n − 1 = 101 gives n = 25.5", "Not a whole number, so 101 is not a term"]],
         ["Find", "A", 3, "A geometric sequence starts 3, 6, 12, … Find the 8th term.", ["Common ratio r = 2", "u₈ = 3 × 2⁷", "= 384"]],
       ],
       mistakes: ["Writing n + 4 instead of 4n.", "Forgetting to check the zero term.", "Confusing arithmetic (add) and geometric (multiply) sequences."],
@@ -152,7 +152,7 @@ export const MATHS_ENGLISH_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Calculate", "A", 2, "A fair dice is rolled twice. Calculate the probability of getting two sixes.", ["1/6 × 1/6", "= 1/36"]],
-        ["Explain", "B", 3, "Explain why taking counters without replacement makes the events dependent, using the bag example.", ["The first pick changes what is left in the bag", "So the probability for the second pick changes (2/4 instead of 3/5)", "The outcome of one event affects the other"]],
+        ["Explain", "A", 3, "Explain why taking counters without replacement makes the events dependent, using the bag example.", ["The first pick changes what is left in the bag", "So the probability for the second pick changes (2/4 instead of 3/5)", "The outcome of one event affects the other"]],
       ],
       mistakes: ["Adding probabilities that should be multiplied (and vice versa).", "Forgetting to reduce the total without replacement.", "Probabilities that add up to more than 1."],
     },
@@ -170,7 +170,7 @@ export const MATHS_ENGLISH_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Find", "A", 2, "Find the median score from the chart.", ["The 10th and 11th values", "Both are 6, so the median is 6"], { kind: "chart", type: "bar", labels: ["4", "5", "6", "7", "8"], series: [{ name: "Frequency", values: [2, 5, 8, 4, 1] }], xLabel: "score", yLabel: "number of students" }],
-        ["Compare", "C", 3, "Class A: mean 62, range 40. Class B: mean 58, range 12. Compare the two classes.", ["Class A scored higher on average (higher mean)", "Class B's scores were more consistent (smaller range)", "Uses the numbers in context"]],
+        ["Compare", "A", 3, "Class A: mean 62, range 40. Class B: mean 58, range 12. Compare the two classes.", ["Class A scored higher on average (higher mean)", "Class B's scores were more consistent (smaller range)", "Uses the numbers in context"]],
       ],
       mistakes: ["Dividing by the number of groups instead of the total frequency.", "Forgetting to order data before finding the median.", "Comparing only averages without spread."],
     },
@@ -206,7 +206,7 @@ export const MATHS_ENGLISH_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Analyse", "A", 4, "Analyse how the poet uses imagery in: “Her laughter was a lantern / in the long corridor of winter.”", ["Identifies the metaphor 'laughter was a lantern'", "Explains light / warmth against darkness and cold", "Comments on 'long corridor of winter' suggesting a difficult time", "Explores effect: she brings hope and comfort"]],
-        ["Explain", "A", 2, "Explain the effect of enjambment in the extract.", ["The line runs on without a pause", "It carries the reader forward, like light moving down the corridor"]],
+        ["Explain", "A", 2, "Explain the effect of enjambment in: “Her laughter was a lantern / in the long corridor of winter.”", ["The line runs on without a pause", "It carries the reader forward, like light moving down the corridor"]],
       ],
       mistakes: ["Retelling the poem instead of analysing it.", "Ignoring structure and form.", "Treating the speaker as the poet automatically."],
     },
@@ -262,7 +262,7 @@ export const MATHS_ENGLISH_DEPTH = Object.fromEntries([
         answer: "Statistics, a rhetorical question and inclusive language combine logic with emotion.",
       },
       exam: [
-        ["Evaluate", "A", 4, "Evaluate how persuasive the extract above is for a teenage audience.", ["Identifies at least two techniques with evidence", "Explains the intended effect", "Considers the audience (teenagers) specifically", "Makes a judgement with a reason (e.g. powerful but lacks a clear action)"]],
+        ["Evaluate", "A", 4, "Evaluate how persuasive this extract is for a teenage audience: “Every single day, 8 million pieces of plastic enter our oceans. Can we really stand by?”", ["Identifies at least two techniques with evidence", "Explains the intended effect", "Considers the audience (teenagers) specifically", "Makes a judgement with a reason (e.g. powerful but lacks a clear action)"]],
         ["Write", "C", 4, "Write a short speech (about 150 words) persuading your school to ban single-use plastic.", ["Clear viewpoint and purpose", "At least three persuasive techniques", "Appropriate register for a school audience", "Structured with a call to action"]],
       ],
       mistakes: ["Listing techniques without effects.", "Ignoring the audience and purpose.", "Overusing rhetorical questions."],
@@ -280,7 +280,7 @@ export const MATHS_ENGLISH_DEPTH = Object.fromEntries([
       },
       exam: [
         ["Rewrite", "D", 3, "Rewrite this for a formal letter: “The canteen food is honestly so bad, like nobody eats it.”", ["Removes slang and fillers ('honestly', 'like')", "Uses formal vocabulary (e.g. 'unpopular', 'many students')", "Keeps a polite, reasoned tone"]],
-        ["Explain", "D", 2, "Explain why a writer might choose an informal register in a blog for teenagers.", ["To build a relationship / sound friendly and relatable", "It suits the audience and purpose (engaging readers)"]],
+        ["Explain", "A", 2, "Explain why a writer might choose an informal register in a blog for teenagers.", ["To build a relationship / sound friendly and relatable", "It suits the audience and purpose (engaging readers)"]],
       ],
       mistakes: ["Thinking formal means using long words for their own sake.", "Mixing registers within one piece.", "Using contractions in formal letters."],
     },
@@ -313,7 +313,7 @@ export const MATHS_ENGLISH_DEPTH = Object.fromEntries([
         answer: "Point → Text A → connective → Text B → comparative conclusion.",
       },
       exam: [
-        ["Compare", "B", 4, "Compare how two writers present the sea: one calm (“the sea breathed softly”) and one violent (“the sea roared and clawed”).", ["Comparative point about contrasting presentations", "Analysis of 'breathed softly' (calm, alive, gentle)", "Analysis of 'roared and clawed' (animalistic, violent)", "Comparative connectives and a concluding judgement"]],
+        ["Compare", "A", 4, "Compare how two writers present the sea: one calm (“the sea breathed softly”) and one violent (“the sea roared and clawed”).", ["Comparative point about contrasting presentations", "Analysis of 'breathed softly' (calm, alive, gentle)", "Analysis of 'roared and clawed' (animalistic, violent)", "Comparative connectives and a concluding judgement"]],
         ["Explain", "B", 2, "Explain why writing about the texts separately scores lower than an integrated comparison.", ["It doesn't show the relationship between the texts", "Comparison criteria reward linking similarities and differences"]],
       ],
       mistakes: ["Writing two separate essays.", "Only comparing content, not methods.", "Using 'both' but then only discussing one text."],

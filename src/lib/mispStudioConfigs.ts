@@ -48,13 +48,13 @@ const physicsTools: StudioTool[] = [
   {
     id: "ia",
     title: "IB Physics IA Coach",
-    description: "Critique an IA research question against IB criteria — personal engagement, focus, methodology.",
+    description: "Critique an IA research question against the current IA criteria: research design, data analysis, conclusion, evaluation.",
     icon: Target,
     needsInput: true,
     inputLabel: "Student's research question",
     inputPlaceholder: "e.g. How does temperature affect the resistivity of nichrome wire?",
     buildPrompt: (i, g) =>
-      `Evaluate this ${g} IB Physics IA research question: "${i}". Score it 1-10 on each of: personal engagement potential, focus & narrowness, scientific rigor, feasibility in a school lab, and quantitative depth. For each, give specific feedback. Then suggest 3 sharpened reformulations and list the key physics concepts the student must master before starting.`,
+      `Evaluate this ${g} IB Physics IA research question: "${i}". The DP physics internal assessment (guide for first assessment 2025) is one scientific investigation marked on four criteria of 6 marks each: Research design, Data analysis, Conclusion and Evaluation (the older personal engagement / exploration / communication criteria no longer apply). Judge how well this question sets the student up for each criterion: for Research design, whether it names the independent and dependent variables (or two correlated variables) within a specific, appropriate context, and what methodological considerations it raises (measurement methods, range and interval, repeats and precision, control variables, safety, ethical and environmental issues); then how much scope it gives for data analysis with uncertainties, a justified conclusion, and a meaningful evaluation. Also comment on feasibility in a school lab in about 10 hours. Give specific feedback for each, then 3 sharpened reformulations, and list the key physics concepts the student must master before starting.`,
   },
   {
     id: "exam",

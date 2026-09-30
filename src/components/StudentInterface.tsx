@@ -3,7 +3,7 @@ import {
   Archive, ArrowUp, Beaker, BookMarked, BookOpen, Calculator, Check, ChevronDown, Copy, FileText, Languages,
   LayoutGrid, Lightbulb, Loader2, LogOut, Menu, MessageSquare, PanelLeftClose, PanelLeftOpen, PenTool, Plus,
   Puzzle, Route, Search, Sparkles, Terminal, Users, X, Briefcase, Layers, RotateCcw, Paperclip, Library as LibraryIcon,
-  AlertCircle, Upload as UploadIcon, Presentation,
+  AlertCircle, Upload as UploadIcon, Presentation, FileStack,
 } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import { useChatLibrary } from "@/components/assistant/files/library";
@@ -60,6 +60,8 @@ interface ChatMessage {
   library?: { items: number; used: number; mode: "full" | "excerpts"; names?: string[] };
   /** Tokens the reply used, as reported by the AI provider */
   usage?: { prompt: number; completion: number };
+  /** Past papers the reply quoted from (teachers) */
+  pastPapers?: string[];
   /** Arrived in this visit (a presentation in it opens straight away) */
   fresh?: boolean;
 }
@@ -292,7 +294,7 @@ const StudentInterface = () => {
       .order('created_at', { ascending: true });
 
     if (data) {
-      type Row = { id: string; role: string; content: string; created_at: string; metadata: { model?: string; effort?: string | null; notice?: string; attachments?: string[]; library?: ChatMessage["library"]; usage?: ChatMessage["usage"] } | null };
+      type Row = { id: string; role: string; content: string; created_at: string; metadata: { model?: string; effort?: string | null; notice?: string; attachments?: string[]; library?: ChatMessage["library"]; usage?: ChatMessage["usage"]; pastPapers?: string[] } | null };
       setMessages(data.map((m: Row) => ({
         id: m.id,
         role: m.role as "user" | "assistant",
@@ -304,6 +306,7 @@ const StudentInterface = () => {
         attachments: m.metadata?.attachments,
         library: m.metadata?.library,
         usage: m.metadata?.usage,
+        pastPapers: m.metadata?.pastPapers,
       })));
     }
     const session = sessions.find(s => s.id === sessionId);
@@ -500,6 +503,7 @@ const StudentInterface = () => {
         notice: typeof meta.notice === "string" ? meta.notice : undefined,
         library: meta.library && typeof meta.library === "object" ? meta.library : undefined,
         usage: meta.usage && typeof meta.usage === "object" ? meta.usage : undefined,
+        pastPapers: Array.isArray(meta.pastPapers) ? meta.pastPapers : undefined,
         fresh: true,
       };
 
@@ -1501,6 +1505,16 @@ const StudentInterface = () => {
                                   ? `Read ${msg.library.used} file${msg.library.used === 1 ? "" : "s"}`
                                   : `Searched ${msg.library.items} files, used ${msg.library.used}`}
                               </button>
+                            )}
+                            {msg.pastPapers && msg.pastPapers.length > 0 && (
+                              <Link
+                                to="/past-papers"
+                                title={msg.pastPapers.join("\n")}
+                                className="ml-1 flex items-center gap-1 rounded-full border border-lp-line px-2 py-0.5 text-[11.5px] text-lp-mute hover:text-white"
+                              >
+                                <FileStack className="h-3 w-3 text-lp-sky" />
+                                {`Used ${msg.pastPapers.length} past paper${msg.pastPapers.length === 1 ? "" : "s"}`}
+                              </Link>
                             )}
                           </div>
                           {msg.notice && <p className="mt-1 text-[12px] text-[#FBBF24]/90">{msg.notice}</p>}
