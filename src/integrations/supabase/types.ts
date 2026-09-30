@@ -435,6 +435,68 @@ export type Database = {
           },
         ]
       }
+      chat_context_items: {
+        Row: {
+          char_count: number | null
+          content: string
+          created_at: string
+          id: string
+          kind: string
+          meta: Json
+          mime: string | null
+          name: string
+          pinned: boolean
+          session_id: string
+          size_bytes: number | null
+          source_url: string | null
+          storage_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          char_count?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json
+          mime?: string | null
+          name: string
+          pinned?: boolean
+          session_id: string
+          size_bytes?: number | null
+          source_url?: string | null
+          storage_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          char_count?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json
+          mime?: string | null
+          name?: string
+          pinned?: boolean
+          session_id?: string
+          size_bytes?: number | null
+          source_url?: string | null
+          storage_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_context_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_assignments: {
         Row: {
           class_id: string
