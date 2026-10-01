@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import { toLoginEmail } from "@/lib/studentIds";
+import { consentReturnPath } from "@/lib/oauthReturn";
 
 interface AuthUser {
   id: string;
@@ -16,7 +17,7 @@ interface AuthContextType {
   isLoading: boolean;
   logout: () => Promise<void>;
   login: (email: string, password: string) => Promise<AuthUser>;
-  signUp: (email: string, password: string, fullName: string, role: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, role: string, returnTo?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -411,13 +412,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const handleSignUp = async (email: string, password: string, fullName: string, role: string) => {
+  const handleSignUp = async (email: string, password: string, fullName: string, role: string, returnTo?: string) => {
     const safeRole = getSafeRole(role);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: returnTo && consentReturnPath(returnTo) ? `${window.location.origin}${returnTo}` : window.location.origin,
         data: {
           full_name: fullName,
           requested_role: safeRole,

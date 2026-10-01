@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,
   BookOpen,
@@ -28,6 +28,7 @@ import { usePaymentsEnabled } from "@/hooks/usePlatformSettings";
 import { z } from "zod";
 import { Wordmark } from "@/components/landing/LandingNav";
 import { GlowSubmit } from "@/components/landing/primitives";
+import { consentNext } from "@/lib/oauthReturn";
 
 // Input validation schema (security: prevent injection / oversized inputs)
 const registrationSchema = z.object({
@@ -232,6 +233,7 @@ const Register = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
+  const next = consentNext(useLocation().search);
   const { paymentsEnabled } = usePaymentsEnabled();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -393,7 +395,7 @@ const Register = () => {
         <StatusCard tone="green" icon={CheckCircle2} title="You're approved">
           <p>Your registration has been approved. You can now create your account.</p>
           <div className="mx-auto max-w-[280px]">
-            <GlowSubmit type="button" onClick={() => navigate(`/signup?email=${encodeURIComponent(formData.email)}`)}>
+            <GlowSubmit type="button" onClick={() => navigate(`/signup?email=${encodeURIComponent(formData.email)}${next ? `&next=${encodeURIComponent(next)}` : ""}`)}>
               Create your account <ArrowRight className="h-4 w-4" />
             </GlowSubmit>
           </div>
@@ -443,7 +445,7 @@ const Register = () => {
         </Link>
         <p className="text-[14px] text-lp-soft">
           <span className="hidden sm:inline">Already have an account? </span>
-          <Link to="/login" className="font-medium text-white underline decoration-lp-blue/60 underline-offset-4 transition-colors hover:text-lp-sky">
+          <Link to={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="font-medium text-white underline decoration-lp-blue/60 underline-offset-4 transition-colors hover:text-lp-sky">
             Log in
           </Link>
         </p>

@@ -95,6 +95,7 @@ import StudioLibrary from './pages/studio/StudioLibrary';
 import PrimaryPlayground from './pages/PrimaryPlayground';
 import { getStudioConfig } from './lib/mispStudioConfigs';
 import { getPrimaryConfig } from './lib/mispPrimaryConfig';
+import OAuthConsent from './pages/OAuthConsent';
 
 // Auto-route Mahindra spotlight teachers to their custom surface
 const DashboardRouter = () => {
@@ -148,6 +149,7 @@ function App() {
           <Route path="/demo" element={<DemoShowcasePage />} />
           <Route path="/tour" element={<GuidedTourPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/register" element={IN_ANDROID_APP ? <AppAccountNotice /> : <Register />} />
           <Route path="/pay/:requestId" element={IN_ANDROID_APP ? <AppAccountNotice /> : <PayPage />} />
