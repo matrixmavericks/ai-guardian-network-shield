@@ -683,6 +683,11 @@ html.lp-light :is(.lp-app, .lp-chrome) :is(.text-\[\#C4B5FD\], .text-\[\#A78BFA\
 html.lp-light :is(.lp-app, .lp-chrome) .text-\[\#A78BFA\]\/25 { color: rgb(109 40 217 / 0.2); }
 html.lp-light :is(.lp-app, .lp-chrome) .text-\[\#A7F3D0\] { color: rgb(4 120 87); }
 html.lp-light :is(.lp-app, .lp-chrome) .text-\[\#E8EEF8\] { color: rgb(var(--lp-text)); }
+/* The same for Tailwind's pale status inks (level chips, badges) */
+html.lp-light :is(.lp-app, .lp-chrome) :is(.text-emerald-200, .text-emerald-300) { color: rgb(4 120 87); }
+html.lp-light :is(.lp-app, .lp-chrome) :is(.text-amber-200, .text-amber-300) { color: rgb(180 83 9); }
+html.lp-light :is(.lp-app, .lp-chrome) :is(.text-sky-200, .text-sky-300) { color: rgb(3 105 161); }
+html.lp-light :is(.lp-app, .lp-chrome) :is(.text-rose-200, .text-rose-300) { color: rgb(190 18 60); }
 html.lp-light :is(.lp-app, .lp-chrome) .from-\[\#10244A\] { --tw-gradient-from: rgb(var(--lp-tint)) var(--tw-gradient-from-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
 html.lp-light :is(.lp-app, .lp-chrome) .via-\[\#A5CCFF\] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--lp-glow)) var(--tw-gradient-via-position), var(--tw-gradient-to); }
 /* Menus and popovers: soft slate shadow instead of the black drop used in dark */

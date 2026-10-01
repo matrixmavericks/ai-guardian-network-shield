@@ -462,3 +462,27 @@ export function mypGuidance(text: string, chatSubject?: string, who: "staff" | "
 
 /** Short criterion names for one group, e.g. for a slide or form label. */
 export const criterionLabel = (g: MypGroup, l: Letter) => `Criterion ${l}: ${MYP[g].criteria[l].name}`;
+
+/** How the four bands rise for any criterion (the IB's pattern, not its wording). */
+export const BAND_PATTERN: Record<"1-2" | "3-4" | "5-6" | "7-8", string> = {
+  "1-2": "limited: the lowest command term of the strands (e.g. states, identifies), with major gaps or errors",
+  "3-4": "adequate: a brief or partial response (e.g. outlines), familiar situations, some gaps",
+  "5-6": "substantial: a detailed response (e.g. describes), mostly accurate, some unfamiliar situations",
+  "7-8": "excellent: the full command term of the strands (e.g. explains, evaluates), consistently accurate, unfamiliar situations handled",
+};
+
+/**
+ * The rubric text an AI grader needs for one criterion: name, focus, strands,
+ * the band pattern, and how the MYP year changes expectations.
+ */
+export function criterionBrief(g: MypGroup, l: Letter, year: number): string {
+  const info = MYP[g];
+  const c = info.criteria[l];
+  const y = Math.min(5, Math.max(1, Math.round(year) || 5));
+  return `IB MYP ${info.name.toUpperCase()}, Criterion ${l}: ${c.name} (levels 0–8; 0 = does not reach the 1–2 band).
+Assesses: ${c.focus}.
+${c.strands ? `Strands (year 5 objectives, summarized): ${c.strands.map((s, i) => `(${"i ii iii iv v".split(" ")[i]}) ${s}`).join("; ")}.` : "The IB guide's strands for this group vary by phase or aren't listed here: judge against the criterion's focus and the task, and don't invent strand numbers."}
+How the bands rise: ${Object.entries(BAND_PATTERN).map(([b, d]) => `${b} ${d}`).join("; ")}.
+MYP year ${y}: ${y === 5 ? "use the year-5 objectives above as they are." : `the strands above are the year-5 versions; the IB's year ${y <= 2 ? "1" : "3"} objectives ask for the same skills at a lower demand (simpler command terms and more familiar situations), so judge against what a year ${y} student is expected to show, guided by the task-specific clarifications when given.`}
+Teachers use a best-fit approach: the level is the band whose descriptor the work fully or largely meets, the upper mark when it largely meets it and the lower when it only just does.`;
+}

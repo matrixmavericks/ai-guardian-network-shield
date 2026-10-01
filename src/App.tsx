@@ -42,6 +42,8 @@ import MyCoursesPage from './pages/MyCoursesPage';
 import DecksPage from './pages/DecksPage';
 import PastPapersPage from './pages/PastPapersPage';
 import PersonalProjectPage from './pages/PersonalProjectPage';
+import AssessmentCoachPage from './pages/AssessmentCoachPage';
+import MarkingCopilotPage from './pages/MarkingCopilotPage';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as Sonner } from './components/ui/sonner';
 import AppAccountNotice from './components/AppAccountNotice';
@@ -160,6 +162,8 @@ function App() {
           <Route path="/decks/:id" element={<ProtectedRoute allowedRoles={['teacher','admin']}><DecksPage /></ProtectedRoute>} />
           <Route path="/past-papers" element={<ProtectedRoute allowedRoles={['teacher','admin']}><PastPapersPage /></ProtectedRoute>} />
           <Route path="/personal-project" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><PersonalProjectPage /></ProtectedRoute>} />
+          <Route path="/assessment-coach" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><AssessmentCoachPage /></ProtectedRoute>} />
+          <Route path="/marking-copilot" element={<ProtectedRoute allowedRoles={['teacher','admin']}><MarkingCopilotPage /></ProtectedRoute>} />
           <Route path="/studio" element={<ProtectedRoute allowedRoles={['teacher','admin']}><StudioHome /></ProtectedRoute>} />
           <Route path="/studio/create" element={<ProtectedRoute allowedRoles={['teacher','admin']}><PrintableMaker /></ProtectedRoute>} />
           <Route path="/studio/diagrams" element={<ProtectedRoute allowedRoles={['teacher','admin']}><DiagramLab /></ProtectedRoute>} />

@@ -31,6 +31,8 @@ import {
   Presentation,
   FileStack,
   Target,
+  ListChecks,
+  WandSparkles,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isStudentId } from "@/lib/studentIds";
@@ -61,6 +63,7 @@ const STUDENT_GROUPS: NavGroup[] = [
       { title: "Learning Paths", href: "/learning-paths", icon: Book },
       { title: "Portfolio", href: "/portfolio", icon: Briefcase },
       { title: "Personal Project", href: "/personal-project", icon: Target },
+      { title: "Assessment coach", href: "/assessment-coach", icon: ListChecks },
       { title: "AI Assistant", href: "/ai-learning-assistant", icon: Brain },
       { title: "Messages", href: "/messages", icon: MessageSquare },
     ],
@@ -81,6 +84,7 @@ const TEACHER_GROUPS: NavGroup[] = [
     items: [
       { title: "Overview", href: "/dashboard", icon: LayoutGrid },
       { title: "Marking", href: "/marking", icon: ClipboardCheck, badge: "marking" },
+      { title: "Marking copilot", href: "/marking-copilot", icon: WandSparkles },
       { title: "Gradebook", href: "/grades", icon: Table2 },
       { title: "Classes", href: "/classes", icon: Users },
     ],
