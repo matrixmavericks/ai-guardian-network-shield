@@ -304,21 +304,19 @@ const ClassesPage = () => {
     }
     setJoining(true);
     try {
-      const { data: cls, error: clsError } = await supabase.from("classes").select("id, name").eq("join_code", joinCode.trim().toLowerCase()).maybeSingle();
-      if (clsError) throw clsError;
+      // The database checks the code and adds you (joining by class id alone isn't allowed)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error: joinError } = await (supabase.rpc as any)("join_class", { _code: joinCode.trim() });
+      if (joinError) throw joinError;
+      const cls = (Array.isArray(data) ? data[0] : data) as { id: string; name: string } | undefined;
       if (!cls) {
         toast.error("Invalid class code. Please check and try again.");
         return;
       }
-      const { error: joinError } = await supabase.from("class_members").insert({ class_id: cls.id, student_id: user!.id });
-      if (joinError) {
-        if (joinError.code === "23505") toast.info("You are already in this class");
-        else throw joinError;
-      } else {
-        toast.success(`Joined "${cls.name}" successfully!`);
-        setJoinCode("");
-        fetchClasses();
-      }
+      if (classes.some((c) => c.id === cls.id)) toast.info("You are already in this class");
+      else toast.success(`Joined "${cls.name}" successfully!`);
+      setJoinCode("");
+      fetchClasses();
     } catch (err) {
       console.error(err);
       toast.error("Failed to join class");

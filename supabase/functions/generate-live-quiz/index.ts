@@ -22,6 +22,10 @@ serve(async (req) => {
     if (!authHeader) return json({ success: false, error: "Unauthorized" }, 401);
 
     const requesterUserId = await getUserIdFromAuthHeader(authHeader);
+    // Uses the school's paid AI credits: signed-in people only
+    if (!requesterUserId) {
+      return new Response(JSON.stringify({ error: "Sign in required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const { topic, subject, difficulty, questionCount, includeRedemption, curriculumType } = await req.json();
 
     if (!topic?.trim()) return json({ success: false, error: "Topic is required." }, 400);

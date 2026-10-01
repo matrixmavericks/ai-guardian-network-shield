@@ -425,6 +425,11 @@ Do not answer, solve or grade anything in the image: only transcribe and describ
     }
   }
 
+  // Replies use the school's paid AI credits: only signed-in people get them
+  if (!userId) {
+    return json({ success: false, reply: 'Please sign in to use Refyn AI.', error: 'Sign in required', meta: null }, 401);
+  }
+
   if (!prompt) {
     return json({ success: false, reply: 'Please enter a question.', error: 'Empty prompt', meta: null }, 400);
   }

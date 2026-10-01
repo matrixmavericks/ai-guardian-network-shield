@@ -15,6 +15,10 @@ serve(async (req) => {
 
   try {
     const requesterUserId = await getUserIdFromAuthHeader(req.headers.get("Authorization"));
+    // Uses the school's paid AI credits: signed-in people only
+    if (!requesterUserId) {
+      return new Response(JSON.stringify({ error: "Sign in required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const { subject, prompt, targetClass, title } = await req.json();
     console.log('Generating teaching plan:', { subject, prompt, targetClass, title });
 

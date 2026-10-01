@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getServiceClient, getUserIdFromAuthHeader } from "../_shared/aiUsage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +31,12 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Admins only: the platform docs assistant runs on the school's paid AI credits
+    const requesterUserId = await getUserIdFromAuthHeader(req.headers.get("Authorization"));
+    const { data: roles } = requesterUserId ? await getServiceClient().from("user_roles").select("role").eq("user_id", requesterUserId) : { data: [] };
+    if (!requesterUserId || !(roles ?? []).some((r: { role: string }) => r.role === "admin")) {
+      return new Response(JSON.stringify({ error: requesterUserId ? "Admins only" : "Sign in required" }), { status: requesterUserId ? 403 : 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const { messages, mode } = await req.json();
     if (!Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "messages array required" }), {
