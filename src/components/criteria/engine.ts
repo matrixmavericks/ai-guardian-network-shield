@@ -182,7 +182,22 @@ export type MarkingSet = {
   created_at: string;
   updated_at: string;
 };
-export type Overrides = Partial<Record<Letter, number>> & { comment?: string };
+export type Overrides = Partial<Record<Letter, number>> & { comment?: string; targets?: string };
+
+/** What a marked submission keeps for the student: levels, comments and targets per criterion. */
+export type Assessment = {
+  kind: "myp";
+  group: MypGroup;
+  year: number;
+  criteria: Letter[];
+  levels: Partial<Record<Letter, number>>;
+  comments: Partial<Record<Letter, string>>;
+  targets: string[];
+  total: number;
+  max: number;
+  grade: number | null;
+  at: string;
+};
 export type MarkingItem = {
   id: string;
   set_id: string;
@@ -221,6 +236,21 @@ export const commentOf = (item: MarkingItem, set: MarkingSet): string =>
     const c = item.result?.results?.[l]?.studentComment;
     return c ? `Criterion ${l} (${MYP[set.subject_group].criteria[l].name}): ${c}` : "";
   }).filter(Boolean).join("\n\n");
+
+/**
+ * Next steps for the student: the teacher's edit, or one from each of the
+ * (up to three) weakest criteria, taken from what the next band needs.
+ */
+export const targetsOf = (item: MarkingItem, set: MarkingSet): string[] => {
+  if (typeof item.overrides?.targets === "string") return item.overrides.targets.split("\n").map((t) => t.trim()).filter(Boolean).slice(0, 5);
+  return set.criteria
+    .map((l) => ({ l, lv: levelOf(item, l), r: item.result?.results?.[l] }))
+    .filter((x) => x.lv !== null && x.lv < 8 && x.r && !x.r.error)
+    .sort((a, b) => (a.lv as number) - (b.lv as number))
+    .slice(0, 3)
+    .map(({ l, r }) => `Criterion ${l} (${MYP[set.subject_group].criteria[l].name}): ${(r!.nextBand?.steps?.[0] || r!.whyNotHigher || "").trim()}`)
+    .filter((t) => !t.endsWith(": "));
+};
 
 export async function listSets(): Promise<(MarkingSet & { count: number })[]> {
   const { data } = await db.from("marking_sets").select("*, marking_items(count)").order("updated_at", { ascending: false }).limit(50);
@@ -405,7 +435,14 @@ export async function saveToSubmission(item: MarkingItem, set: MarkingSet, teach
   if (!t.complete) throw new Error(`${item.student_name} isn't fully marked yet.`);
   const grade = Math.round((t.total / t.max) * max);
   const feedback = `${set.criteria.map((l) => `${l} ${MYP[set.subject_group].criteria[l].name}: ${levels[l]}/8`).join(" · ")}${t.grade ? ` · Grade ${t.grade} (IB guideline)` : ""}\n\n${commentOf(item, set)}`.slice(0, 5000);
-  const { error } = await db.from("assignment_submissions").update({ grade, feedback, graded_at: new Date().toISOString(), status: "graded", graded_by: teacherId }).eq("id", item.submission_id);
+  // The breakdown the student's task page shows on the rubric, and the targets that carry forward
+  const assessment: Assessment = {
+    kind: "myp", group: set.subject_group, year: set.year, criteria: set.criteria,
+    levels: Object.fromEntries(set.criteria.map((l) => [l, levels[l] as number])),
+    comments: Object.fromEntries(set.criteria.map((l) => [l, item.result?.results?.[l]?.studentComment ?? ""]).filter(([, c]) => c)),
+    targets: targetsOf(item, set), total: t.total, max: t.max, grade: t.grade, at: new Date().toISOString(),
+  };
+  const { error } = await db.from("assignment_submissions").update({ grade, feedback, assessment, graded_at: new Date().toISOString(), status: "graded", graded_by: teacherId }).eq("id", item.submission_id);
   if (error) throw new Error(`Couldn't save ${item.student_name}'s mark.`);
   return { grade, feedback };
 }

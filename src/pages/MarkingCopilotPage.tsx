@@ -11,7 +11,7 @@ import { StudyShell } from "@/components/subjects/kit";
 import { useTeacherData } from "@/components/teacher/data";
 import { MYP, type Letter, type MypGroup } from "@/lib/myp";
 import {
-  LETTERS, addFiles, classInsights, commentOf, createSet, deleteItem, deleteSet, draftTsc, exportCsv, importSubmissions, levelOf, listSets, loadFile, loadSet,
+  LETTERS, addFiles, classInsights, commentOf, targetsOf, createSet, deleteItem, deleteSet, draftTsc, exportCsv, importSubmissions, levelOf, listSets, loadFile, loadSet,
   markAll, markItem, saveItem, saveToSubmission, totals, updateSet, type MarkingItem, type MarkingSet,
 } from "@/components/criteria/engine";
 import { WorkView } from "@/components/criteria/WorkView";
@@ -203,6 +203,8 @@ const SetView: React.FC<{ setId: string; userId: string; onBack: () => void }> =
         onOverride={(l, lv) => { const o = { ...current.overrides }; if (lv === null) delete o[l]; else o[l] = lv; update(current, { overrides: o }); }}
         comment={commentOf(current, set)}
         onComment={(s) => update(current, { overrides: { ...current.overrides, comment: s } })}
+        targets={targetsOf(current, set).join("\n")}
+        onTargets={(s) => update(current, { overrides: { ...current.overrides, targets: s } })}
         approved={current.approved}
         onApprove={(v) => update(current, { approved: v })}
         onRetry={async () => { patch(await markItem(set, current, patch)); }}

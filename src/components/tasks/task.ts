@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MYP, type Letter, type MypGroup } from "@/lib/myp";
 import type { Printable, Question } from "@/components/studio/worksheet";
 import type { DocOptions } from "@/components/studio/PrintableDoc";
+import type { Assessment } from "@/components/criteria/engine";
 
 // A task is a class assignment with everything a student needs: instructions,
 // the worksheet itself, resources and a rubric (columns added in
@@ -60,7 +61,13 @@ export type TaskSubmission = {
   status: string;
   submitted_at: string;
   graded_at: string | null;
+  /** Criterion levels, comments and targets, when the teacher marked with the rubric */
+  assessment?: Assessment | null;
+  reflection?: string | null;
+  reflected_at?: string | null;
 };
+
+export const SUBMISSION_COLUMNS = "id, content, file_url, file_name, grade, max_grade, feedback, status, submitted_at, graded_at, assessment, reflection, reflected_at";
 
 export type TaskClass = { id: string; name: string; subject: string; teacher_id: string };
 
@@ -113,7 +120,7 @@ export async function loadTask(id: string, userId: string | null) {
   const task = toTask(row);
   const [{ data: cls }, { data: sub }] = await Promise.all([
     db.from("classes").select("id, name, subject, teacher_id").eq("id", task.class_id).maybeSingle(),
-    userId ? db.from("assignment_submissions").select("id, content, file_url, file_name, grade, max_grade, feedback, status, submitted_at, graded_at").eq("assignment_id", id).eq("student_id", userId).maybeSingle() : Promise.resolve({ data: null }),
+    userId ? db.from("assignment_submissions").select(SUBMISSION_COLUMNS).eq("assignment_id", id).eq("student_id", userId).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const { data: teacher } = await db.from("profiles").select("full_name").eq("user_id", task.teacher_id).maybeSingle();
   return { task, cls: (cls as TaskClass | null) ?? null, teacherName: (teacher?.full_name as string | undefined) ?? null, submission: (sub as TaskSubmission | null) ?? null };
@@ -221,5 +228,59 @@ export const tscText = (r: MypRubric) =>
     if (!c || !Object.keys(c).length) return "";
     return `Criterion ${l}: ${MYP[r.group].criteria[l].name}\n${[...BANDS].reverse().filter((b) => c[b]).map((b) => `${b}: ${c[b]}`).join("\n")}`;
   }).filter(Boolean).join("\n\n");
+
+/* ---------- the marking loop ---------- */
+
+export type CarriedTargets = { taskId: string; title: string; targets: string[]; reflection: string | null };
+
+/**
+ * Targets from the student's most recent marked task in the same class (or,
+ * failing that, the same MYP subject group), to show on this one.
+ */
+export async function previousTargets(userId: string, task: Task): Promise<CarriedTargets | null> {
+  const { data } = await db
+    .from("assignment_submissions")
+    .select("assignment_id, assessment, reflection, graded_at")
+    .eq("student_id", userId)
+    .not("assessment", "is", null)
+    .order("graded_at", { ascending: false })
+    .limit(12);
+  const rows = ((data ?? []) as Loose[]).filter((r) => r.assignment_id !== task.id && Array.isArray(r.assessment?.targets) && r.assessment.targets.length);
+  if (!rows.length) return null;
+  const { data: tasks } = await db.from("class_assignments").select("id, title, class_id, rubric").in("id", rows.map((r) => r.assignment_id));
+  const group = task.rubric?.kind === "myp" ? task.rubric.group : null;
+  const byId = new Map(((tasks ?? []) as Loose[]).map((t) => [t.id, t]));
+  const pick = rows.find((r) => byId.get(r.assignment_id)?.class_id === task.class_id) ?? (group ? rows.find((r) => byId.get(r.assignment_id)?.rubric?.group === group) : undefined);
+  if (!pick) return null;
+  const t = byId.get(pick.assignment_id)!;
+  return { taskId: t.id, title: t.title, targets: (pick.assessment.targets as string[]).slice(0, 5), reflection: pick.reflection ?? null };
+}
+
+export async function saveReflection(submissionId: string, text: string): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("save_reflection", { _submission: submissionId, _text: text });
+  if (error) throw new Error("Couldn't save your reflection.");
+  return data as string;
+}
+
+export type TaskStats = { students: number; handedIn: number; marked: number; reflections: { name: string; text: string; at: string }[] };
+
+/** Handed in / marked / class size and students' reflections, for the teacher's view of a task. */
+export async function taskStats(task: Task): Promise<TaskStats> {
+  const [{ count: students }, { data: subs }] = await Promise.all([
+    db.from("class_members").select("id", { count: "exact", head: true }).eq("class_id", task.class_id),
+    db.from("assignment_submissions").select("student_id, grade, status, reflection, reflected_at").eq("assignment_id", task.id),
+  ]);
+  const list = (subs ?? []) as { student_id: string; grade: number | null; status: string; reflection: string | null; reflected_at: string | null }[];
+  const withText = list.filter((s) => s.reflection);
+  const { data: profs } = withText.length ? await db.from("profiles").select("user_id, full_name").in("user_id", withText.map((s) => s.student_id)) : { data: [] };
+  const name = new Map(((profs ?? []) as { user_id: string; full_name: string | null }[]).map((p) => [p.user_id, p.full_name || "Student"]));
+  return {
+    students: students ?? 0,
+    handedIn: list.length,
+    marked: list.filter((s) => s.grade !== null || s.status === "graded").length,
+    reflections: withText.map((s) => ({ name: name.get(s.student_id) ?? "Student", text: s.reflection!, at: s.reflected_at ?? "" })).sort((a, b) => b.at.localeCompare(a.at)),
+  };
+}
 
 export const fmtSize = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`);

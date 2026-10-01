@@ -217,8 +217,10 @@ export const WorkView: React.FC<{
   // teacher
   overrides?: Partial<Record<Letter, number>>; onOverride?: (l: Letter, level: number | null) => void;
   comment?: string; onComment?: (s: string) => void; approved?: boolean; onApprove?: (v: boolean) => void;
+  /** Next steps the student will see on their task page, one per line */
+  targets?: string; onTargets?: (s: string) => void;
   header?: React.ReactNode;
-}> = ({ group, criteria, results, text, file, fileType, mode, onRetry, chat = [], onAsk, overrides = {}, onOverride, comment, onComment, approved, onApprove, header }) => {
+}> = ({ group, criteria, results, text, file, fileType, mode, onRetry, chat = [], onAsk, overrides = {}, onOverride, comment, onComment, approved, onApprove, targets, onTargets, header }) => {
   type Tab = Letter | "ask" | "comment";
   const [tab, setTab] = useState<Tab>(criteria[0] ?? "A");
   const [active, setActive] = useState<string | null>(null);
@@ -306,6 +308,13 @@ export const WorkView: React.FC<{
               <p className="flex items-center gap-2 text-[15px] font-medium text-white"><PenLine className="h-4 w-4 text-lp-sky" /> Comment to the student</p>
               <p className="mt-1 text-[12.5px] text-lp-mute">Drafted from each criterion's feedback. Edit it in your own voice before you approve.</p>
               <textarea value={comment ?? ""} onChange={(e) => onComment?.(e.target.value)} rows={12} className="mt-3 w-full resize-y rounded-xl border border-lp-line bg-lp-deep/60 px-3 py-2.5 text-[13.5px] leading-relaxed text-white outline-none focus:border-lp-blue/60" />
+              {onTargets && (
+                <>
+                  <p className="mt-4 text-[13.5px] font-medium text-white">Targets for next time</p>
+                  <p className="mt-0.5 text-[12px] text-lp-mute">One per line. The student sees them with their marks and again on their next task.</p>
+                  <textarea value={targets ?? ""} onChange={(e) => onTargets(e.target.value)} rows={4} className="mt-2 w-full resize-y rounded-xl border border-lp-line bg-lp-deep/60 px-3 py-2.5 text-[13.5px] leading-relaxed text-white outline-none focus:border-lp-blue/60" />
+                </>
+              )}
               <button type="button" onClick={() => onApprove?.(!approved)} className={cn("mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl text-[13.5px] font-medium", approved ? "border border-emerald-500/50 bg-emerald-500/15 text-emerald-300" : "bg-lp-blue text-white hover:bg-[#2F6FE0]")}>
                 {approved ? <><CheckCircle2 className="h-4 w-4" /> Approved: click to undo</> : <><Check className="h-4 w-4" /> Approve levels and comment</>}
               </button>

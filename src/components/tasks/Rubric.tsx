@@ -2,7 +2,10 @@ import React, { useMemo, useState } from "react";
 import { BookOpenText, ChevronDown, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COMMAND_TERMS, GRADE_BOUNDARIES, MYP, type Letter } from "@/lib/myp";
+import type { Assessment } from "@/components/criteria/engine";
 import { BANDS, BAND_PLAIN, type Band, type CustomRubric, type MypRubric, type Rubric } from "./task";
+
+const bandOf = (level: number): Band | null => (level >= 7 ? "7-8" : level >= 5 ? "5-6" : level >= 3 ? "3-4" : level >= 1 ? "1-2" : null);
 
 const ROMAN = ["i", "ii", "iii", "iv", "v", "vi"];
 const BAND_TONE: Record<Band, string> = {
@@ -19,8 +22,9 @@ const termsIn = (text: string) => {
   return Object.entries(COMMAND_TERMS).filter(([t]) => new RegExp(`\\b${t}(s|es|d|ed|ing)?\\b`).test(lower)).slice(0, 8);
 };
 
-const MypCriterionCard: React.FC<{ r: MypRubric; l: Letter }> = ({ r, l }) => {
+const MypCriterionCard: React.FC<{ r: MypRubric; l: Letter; mark?: { level: number; comment?: string } }> = ({ r, l, mark }) => {
   const c = MYP[r.group].criteria[l];
+  const yours = mark ? bandOf(mark.level) : null;
   const tsc = r.clarifications[l] ?? {};
   const terms = termsIn([...(c.strands ?? []), ...Object.values(tsc)].join(" "));
   return (
@@ -31,8 +35,13 @@ const MypCriterionCard: React.FC<{ r: MypRubric; l: Letter }> = ({ r, l }) => {
           <h3 className="text-[17px] font-semibold text-white">{c.name}</h3>
           <p className="mt-0.5 text-[13px] leading-relaxed text-lp-soft">Assesses {c.focus}.</p>
         </div>
-        <span className="rounded-full border border-lp-line px-2.5 py-1 text-[12px] text-lp-soft">out of 8</span>
+        {mark ? (
+          <span className="lp-keep flex flex-col items-center rounded-xl bg-lp-blue px-3 py-1.5 text-white"><span className="text-[19px] font-semibold leading-none">{mark.level}</span><span className="text-[10.5px] text-white/80">your level</span></span>
+        ) : (
+          <span className="rounded-full border border-lp-line px-2.5 py-1 text-[12px] text-lp-soft">out of 8</span>
+        )}
       </div>
+      {mark?.comment && <p className="mt-3 rounded-xl border border-lp-sky/40 bg-lp-blue/10 px-3 py-2.5 text-[13.5px] leading-relaxed text-white"><span className="mb-0.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-lp-sky">Your teacher</span>{mark.comment}</p>}
 
       {c.strands && (
         <div className="mt-4">
@@ -48,10 +57,11 @@ const MypCriterionCard: React.FC<{ r: MypRubric; l: Letter }> = ({ r, l }) => {
 
       <div className="mt-4 space-y-2">
         {[...BANDS].reverse().map((b) => (
-          <div key={b} className={cn("rounded-xl border p-3", BAND_TONE[b])}>
+          <div key={b} className={cn("rounded-xl border p-3", BAND_TONE[b], mark && yours !== b && "opacity-55", yours === b && "ring-2 ring-lp-sky")}>
             <div className="flex flex-wrap items-baseline gap-2">
               <span className={cn("text-[15px] font-semibold tabular-nums", BAND_INK[b])}>{b.replace("-", "–")}</span>
               <span className={cn("text-[12px] font-medium uppercase tracking-[0.1em]", BAND_INK[b])}>{BAND_PLAIN[b].label}</span>
+              {yours === b && <span className="ml-auto rounded-full bg-lp-sky/20 px-2 py-0.5 text-[11px] font-semibold text-lp-sky">Your work: {mark!.level}</span>}
             </div>
             {tsc[b] ? (
               <>
@@ -80,7 +90,7 @@ const MypCriterionCard: React.FC<{ r: MypRubric; l: Letter }> = ({ r, l }) => {
   );
 };
 
-const MypRubricView: React.FC<{ r: MypRubric }> = ({ r }) => {
+const MypRubricView: React.FC<{ r: MypRubric; assessment?: Assessment | null }> = ({ r, assessment }) => {
   const [bounds, setBounds] = useState(false);
   const max = r.criteria.length * 8;
   return (
@@ -97,7 +107,7 @@ const MypRubricView: React.FC<{ r: MypRubric }> = ({ r }) => {
         Your teacher uses best fit: they find the description your work matches most closely. The higher number in a band means you fully meet it; the lower means you only just do.
       </p>
       {r.notes && <p className="whitespace-pre-wrap rounded-xl border border-lp-line p-3 text-[13.5px] leading-relaxed text-white">{r.notes}</p>}
-      {r.criteria.map((l) => <MypCriterionCard key={l} r={r} l={l} />)}
+      {r.criteria.map((l) => <MypCriterionCard key={l} r={r} l={l} mark={typeof assessment?.levels[l] === "number" ? { level: assessment.levels[l]!, comment: assessment.comments[l] } : undefined} />)}
       {r.criteria.length === 4 && (
         <div className="rounded-2xl border border-lp-line">
           <button type="button" onClick={() => setBounds((v) => !v)} className="flex w-full items-center justify-between px-4 py-3 text-left text-[13.5px] text-white">
@@ -152,4 +162,4 @@ const CustomRubricView: React.FC<{ r: CustomRubric }> = ({ r }) => {
   );
 };
 
-export const RubricView: React.FC<{ rubric: Rubric }> = ({ rubric }) => (rubric.kind === "myp" ? <MypRubricView r={rubric} /> : <CustomRubricView r={rubric} />);
+export const RubricView: React.FC<{ rubric: Rubric; assessment?: Assessment | null }> = ({ rubric, assessment }) => (rubric.kind === "myp" ? <MypRubricView r={rubric} assessment={assessment} /> : <CustomRubricView r={rubric} />);

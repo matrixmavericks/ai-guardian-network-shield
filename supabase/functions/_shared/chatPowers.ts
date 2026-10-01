@@ -81,7 +81,7 @@ async function studentContext(db: Db, userId: string, tz: string, now: number) {
 
     const { data: graded } = await db
       .from("assignment_submissions")
-      .select("assignment_id, grade, max_grade, feedback, graded_at")
+      .select("assignment_id, grade, max_grade, feedback, graded_at, assessment")
       .eq("student_id", userId)
       .not("graded_at", "is", null)
       .order("graded_at", { ascending: false })
@@ -92,7 +92,10 @@ async function studentContext(db: Db, userId: string, tz: string, now: number) {
       const title = new Map((gA ?? []).map((a: any) => [a.id, a]));
       lines.push(`Recent marked work:\n${graded.map((g: any) => {
         const a: any = title.get(g.assignment_id);
-        return `- "${clip(a?.title ?? "Assignment", 70)}"${a ? ` (${clip(cName.get(a.class_id), 30)})` : ""}: ${g.grade ?? "?"}/${g.max_grade ?? "?"}${g.feedback ? `. Teacher feedback: ${clip(g.feedback, 180)}` : ""}`;
+        const as = g.assessment;
+        const levels = as?.levels ? Object.entries(as.levels).map(([k, v]) => `${k} ${v}/8`).join(", ") : "";
+        const targets = Array.isArray(as?.targets) && as.targets.length ? `. Targets the teacher set: ${as.targets.slice(0, 3).map((t: string) => clip(t, 140)).join(" | ")}` : "";
+        return `- "${clip(a?.title ?? "Assignment", 70)}"${a ? ` (${clip(cName.get(a.class_id), 30)})` : ""}: ${g.grade ?? "?"}/${g.max_grade ?? "?"}${levels ? ` (MYP levels ${levels})` : ""}${g.feedback ? `. Teacher feedback: ${clip(g.feedback, 180)}` : ""}${targets}`;
       }).join("\n")}`);
     }
   } else {

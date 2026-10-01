@@ -5,7 +5,7 @@ import remarkGfm from "remark-gfm";
 import { differenceInCalendarDays, format, formatDistanceToNow } from "date-fns";
 import {
   ArrowLeft, BookOpenText, CalendarPlus, Check, CheckCircle2, ClipboardList, Download, ExternalLink, Eye, File as FileIcon, FileText, Image as ImageIcon,
-  Link2, ListChecks, Loader2, MessageCircleQuestion, Paperclip, PenLine, Printer, ScanSearch, Send, Upload, Users,
+  Link2, ListChecks, Loader2, MessageCircleQuestion, Paperclip, PenLine, Printer, ScanSearch, Send, Sparkles, Target, Upload, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,8 @@ import { downloadFile, fileFrom, printAsPdf } from "@/components/assistant/files
 import { planToIcs } from "@/components/assistant/powers/Plan";
 import { download } from "@/components/assistant/powers/ui";
 import { RubricView } from "@/components/tasks/Rubric";
-import { fmtSize, loadTask, taskFileUrl, type Task, type TaskClass, type TaskResource, type TaskSubmission } from "@/components/tasks/task";
+import { SUBMISSION_COLUMNS, fmtSize, loadTask, previousTargets, saveReflection, taskFileUrl, taskStats, type CarriedTargets, type TaskStats, type Task, type TaskClass, type TaskResource, type TaskSubmission } from "@/components/tasks/task";
+import { openMarkingFor } from "@/components/tasks/marking";
 
 type Loaded = { task: Task; cls: TaskClass | null; teacherName: string | null; submission: TaskSubmission | null };
 type Tab = "overview" | "task" | "resources" | "rubric" | "work";
@@ -79,9 +80,72 @@ const ResourceRow: React.FC<{ r: TaskResource }> = ({ r }) => {
   return null;
 };
 
+/* ---------- marks, targets and reflection ---------- */
+
+const MarkedPanel: React.FC<{ submission: TaskSubmission; onSaved: (s: TaskSubmission) => void; onRubric?: () => void }> = ({ submission, onSaved, onRubric }) => {
+  const a = submission.assessment!;
+  const [text, setText] = useState(submission.reflection ?? "");
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    try {
+      const at = await saveReflection(submission.id, text);
+      onSaved({ ...submission, reflection: text.trim() || null, reflected_at: at });
+      toast.success("Reflection saved. Your teacher can see it.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className={cn(card, "p-5")}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[15px] font-medium text-white">Your marks, criterion by criterion</p>
+        {onRubric && <button type="button" onClick={onRubric} className="text-[12.5px] text-lp-sky hover:underline">See them on the rubric</button>}
+      </div>
+      <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+        {a.criteria.map((l) => {
+          const lv = a.levels[l];
+          return (
+            <div key={l} className="rounded-xl border border-lp-line p-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="truncate text-[13px] text-lp-soft"><span className="font-semibold text-white">{l}</span> · {MYP[a.group]?.criteria[l]?.name}</p>
+                <p className="shrink-0 text-[16px] font-semibold text-white">{lv ?? "–"}<span className="text-[12px] font-normal text-lp-mute">/8</span></p>
+              </div>
+              <div className="mt-2 flex gap-[3px]">{Array.from({ length: 8 }, (_, i) => <span key={i} className={cn("h-1.5 flex-1 rounded-full", typeof lv === "number" && i < lv ? "bg-lp-sky" : "bg-lp-line")} />)}</div>
+              {a.comments[l] && <p className="mt-2 text-[12.5px] leading-relaxed text-lp-soft">{a.comments[l]}</p>}
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-[13px] text-lp-soft">Total {a.total}/{a.max}{a.grade ? ` · grade ${a.grade} on the IB 1–7 guideline` : ""}</p>
+
+      {a.targets.length > 0 && (
+        <div className="mt-5">
+          <p className="flex items-center gap-2 text-[14px] font-medium text-white"><Target className="h-4 w-4 text-lp-sky" /> Your targets for next time</p>
+          <ol className="mt-2 space-y-1.5">
+            {a.targets.map((t, i) => <li key={i} className="flex gap-2.5 rounded-xl bg-lp-raised/50 px-3 py-2 text-[13.5px] leading-relaxed text-white"><span className="font-semibold text-lp-sky">{i + 1}</span>{t}</li>)}
+          </ol>
+        </div>
+      )}
+
+      <div className="mt-5">
+        <p className="text-[14px] font-medium text-white">Reflect</p>
+        <p className="mt-0.5 text-[12.5px] text-lp-mute">What went well, and what will you do differently next time? Your teacher sees this, and your targets come back on your next task.</p>
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder="Next time I will…" className="mt-2 w-full resize-y rounded-xl border border-lp-line bg-lp-deep/60 px-3.5 py-3 text-[14px] leading-relaxed text-white outline-none placeholder:text-lp-mute focus:border-lp-blue/60" />
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[12px] text-lp-mute">{submission.reflected_at ? `Saved ${formatDistanceToNow(new Date(submission.reflected_at), { addSuffix: true })}` : ""}</span>
+          <button type="button" disabled={busy || !text.trim() || text.trim() === (submission.reflection ?? "").trim()} onClick={save} className={primary}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save reflection</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ---------- submitting ---------- */
 
-const YourWork: React.FC<{ task: Task; submission: TaskSubmission | null; userId: string; onSaved: (s: TaskSubmission) => void }> = ({ task, submission, userId, onSaved }) => {
+const YourWork: React.FC<{ task: Task; submission: TaskSubmission | null; userId: string; onSaved: (s: TaskSubmission) => void; onRubric?: () => void }> = ({ task, submission, userId, onSaved, onRubric }) => {
   const [text, setText] = useState(submission?.content ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -110,10 +174,10 @@ const YourWork: React.FC<{ task: Task; submission: TaskSubmission | null; userId
       }
       const row = { content: text.trim(), file_url: fileUrl, file_name: fileName, submitted_at: new Date().toISOString() };
       const res = submission
-        ? await supabase.from("assignment_submissions").update({ ...row, status: "resubmitted" }).eq("id", submission.id).select("id, content, file_url, file_name, grade, max_grade, feedback, status, submitted_at, graded_at").single()
-        : await supabase.from("assignment_submissions").insert({ ...row, assignment_id: task.id, student_id: userId, status: "submitted" }).select("id, content, file_url, file_name, grade, max_grade, feedback, status, submitted_at, graded_at").single();
+        ? await supabase.from("assignment_submissions").update({ ...row, status: "resubmitted" }).eq("id", submission.id).select(SUBMISSION_COLUMNS).single()
+        : await supabase.from("assignment_submissions").insert({ ...row, assignment_id: task.id, student_id: userId, status: "submitted" }).select(SUBMISSION_COLUMNS).single();
       if (res.error || !res.data) throw res.error ?? new Error("Couldn't submit");
-      onSaved(res.data as TaskSubmission);
+      onSaved(res.data as unknown as TaskSubmission);
       setFile(null);
       toast.success(submission ? "Resubmitted" : "Submitted. Your teacher can see it now.");
     } catch (e) {
@@ -145,6 +209,7 @@ const YourWork: React.FC<{ task: Task; submission: TaskSubmission | null; userId
           )}
         </div>
       )}
+      {graded && submission?.assessment && <MarkedPanel submission={submission} onSaved={onSaved} onRubric={onRubric} />}
 
       <div className={cn(card, "p-5")}>
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -176,6 +241,10 @@ const TaskPage = () => {
   const [state, setState] = useState<Loaded | "missing" | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const paper = useRef<HTMLDivElement>(null);
+  const [carried, setCarried] = useState<CarriedTargets | null>(null);
+  const [stats, setStats] = useState<TaskStats | null>(null);
+  const [premarking, setPremarking] = useState(false);
+  const teacherRole = user?.role === "teacher" || user?.role === "admin";
 
   useEffect(() => {
     if (!id || !user) return;
@@ -184,6 +253,11 @@ const TaskPage = () => {
 
   const loaded = state && state !== "missing" ? state : null;
   const t = loaded?.task;
+  useEffect(() => {
+    if (!loaded || !user) return;
+    if (teacherRole) taskStats(loaded.task).then(setStats);
+    else if (!isGraded(loaded.submission)) previousTargets(user.id, loaded.task).then(setCarried);
+  }, [loaded?.task.id, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const printables = useMemo(() => t?.resources.filter((r): r is Extract<TaskResource, { kind: "printable" }> => r.kind === "printable") ?? [], [t]);
   const docs = useMemo(() => t?.resources.filter((r): r is Extract<TaskResource, { kind: "doc" }> => r.kind === "doc") ?? [], [t]);
   const files = useMemo(() => t?.resources.filter((r) => r.kind === "file" || r.kind === "link") ?? [], [t]);
@@ -238,7 +312,20 @@ const TaskPage = () => {
       {teacherView && (
         <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-lp-sky/40 bg-lp-blue/10 px-4 py-3">
           <Eye className="h-4 w-4 text-lp-sky" />
-          <p className="min-w-0 flex-1 text-[13.5px] text-lp-soft">This is the page your students see for this task.</p>
+          <p className="min-w-0 flex-1 text-[13.5px] text-lp-soft">This is the page your students see for this task.{stats ? ` ${stats.handedIn} of ${stats.students} handed in, ${stats.marked} marked.` : ""}</p>
+          {t.teacher_id === user.id && myp && (stats?.handedIn ?? 0) > 0 && (
+            <button type="button" disabled={premarking} onClick={async () => {
+              setPremarking(true);
+              try {
+                const r = await openMarkingFor(t, user.id);
+                toast.success(r.added ? `${r.added} hand-in${r.added === 1 ? "" : "s"} ready to pre-mark` : "Opening the marking set");
+                navigate(`/marking-copilot?set=${r.setId}`);
+              } catch (e) {
+                toast.error((e as Error).message);
+                setPremarking(false);
+              }
+            }} className={cn(primary, "h-9")}>{premarking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Pre-mark submissions</button>
+          )}
           {t.teacher_id === user.id && <Link to={`/task/${t.id}/edit`} className={ghost}><PenLine className="h-4 w-4" /> Edit task</Link>}
           {cls && <Link to={`/class/${cls.id}`} className={ghost}><ClipboardList className="h-4 w-4" /> Submissions</Link>}
         </div>
@@ -273,6 +360,14 @@ const TaskPage = () => {
 
           {tab === "overview" && (
             <div className="space-y-4">
+              {carried && !teacherView && (
+                <div className="rounded-2xl border border-lp-sky/40 bg-lp-blue/10 p-4 sm:p-5">
+                  <p className="flex items-center gap-2 text-[14px] font-medium text-white"><Target className="h-4 w-4 text-lp-sky" /> Your targets from <Link to={`/task/${carried.taskId}`} className="underline decoration-lp-sky/50 underline-offset-2 hover:text-lp-sky">{carried.title}</Link></p>
+                  <ol className="mt-2 space-y-1">{carried.targets.map((x, i) => <li key={i} className="flex gap-2.5 text-[13.5px] leading-relaxed text-lp-soft"><span className="font-semibold text-lp-sky">{i + 1}</span>{x}</li>)}</ol>
+                  {carried.reflection && <p className="mt-2 text-[12.5px] italic text-lp-mute">You said: "{carried.reflection}"</p>}
+                  <p className="mt-2 text-[12px] text-lp-mute">Build them into this task before you hand in.</p>
+                </div>
+              )}
               <div className={cn(card, "p-5 sm:p-6")}>
                 <p className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-lp-mute">Instructions</p>
                 {t.instructions || (t.description && !legacyWorksheet(t)) ? (
@@ -324,11 +419,19 @@ const TaskPage = () => {
           )}
 
           {tab === "resources" && <div className="grid gap-3 sm:grid-cols-2">{files.map((r) => <ResourceRow key={r.id} r={r} />)}</div>}
-          {tab === "rubric" && t.rubric && <RubricView rubric={t.rubric} />}
-          {tab === "work" && !teacherView && <YourWork task={t} submission={submission} userId={user.id} onSaved={(s) => setState({ ...loaded, submission: s })} />}
+          {tab === "rubric" && t.rubric && <RubricView rubric={t.rubric} assessment={!teacherView ? submission?.assessment : null} />}
+          {tab === "work" && !teacherView && <YourWork task={t} submission={submission} userId={user.id} onSaved={(s) => setState({ ...loaded, submission: s })} onRubric={t.rubric ? () => go("rubric") : undefined} />}
         </div>
 
         <aside className="min-w-0 space-y-3 lg:sticky lg:top-4 lg:self-start">
+          {teacherView && stats && stats.reflections.length > 0 && (
+            <div className={cn(card, "p-4")}>
+              <p className="text-[13.5px] font-medium text-white">Student reflections <span className="text-lp-mute">· {stats.reflections.length}</span></p>
+              <ul className="mt-2 max-h-80 space-y-2 overflow-y-auto">
+                {stats.reflections.map((r, i) => <li key={i} className="rounded-xl bg-lp-raised/50 px-3 py-2"><p className="text-[12px] font-medium text-lp-sky">{r.name}</p><p className="mt-0.5 text-[13px] leading-relaxed text-lp-soft">{r.text}</p></li>)}
+              </ul>
+            </div>
+          )}
           {!teacherView && (
             <div className={cn(card, "p-4")}>
               <p className="text-[12px] text-lp-mute">{graded ? "Marked" : submission ? "Handed in" : due ? (days !== null && days < 0 ? "Was due" : "Due") : "No deadline"}</p>
