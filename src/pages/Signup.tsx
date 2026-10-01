@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import AuthBrandPanel from "@/components/landing/AuthBrandPanel";
 import { Wordmark } from "@/components/landing/LandingNav";
 import { GlowSubmit } from "@/components/landing/primitives";
+import { consentNext } from "@/lib/oauthReturn";
 
 const inputClass =
   "h-12 w-full rounded-xl border border-lp-line bg-lp-surface/70 pl-11 pr-12 text-[15px] text-lp-text placeholder:text-lp-mute outline-none transition-[border-color,background-color,box-shadow] duration-200 focus:border-lp-blue/70 focus:bg-lp-surface focus:shadow-[0_0_0_4px_rgba(59,130,246,0.15)]";
@@ -82,6 +83,7 @@ const PasswordField: React.FC<{
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
+  const next = consentNext(window.location.search);
   const prefilledEmail = searchParams.get('email') || '';
   const [formData, setFormData] = useState({
     email: prefilledEmail, password: "", confirmPassword: "",
@@ -140,7 +142,7 @@ const Signup = () => {
 
     setIsSubmitting(true);
     try {
-      await signUp(formData.email.trim(), formData.password, approvedRequest.full_name, approvedRequest.requested_role);
+      await signUp(formData.email.trim(), formData.password, approvedRequest.full_name, approvedRequest.requested_role, next ?? undefined);
 
       // Mark the request as completed (keep payment_plan and seat_config for provisioning on first login)
       await supabase
@@ -154,7 +156,7 @@ const Signup = () => {
         title: "Account created!",
         description: "Please check your email to verify your account, then log in.",
       });
-      navigate("/login");
+      navigate(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
     } catch (error: unknown) {
       toast({
         title: "Registration failed",
@@ -202,7 +204,7 @@ const Signup = () => {
           </Link>
           <p className="text-[14px] text-lp-soft">
             <span className="hidden sm:inline">Already have an account? </span>
-            <Link to="/login" className="font-medium text-white underline decoration-lp-blue/60 underline-offset-4 transition-colors hover:text-lp-sky">
+            <Link to={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="font-medium text-white underline decoration-lp-blue/60 underline-offset-4 transition-colors hover:text-lp-sky">
               Log in
             </Link>
           </p>

@@ -1,0 +1,2 @@
+- Author MCP tools under `src/lib/mcp` with OAuth user tokens forwarded to the data client; this keeps every agent read subject to the signed-in person's row-level permissions.
+- Keep OAuth consent at `/.lovable/oauth/consent` and validate login return paths against that route; this prevents open redirects while preserving authorization requests.

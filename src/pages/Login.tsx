@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,7 @@ import { lovable } from '@/integrations/lovable/index';
 import { Wordmark } from "@/components/landing/LandingNav";
 import AuthBrandPanel from "@/components/landing/AuthBrandPanel";
 import { GlowSubmit } from "@/components/landing/primitives";
+import { consentNext } from "@/lib/oauthReturn";
 
 const inputClass =
   "h-12 w-full rounded-xl border border-lp-line bg-lp-surface/70 pl-11 pr-4 text-[15px] text-lp-text placeholder:text-lp-mute outline-none transition-[border-color,background-color,box-shadow] duration-200 focus:border-lp-blue/70 focus:bg-lp-surface focus:shadow-[0_0_0_4px_rgba(59,130,246,0.15)]";
@@ -20,6 +21,8 @@ const GoogleIcon = () => (
 const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const next = consentNext(location.search);
   const { user, login, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,6 +38,7 @@ const Login = () => {
   }, [user]);
 
   const navigateByRole = (role: string) => {
+    if (next) { navigate(next, { replace: true }); return; }
     if (role === 'admin') navigate("/dashboard");
     else if (role === 'teacher') navigate("/dashboard");
     else if (role === 'student') navigate("/student-dashboard");
@@ -67,7 +71,7 @@ const Login = () => {
     setError("");
     setGoogleLoading(true);
     const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: next ? `${window.location.origin}${next}` : window.location.origin,
     });
     if (error) {
       setError(error.message || "Google sign-in failed.");
@@ -104,7 +108,7 @@ const Login = () => {
           ) : (
             <p className="text-[14px] text-lp-soft">
               New to Refyn?{" "}
-              <Link to="/register" className="font-medium text-white underline decoration-lp-blue/60 underline-offset-4 transition-colors hover:text-lp-sky">
+              <Link to={next ? `/register?next=${encodeURIComponent(next)}` : "/register"} className="font-medium text-white underline decoration-lp-blue/60 underline-offset-4 transition-colors hover:text-lp-sky">
                 Sign up
               </Link>
             </p>

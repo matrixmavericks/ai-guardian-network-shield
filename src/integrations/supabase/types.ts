@@ -506,13 +506,17 @@ export type Database = {
           grading_type: string
           group_formation: string
           id: string
+          instructions: string | null
           is_group_assignment: boolean
           max_group_size: number
           min_group_size: number
+          resources: Json
+          rubric: Json | null
           subject: string | null
           teacher_id: string
           title: string
           updated_at: string
+          worksheet: string | null
         }
         Insert: {
           class_id: string
@@ -522,13 +526,17 @@ export type Database = {
           grading_type?: string
           group_formation?: string
           id?: string
+          instructions?: string | null
           is_group_assignment?: boolean
           max_group_size?: number
           min_group_size?: number
+          resources?: Json
+          rubric?: Json | null
           subject?: string | null
           teacher_id: string
           title: string
           updated_at?: string
+          worksheet?: string | null
         }
         Update: {
           class_id?: string
@@ -538,13 +546,17 @@ export type Database = {
           grading_type?: string
           group_formation?: string
           id?: string
+          instructions?: string | null
           is_group_assignment?: boolean
           max_group_size?: number
           min_group_size?: number
+          resources?: Json
+          rubric?: Json | null
           subject?: string | null
           teacher_id?: string
           title?: string
           updated_at?: string
+          worksheet?: string | null
         }
         Relationships: [
           {
