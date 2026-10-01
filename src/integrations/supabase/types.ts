@@ -280,6 +280,7 @@ export type Database = {
       }
       assignment_submissions: {
         Row: {
+          assessment: Json | null
           assignment_id: string
           content: string | null
           feedback: string | null
@@ -290,12 +291,15 @@ export type Database = {
           graded_by: string | null
           id: string
           max_grade: number
+          reflected_at: string | null
+          reflection: string | null
           status: string
           student_id: string
           submitted_at: string
           updated_at: string
         }
         Insert: {
+          assessment?: Json | null
           assignment_id: string
           content?: string | null
           feedback?: string | null
@@ -306,12 +310,15 @@ export type Database = {
           graded_by?: string | null
           id?: string
           max_grade?: number
+          reflected_at?: string | null
+          reflection?: string | null
           status?: string
           student_id: string
           submitted_at?: string
           updated_at?: string
         }
         Update: {
+          assessment?: Json | null
           assignment_id?: string
           content?: string | null
           feedback?: string | null
@@ -322,6 +329,8 @@ export type Database = {
           graded_by?: string | null
           id?: string
           max_grade?: number
+          reflected_at?: string | null
+          reflection?: string | null
           status?: string
           student_id?: string
           submitted_at?: string
@@ -3486,6 +3495,17 @@ export type Database = {
       is_school_member: {
         Args: { _school_id: string; _user_id: string }
         Returns: boolean
+      }
+      join_class: {
+        Args: { _code: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
+      save_reflection: {
+        Args: { _submission: string; _text: string }
+        Returns: string
       }
       validate_discount_code: {
         Args: { _code: string }
