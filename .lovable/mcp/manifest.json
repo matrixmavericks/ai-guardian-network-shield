@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "sdk_version": "3.0.4",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://kvblawqwgjoibzkunhqv.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "refyn-dashboard-v1",
+      "version": "0.1.0",
+      "title": "REFYN DASHBOARD v1"
+    },
+    "tools": [
+      {
+        "name": "list_my_classes",
+        "title": "My classes",
+        "description": "List the signed-in person's classes, with their subject and curriculum.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": null,
+        "outputSchema": null
+      }
+    ]
+  }
+}
