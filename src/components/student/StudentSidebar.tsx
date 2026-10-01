@@ -42,6 +42,7 @@ import { modKey } from "@/lib/portalAppearance";
 import CommandPalette, { type PaletteNav } from "@/components/portal/CommandPalette";
 import { needsMarking, useTeacherData, waited } from "@/components/teacher/data";
 import { Wordmark } from "@/components/landing/LandingNav";
+import { NotificationBell, UnreadDot } from "@/components/notifications/NotificationBell";
 import { getStudioConfig } from "@/lib/mispStudioConfigs";
 
 type NavItem = { title: string; href: string; icon: React.ElementType; badge?: "marking" };
@@ -220,11 +221,14 @@ const SidebarBody: React.FC<{ onNavigate?: () => void; onSearch: () => void }> =
         <Link to={home} onClick={onNavigate} aria-label="Refyn overview" className="text-white">
           <Wordmark className="text-[22px]" />
         </Link>
-        {!onNavigate && (
-          <span className="rounded-full border border-lp-blue/40 bg-lp-blue/15 px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-lp-sky">
-            {teacher ? "Teacher" : "Student"}
-          </span>
-        )}
+        <div className={cn("flex items-center gap-2", onNavigate && "mr-11")}>
+          {!onNavigate && (
+            <span className="rounded-full border border-lp-blue/40 bg-lp-blue/15 px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-lp-sky">
+              {teacher ? "Teacher" : "Student"}
+            </span>
+          )}
+          <NotificationBell placement="sidebar" />
+        </div>
       </div>
 
       <div className="px-3 pb-3">
@@ -392,6 +396,7 @@ const StudentSidebar = () => {
         className="lp-chrome fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-lp-blue text-white shadow-[0_12px_40px_-8px_rgba(59,130,246,0.8)] transition-transform active:scale-95 lg:hidden"
       >
         <Menu className="h-6 w-6" />
+        <UnreadDot className="-right-1 -top-1" />
       </button>
       <div
         className={cn(

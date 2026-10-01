@@ -10,6 +10,7 @@ import { BlockView } from "@/components/assistant/powers/BlockView";
 import { streamChat, type StreamResult } from "@/components/assistant/powers/chatStream";
 import { useDictation, useSpeaker } from "@/components/assistant/powers/voice";
 import { loadTask, taskBrief } from "@/components/tasks/task";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import remarkGfm from "remark-gfm";
 import { useChatLibrary } from "@/components/assistant/files/library";
 import { LibraryPanel, itemIcon } from "@/components/assistant/files/LibraryPanel";
@@ -1406,6 +1407,7 @@ const StudentInterface = () => {
               <h1 className="truncate text-[15px] font-medium text-white">{currentTitle}</h1>
             </div>
             <div className="flex items-center gap-2">
+              <NotificationBell placement="header" />
               <UsageButton
                 ctx={contextEstimate}
                 userId={user?.id ?? null}

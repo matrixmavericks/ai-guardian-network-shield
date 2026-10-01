@@ -1,4 +1,5 @@
 import React from 'react';
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LogOut, TrendingUp, BookOpen, GraduationCap, Settings, Brain, MessageSquare, Book, Users, Briefcase, Building2, DollarSign, Layers, Shield, Megaphone, Calendar, Moon, Sun } from 'lucide-react';
@@ -77,6 +78,7 @@ const SchoolSidebar = () => {
             </div>
           )}
           <span className="font-bold text-slate-900 text-lg truncate">{school?.name || 'School'}</span>
+          <NotificationBell placement="sidebar" className="ml-auto shrink-0 border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900" />
         </div>
       </div>
       
