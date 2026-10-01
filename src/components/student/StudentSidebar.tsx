@@ -33,6 +33,7 @@ import {
   Target,
   ListChecks,
   WandSparkles,
+  TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isStudentId } from "@/lib/studentIds";
@@ -56,6 +57,7 @@ const STUDENT_GROUPS: NavGroup[] = [
       { title: "My Subjects", href: "/my-courses", icon: GraduationCap },
       { title: "Classes", href: "/classes", icon: Users },
       { title: "Grades", href: "/grades", icon: Award },
+      { title: "Progress", href: "/progress", icon: TrendingUp },
     ],
   },
   {
@@ -87,6 +89,7 @@ const TEACHER_GROUPS: NavGroup[] = [
       { title: "Marking", href: "/marking", icon: ClipboardCheck, badge: "marking" },
       { title: "Marking copilot", href: "/marking-copilot", icon: WandSparkles },
       { title: "Gradebook", href: "/grades", icon: Table2 },
+      { title: "Class progress", href: "/progress", icon: TrendingUp },
       { title: "Classes", href: "/classes", icon: Users },
     ],
   },

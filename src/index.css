@@ -711,6 +711,21 @@ html.lp-light :is(.lp-app, .lp-chrome) .lp-pop { box-shadow: 0 24px 60px -24px r
   }
 }
 
+/* Chart colours for MYP criteria (A-D always slots 1-4), validated for both
+   themes with the dataviz palette checks; plus hairline grid and axis inks */
+:root {
+  --crit-a: #3987e5; --crit-b: #d95926; --crit-c: #199e70; --crit-d: #c98500;
+  --viz-grid: rgba(255, 255, 255, 0.07); --viz-axis: rgba(255, 255, 255, 0.18);
+  --band-1: #184f95; --band-2: #256abf; --band-3: #3987e5; --band-4: #6da7ec;
+  --band-ink-1: #ffffff; --band-ink-2: #ffffff; --band-ink-3: #ffffff; --band-ink-4: #0b0b0b;
+}
+html.lp-light {
+  --crit-a: #2a78d6; --crit-b: #eb6834; --crit-c: #1baf7a; --crit-d: #eda100;
+  --viz-grid: #e8ebf1; --viz-axis: #c3c8d2;
+  --band-1: #86b6ef; --band-2: #5598e7; --band-3: #2a78d6; --band-4: #1c5cab;
+  --band-ink-1: #0b0b0b; --band-ink-2: #0b0b0b; --band-ink-3: #ffffff; --band-ink-4: #ffffff;
+}
+
 /* A task's worksheet shown as a white sheet of paper (same in light and dark) */
 @layer components {
   .paper-md { color: #111827; font-size: 15px; line-height: 1.7; overflow-wrap: anywhere; }
