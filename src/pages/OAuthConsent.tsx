@@ -47,8 +47,8 @@ export default function OAuthConsent() {
     <div className="w-full max-w-md space-y-6">
       <p className="text-sm font-semibold uppercase text-muted-foreground">Refyn · Agent integrations</p>
       {error ? <p role="alert" className="text-destructive">{error}</p> : details ? <>
-        <h1 className="text-3xl font-semibold">Connect {details.client?.name ?? "an assistant"}?</h1>
-        <p className="text-muted-foreground">This assistant can see your Refyn classes as you. It cannot access another person's private data or make changes with this connection.</p>
+        <h1 className="text-3xl font-semibold">Connect {details.client?.client_name ?? "an assistant"}?</h1>
+        <p className="text-muted-foreground">This assistant can see the classes your Refyn account can access. This connection cannot make changes.</p>
         <p className="text-sm text-muted-foreground">Signed in as {details.user.email}</p>
         <div className="flex gap-3">
           <Button disabled={busy} onClick={() => decide(true)}>Allow connection</Button>
