@@ -2177,6 +2177,8 @@ export type Database = {
         Row: {
           created_at: string
           file_name: string | null
+          file_path: string | null
+          file_type: string | null
           id: string
           pages: number | null
           recording_minutes: number
@@ -2189,6 +2191,8 @@ export type Database = {
         Insert: {
           created_at?: string
           file_name?: string | null
+          file_path?: string | null
+          file_type?: string | null
           id?: string
           pages?: number | null
           recording_minutes?: number
@@ -2201,6 +2205,8 @@ export type Database = {
         Update: {
           created_at?: string
           file_name?: string | null
+          file_path?: string | null
+          file_type?: string | null
           id?: string
           pages?: number | null
           recording_minutes?: number
