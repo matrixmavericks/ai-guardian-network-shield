@@ -1790,6 +1790,45 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          data: Json
+          dedupe: string | null
+          id: string
+          kind: string
+          link: string | null
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          data?: Json
+          dedupe?: string | null
+          id?: string
+          kind: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          data?: Json
+          dedupe?: string | null
+          id?: string
+          kind?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       paddle_price_ids: {
         Row: {
           billing_cycle: string
@@ -3503,6 +3542,8 @@ export type Database = {
           name: string
         }[]
       }
+      person_name: { Args: { _user: string }; Returns: string }
+      remind_due_tasks: { Args: never; Returns: number }
       save_reflection: {
         Args: { _submission: string; _text: string }
         Returns: string
