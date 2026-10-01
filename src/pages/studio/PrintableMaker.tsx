@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Accessibility,
   BookMarked,
@@ -43,6 +43,7 @@ import {
   normQuestion,
   normalize,
   questionCount,
+  toMarkdown,
   toPlainText,
   totalMarks,
   uid,
@@ -54,6 +55,7 @@ import {
   type Worksheet,
 } from "@/components/studio/worksheet";
 import { useTeacherData } from "@/components/teacher/data";
+import { SOLO, cleanRubric, newId, saveTask, stripAnswers } from "@/components/tasks/task";
 import { MYP, detectGroups, programmeOf, type Letter } from "@/lib/myp";
 
 const KINDS: { id: PrintKind; label: string; body: string; icon: React.ElementType }[] = [
@@ -90,6 +92,7 @@ const Toggle: React.FC<{ on: boolean; set: (v: boolean) => void; label: string; 
 
 const PrintableMaker = () => {
   const { user, config, look, band, setBand } = useStudio();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const lib = useLibrary();
   const { data: teacher } = useTeacherData(!!config);
@@ -307,23 +310,30 @@ const PrintableMaker = () => {
     const cls = teacher.classes.find((c) => c.id === assign.classId);
     if (!cls) return toast.error("Choose a class");
     setAssigning(true);
-    const { error: err } = await supabase.from("class_assignments").insert({
-      class_id: cls.id,
-      teacher_id: user.id,
-      title: doc.title,
-      description: toPlainText(doc, false).slice(0, 20000),
-      due_date: assign.due ? new Date(assign.due).toISOString() : null,
-      subject: cls.subject,
-      is_group_assignment: false,
-      group_formation: "student_choice",
-      min_group_size: 2,
-      max_group_size: 4,
-      grading_type: "group",
-    });
-    setAssigning(false);
-    if (err) return toast.error("Couldn't create the assignment");
-    setAssignOpen(false);
-    toast.success(`Assigned to ${cls.name}`);
+    // Students can read everything in a task, so the mark scheme never goes in
+    const clean = stripAnswers(doc);
+    const tagged = doc.kind === "flashcards" ? [] : [...new Set((doc.kind === "exit" ? doc.questions : doc.sections.flatMap((s) => s.questions)).map((q) => q.criterion).filter(Boolean))] as Letter[];
+    const year = Number(String(band).match(/(\d)/)?.[1]) || 5;
+    try {
+      const id = await saveTask(user.id, {
+        class_id: cls.id,
+        title: doc.title,
+        instructions: doc.kind === "worksheet" || doc.kind === "test" ? doc.instructions ?? null : null,
+        worksheet: toMarkdown(clean),
+        resources: opts ? [{ kind: "printable", id: newId(), name: doc.title, doc: clean, opts: { theme: opts.theme, accent: opts.accent, gradient: opts.gradient, header: opts.header, grid: opts.grid, accessible: opts.accessible, showMarks: opts.showMarks, nameFields: opts.nameFields } }] : [],
+        rubric: mypGroup && programme !== "dp" && tagged.length ? cleanRubric({ kind: "myp", group: mypGroup, year: Math.min(5, year), criteria: tagged, clarifications: {} }) : null,
+        due_date: assign.due ? new Date(assign.due).toISOString() : null,
+        subject: cls.subject,
+        ...SOLO,
+        description: null,
+      }, { create: true });
+      setAssignOpen(false);
+      toast.success(`Assigned to ${cls.name}`, { action: { label: "Open the task", onClick: () => navigate(`/task/${id}`) } });
+    } catch {
+      toast.error("Couldn't create the assignment");
+    } finally {
+      setAssigning(false);
+    }
   };
 
   const ideas = useMemo(() => look?.ideas.filter((i) => i.kind === gen.kind || gen.kind === "worksheet").slice(0, 4) ?? [], [look, gen.kind]);

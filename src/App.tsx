@@ -44,6 +44,8 @@ import PastPapersPage from './pages/PastPapersPage';
 import PersonalProjectPage from './pages/PersonalProjectPage';
 import AssessmentCoachPage from './pages/AssessmentCoachPage';
 import MarkingCopilotPage from './pages/MarkingCopilotPage';
+import TaskPage from './pages/TaskPage';
+import TaskEditorPage from './pages/TaskEditorPage';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as Sonner } from './components/ui/sonner';
 import AppAccountNotice from './components/AppAccountNotice';
@@ -166,6 +168,9 @@ function App() {
           <Route path="/personal-project" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><PersonalProjectPage /></ProtectedRoute>} />
           <Route path="/assessment-coach" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><AssessmentCoachPage /></ProtectedRoute>} />
           <Route path="/marking-copilot" element={<ProtectedRoute allowedRoles={['teacher','admin']}><MarkingCopilotPage /></ProtectedRoute>} />
+          <Route path="/task/new" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TaskEditorPage /></ProtectedRoute>} />
+          <Route path="/task/:id/edit" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TaskEditorPage /></ProtectedRoute>} />
+          <Route path="/task/:id" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><TaskPage /></ProtectedRoute>} />
           <Route path="/studio" element={<ProtectedRoute allowedRoles={['teacher','admin']}><StudioHome /></ProtectedRoute>} />
           <Route path="/studio/create" element={<ProtectedRoute allowedRoles={['teacher','admin']}><PrintableMaker /></ProtectedRoute>} />
           <Route path="/studio/diagrams" element={<ProtectedRoute allowedRoles={['teacher','admin']}><DiagramLab /></ProtectedRoute>} />

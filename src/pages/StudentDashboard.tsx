@@ -531,7 +531,7 @@ const StudentDashboard = () => {
                     <li key={a.id}>
                       <button
                         type="button"
-                        onClick={() => setTab('assignments')}
+                        onClick={() => navigate(`/task/${a.id}`)}
                         className={cn(
                           'group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04]',
                           state === 'overdue' && 'bg-lp-red/[0.06]',

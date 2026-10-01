@@ -11,17 +11,22 @@ import {
   LETTERS, askTutor, deleteTaskReview, ext, listTaskReviews, loadFile, retryTaskCriterion, runTaskReview, saveTaskReview, totals, type CriterionResult, type TaskReview,
 } from "@/components/criteria/engine";
 import { WorkView } from "@/components/criteria/WorkView";
+import { useSearchParams } from "react-router-dom";
+import { loadTask, tscText } from "@/components/tasks/task";
 
 const input = "h-10 w-full rounded-xl border border-lp-line bg-lp-deep/60 px-3 text-[14px] text-white outline-none placeholder:text-lp-mute focus:border-lp-blue/60";
 const GROUPS = Object.keys(MYP) as MypGroup[];
 const wordsIn = (t: string) => (t.match(/[\p{L}\p{N}’']+/gu) ?? []).length;
 
-const Start: React.FC<{ onRun: (o: { text: string; title: string; group: MypGroup; year: number; criteria: Letter[]; task: { title: string; description: string; tsc: string }; file?: File; pages?: number }) => void }> = ({ onRun }) => {
-  const [group, setGroup] = useState<MypGroup>("sciences");
-  const [year, setYear] = useState(5);
-  const [criteria, setCriteria] = useState<Letter[]>(["B", "C"]);
-  const [title, setTitle] = useState("");
-  const [taskText, setTaskText] = useState("");
+/** A task set in Refyn, so its rubric and clarifications drive the review. */
+type FromTask = { group: MypGroup; year: number; criteria: Letter[]; title: string; description: string; tsc: string };
+
+const Start: React.FC<{ onRun: (o: { text: string; title: string; group: MypGroup; year: number; criteria: Letter[]; task: { title: string; description: string; tsc: string }; file?: File; pages?: number }) => void; from?: FromTask | null }> = ({ onRun, from }) => {
+  const [group, setGroup] = useState<MypGroup>(from?.group ?? "sciences");
+  const [year, setYear] = useState(from?.year ?? 5);
+  const [criteria, setCriteria] = useState<Letter[]>(from?.criteria ?? ["B", "C"]);
+  const [title, setTitle] = useState(from?.title ?? "");
+  const [taskText, setTaskText] = useState(from?.description ?? "");
   const [mode, setMode] = useState<"upload" | "paste">("upload");
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState("");
@@ -38,7 +43,7 @@ const Start: React.FC<{ onRun: (o: { text: string; title: string; group: MypGrou
   const go = async () => {
     if (!criteria.length) { toast.error("Choose at least one criterion."); return; }
     try {
-      const task = { title: title.trim(), description: taskText.trim(), tsc: "" };
+      const task = { title: title.trim(), description: taskText.trim(), tsc: from?.tsc ?? "" };
       if (mode === "upload") {
         if (!file) return;
         setBusy("Reading your work");
@@ -123,6 +128,22 @@ const Start: React.FC<{ onRun: (o: { text: string; title: string; group: MypGrou
 
 const AssessmentCoachPage = () => {
   const { user } = useAuth();
+  // ?task=<id> from a task page: start from that task's rubric
+  const [params, setParams] = useSearchParams();
+  const [from, setFrom] = useState<FromTask | null>(null);
+  useEffect(() => {
+    const id = params.get("task");
+    if (!id) return;
+    loadTask(id, null).then((r) => {
+      const rb = r?.task.rubric;
+      if (r && rb?.kind === "myp") {
+        setFrom({ group: rb.group, year: rb.year, criteria: rb.criteria, title: r.task.title, description: [r.task.instructions || r.task.description, r.task.worksheet].filter(Boolean).join("\n\n").slice(0, 6000), tsc: tscText(rb) });
+        toast.success("Set up from your task: its criteria and your teacher's clarifications are loaded.");
+      }
+    });
+    params.delete("task");
+    setParams(params, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [rows, setRows] = useState<TaskReview[] | null>(null);
   const [open, setOpen] = useState<{ review: TaskReview; file: Blob | null } | null>(null);
   const [working, setWorking] = useState<{ criteria: Letter[]; done: Partial<Record<Letter, CriterionResult>> } | null>(null);
@@ -211,7 +232,7 @@ const AssessmentCoachPage = () => {
           </div>
           <p className="mt-3 text-[12.5px] text-lp-mute">A careful review takes a minute or two.</p>
         </section>
-      ) : <Start onRun={run} />}
+      ) : <Start key={from ? "task" : "blank"} onRun={run} from={from} />}
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         {[

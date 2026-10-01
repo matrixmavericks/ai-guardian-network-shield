@@ -260,6 +260,40 @@ export const buildPrompt = (o: GenOptions, systemContext: string) => {
   return base.filter(Boolean).join("\n\n");
 };
 
+/* ---------- Markdown for students (never includes answers) ---------- */
+
+export const toMarkdown = (p: Printable) => {
+  const out: string[] = [`# ${p.title}`];
+  if (p.kind === "flashcards") {
+    p.cards.forEach((c, i) => out.push(`${i + 1}. **${c.front}**`));
+    return out.join("\n\n");
+  }
+  const qMd = (q: Question, n: number) => {
+    const lines = [`**${n}.** ${q.prompt}${q.marks && !q.parts?.length ? ` *[${q.marks} mark${q.marks === 1 ? "" : "s"}]*` : ""}${q.criterion ? ` · Criterion ${q.criterion}` : ""}`];
+    q.options?.forEach((o, i) => lines.push(`- ${String.fromCharCode(65 + i)}. ${o}`));
+    if (q.pairs?.length) lines.push("", "| | |", "|---|---|", ...q.pairs.map(([a, b], i) => `| ${i + 1}. ${a} | ${String.fromCharCode(65 + i)}. ${b} |`));
+    if (q.table) lines.push("", `| ${q.table.headers.join(" | ")} |`, `|${q.table.headers.map(() => "---").join("|")}|`, ...q.table.rows.map((r) => `| ${r.map((c) => c || " ").join(" | ")} |`));
+    q.parts?.forEach((pt) => lines.push(`- (${pt.label}) ${pt.prompt} *[${pt.marks}]*`));
+    if (q.diagram) lines.push("*(See the diagram on the worksheet.)*");
+    return lines.join("\n");
+  };
+  if (p.kind === "exit") {
+    p.questions.forEach((q, i) => out.push(qMd(q, i + 1)));
+    if (p.reflection) out.push(`*${p.reflection}*`);
+    return out.join("\n\n");
+  }
+  if (p.subtitle) out.push(`*${p.subtitle}*`);
+  if (p.instructions) out.push(p.instructions);
+  if (p.timeMinutes) out.push(`**Time:** ${p.timeMinutes} minutes · **Total:** ${totalMarks(p)} marks`);
+  let n = 0;
+  for (const s of p.sections) {
+    out.push(`## ${s.title}${s.intro ? `\n\n${s.intro}` : ""}${s.wordBank?.length ? `\n\n**Word bank:** ${s.wordBank.join(", ")}` : ""}`);
+    for (const q of s.questions) out.push(qMd(q, ++n));
+  }
+  if (p.extension) out.push(`## Challenge\n\n${p.extension}`);
+  return out.join("\n\n");
+};
+
 /* ---------- Plain text (copy / assign to class) ---------- */
 
 export const toPlainText = (p: Printable, withAnswers = false) => {

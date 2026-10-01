@@ -22,10 +22,10 @@ export type ChartSpec = { title: string; type: "bar" | "line" | "pie"; labels: s
 export type PlanItem = { date: string; time: string; minutes: number; title: string; detail: string; tag: string };
 export type PlanSpec = { title: string; items: PlanItem[] };
 export type ActionSpec =
-  | { type: "assignment"; classId: string; title: string; description: string; due: string }
+  | { type: "assignment"; classId: string; title: string; description: string; due: string; instructions: string; attach: string[]; rubric: { group: string; year: number; criteria: string[] } | null }
   | { type: "message"; to: string; text: string }
   | { type: "marking_set"; title: string; group: string; year: number; criteria: string[]; task: string }
-  | { type: "open"; tool: string; label: string };
+  | { type: "open"; tool: string; label: string; id: string };
 
 export type Block =
   | { kind: "quiz"; spec: QuizSpec }
@@ -133,13 +133,21 @@ function plan(title: string, j: Loose): PlanSpec | null {
 
 function action(j: Loose): ActionSpec | null {
   const type = str(j.type).toLowerCase();
-  if (type === "assignment") return { type, classId: str(j.classId ?? j.class_id, 60), title: str(j.title, 200), description: str(j.description, 4000), due: str(j.due, 16) };
+  if (type === "assignment") {
+    const r = j.rubric as Loose | undefined;
+    const criteria = arr(r?.criteria).map((c) => str(c, 1).toUpperCase()).filter((c) => c && "ABCD".includes(c));
+    return {
+      type, classId: str(j.classId ?? j.class_id, 60), title: str(j.title, 200), description: str(j.description, 4000), due: str(j.due, 16),
+      instructions: str(j.instructions, 8000), attach: arr(j.attach).map((a) => str(a, 160)).filter(Boolean).slice(0, 6),
+      rubric: r && criteria.length ? { group: str(r.group, 40), year: Math.min(5, Math.max(1, Math.round(num(r.year, 5)))), criteria: [...new Set(criteria)].sort() } : null,
+    };
+  }
   if (type === "message") { const text = str(j.text, 2000); return text ? { type, to: str(j.to, 80), text } : null; }
   if (type === "marking_set") {
     const criteria = arr(j.criteria).map((c) => str(c, 1).toUpperCase()).filter((c) => "ABCD".includes(c) && c);
     return { type, title: str(j.title, 200) || "Marking set", group: str(j.group, 40), year: Math.min(5, Math.max(1, Math.round(num(j.year, 5)))), criteria: criteria.length ? [...new Set(criteria)].sort() : ["A", "B", "C", "D"], task: str(j.task, 4000) };
   }
-  if (type === "open") { const tool = str(j.tool, 40); return tool ? { type, tool, label: str(j.label, 60) } : null; }
+  if (type === "open") { const tool = str(j.tool, 40); return tool ? { type, tool, label: str(j.label, 60), id: str(j.id, 60) } : null; }
   return null;
 }
 

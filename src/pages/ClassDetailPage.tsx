@@ -25,6 +25,8 @@ import {
   BarChart3, Upload, Clock, AlertTriangle, GraduationCap, Settings, Trophy,
   ClipboardCheck,
   Table2,
+  ArrowRight,
+  PenLine,
 } from 'lucide-react';
 import TeacherGradingView from '@/components/TeacherGradingView';
 import { Progress } from '@/components/ui/progress';
@@ -829,10 +831,8 @@ const ClassDetailPage = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold">Class Assignments</h2>
+                    <Button onClick={() => navigate(`/task/new?class=${classInfo!.id}`)}><Plus className="mr-2 h-4 w-4" /> Set a task</Button>
                     <Dialog open={createAssignmentOpen} onOpenChange={setCreateAssignmentOpen}>
-                      <DialogTrigger asChild>
-                        <Button><Plus className="mr-2 h-4 w-4" /> Create Assignment</Button>
-                      </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Create Assignment</DialogTitle>
@@ -933,7 +933,7 @@ const ClassDetailPage = () => {
                             <div className="flex items-start justify-between">
                               <div>
                                 <CardTitle className="text-base flex items-center gap-2">
-                                  {a.title}
+                                  <Link to={`/task/${a.id}`} className="hover:underline">{a.title}</Link>
                                   {a.is_group_assignment && (
                                     <Badge variant="outline" className="text-xs">
                                       <Users className="mr-1 h-3 w-3" />
@@ -949,6 +949,9 @@ const ClassDetailPage = () => {
                                 </CardDescription>
                               </div>
                               <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => navigate(`/task/${a.id}/edit`)}>
+                                  <PenLine className="mr-2 h-4 w-4" /> Edit
+                                </Button>
                                 <Button variant="outline" size="sm" onClick={() => setGradingAssignment(a)}>
                                   <ClipboardList className="mr-2 h-4 w-4" /> Submissions
                                 </Button>
@@ -960,7 +963,7 @@ const ClassDetailPage = () => {
                           </CardHeader>
                           {a.description && (
                             <CardContent className="pt-0">
-                              <p className="text-sm text-muted-foreground">{a.description}</p>
+                              <p className="line-clamp-2 text-sm text-muted-foreground">{a.description}</p>
                             </CardContent>
                           )}
                           {a.is_group_assignment && (
@@ -1377,7 +1380,7 @@ const ClassDetailPage = () => {
                             <div className="flex flex-wrap items-start justify-between gap-3">
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <h4 className="text-[15px] font-medium text-white">{a.title}</h4>
+                                  <Link to={`/task/${a.id}`} className="text-[15px] font-medium text-white hover:text-lp-sky hover:underline">{a.title}</Link>
                                   <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: tone(st.color), background: `${st.color}1F` }}>
                                     {st.label}
                                   </span>
@@ -1387,7 +1390,7 @@ const ClassDetailPage = () => {
                                     </span>
                                   )}
                                 </div>
-                                {a.description && <p className="mt-1.5 text-[13px] leading-relaxed text-lp-soft">{a.description}</p>}
+                                {a.description && <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-lp-soft">{a.description}</p>}
                                 {a.is_group_assignment && (
                                   <div className="mt-3" onClick={e => e.stopPropagation()}>
                                     <GroupManager
@@ -1429,11 +1432,9 @@ const ClassDetailPage = () => {
                                           : `Due ${format(new Date(a.due_date), 'd MMM')}`}
                                   </span>
                                 ) : null}
-                                {status !== 'graded' && (
-                                  <button type="button" onClick={() => openStudentSubmitDialog(a)} className={cn(status === 'submitted' ? ghostBtn : primaryBtn, 'h-9')}>
-                                    {status === 'submitted' ? 'Resubmit' : 'Submit'} <Send className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
+                                <Link to={`/task/${a.id}`} className={cn(status === 'graded' || status === 'submitted' ? ghostBtn : primaryBtn, 'h-9')}>
+                                  {status === 'graded' ? 'See feedback' : status === 'submitted' ? 'Open task' : 'Open task'} <ArrowRight className="h-3.5 w-3.5" />
+                                </Link>
                               </div>
                             </div>
                           </article>

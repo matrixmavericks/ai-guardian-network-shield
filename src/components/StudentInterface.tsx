@@ -9,6 +9,7 @@ import {
 import { BlockView } from "@/components/assistant/powers/BlockView";
 import { streamChat, type StreamResult } from "@/components/assistant/powers/chatStream";
 import { useDictation, useSpeaker } from "@/components/assistant/powers/voice";
+import { loadTask, taskBrief } from "@/components/tasks/task";
 import remarkGfm from "remark-gfm";
 import { useChatLibrary } from "@/components/assistant/files/library";
 import { LibraryPanel, itemIcon } from "@/components/assistant/files/LibraryPanel";
@@ -209,6 +210,15 @@ const StudentInterface = () => {
     const resDesc = searchParams.get("resourceDesc");
     const resUrl = searchParams.get("resourceUrl");
     const draft = searchParams.get("prompt");
+    // "Ask Refyn about this task" from a task page: the whole task becomes the context
+    const task = searchParams.get("task");
+    if (task) {
+      loadTask(task, null).then(r => {
+        if (r) setResourceContext({ title: `Task: ${r.task.title}`, description: taskBrief(r.task, r.cls) });
+      });
+      searchParams.delete("task");
+      setSearchParams(searchParams, { replace: true });
+    }
     // Coming back from a presentation made in a chat
     const back = searchParams.get("session");
     if (back) {
@@ -1548,6 +1558,7 @@ const StudentInterface = () => {
                                 body={seg.body}
                                 complete={seg.complete}
                                 teacher={teacherMode}
+                                files={splitReply(msg.content).flatMap(s => (s.type === "file" && s.complete ? [s.file] : []))}
                                 onAsk={p => { if (chatState !== "sending") sendPrompt(p); }}
                                 onSave={(title, md) => { const id = saveToNotebook(md, title); setNotebookFocus(id); toast({ title: "Saved to your Notebook", description: title }); }}
                               />

@@ -11,7 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
-import { FileText, Upload, Send, CheckCircle2, Clock, AlertTriangle, Star, MessageSquare, Sparkles, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { FileText, Upload, Send, CheckCircle2, Clock, AlertTriangle, Star, MessageSquare, Sparkles, ExternalLink, ArrowRight } from 'lucide-react';
 
 interface ClassAssignment {
   id: string;
@@ -359,7 +360,7 @@ const StudentAssignmentView = () => {
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-base">{a.title}</CardTitle>
+                        <CardTitle className="text-base"><Link to={`/task/${a.id}`} className="hover:underline">{a.title}</Link></CardTitle>
                         <CardDescription>
                           {a.subject && <Badge variant="secondary" className="mr-2">{a.subject}</Badge>}
                           {a.due_date && (
@@ -370,15 +371,17 @@ const StudentAssignmentView = () => {
                           )}
                         </CardDescription>
                       </div>
-                      <Button size="sm" onClick={() => openSubmitDialog(a)}>
-                        {sub ? 'Resubmit' : 'Submit'}
-                        <Send className="ml-2 h-3 w-3" />
+                      <Button size="sm" asChild>
+                        <Link to={`/task/${a.id}`}>
+                          Open task
+                          <ArrowRight className="ml-2 h-3 w-3" />
+                        </Link>
                       </Button>
                     </div>
                   </CardHeader>
                   {a.description && (
                     <CardContent className="pt-0">
-                      <p className="text-sm text-muted-foreground">{a.description}</p>
+                      <p className="line-clamp-2 text-sm text-muted-foreground">{a.description}</p>
                     </CardContent>
                   )}
                   {sub && (

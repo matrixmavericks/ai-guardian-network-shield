@@ -12,6 +12,7 @@ import { Chart } from "./Chart";
 import { Plan } from "./Plan";
 import { Action } from "./Action";
 import { Card, CardHead, field, ghost, primary } from "./ui";
+import type { OutputFile } from "@/components/assistant/files/outputs";
 
 const ICONS: Record<BlockKind, React.ElementType> = { quiz: ListChecks, flashcards: Layers, graph: LineChart, chart: BarChart3, plan: CalendarRange, action: WandSparkles };
 const BUILDING: Record<BlockKind, string> = { quiz: "Writing your quiz", flashcards: "Making flashcards", graph: "Plotting the graph", chart: "Drawing the chart", plan: "Building your plan", action: "Getting that ready" };
@@ -69,7 +70,9 @@ export const BlockView: React.FC<{
   teacher: boolean;
   onAsk?: (prompt: string) => void;
   onSave?: (title: string, markdown: string) => void;
-}> = ({ kind, attrs, body, complete, teacher, onAsk, onSave }) => {
+  /** Files written in the same reply (an action can attach them to a task) */
+  files?: OutputFile[];
+}> = ({ kind, attrs, body, complete, teacher, onAsk, onSave, files }) => {
   const block = useMemo(() => (complete ? parseBlock(kind, attrs, body) : null), [kind, attrs, body, complete]);
   const key = useMemo(() => blockKey(kind, body), [kind, body]);
   const [live, setLive] = useState<QuizSpec | null>(null);
@@ -105,6 +108,6 @@ export const BlockView: React.FC<{
     case "graph": return <Graph spec={block.spec} />;
     case "chart": return <Chart spec={block.spec} />;
     case "plan": return <Plan spec={block.spec} storeKey={key} onSave={onSave} />;
-    case "action": return <Action spec={block.spec} storeKey={key} teacher={teacher} />;
+    case "action": return <Action spec={block.spec} storeKey={key} teacher={teacher} files={files} />;
   }
 };

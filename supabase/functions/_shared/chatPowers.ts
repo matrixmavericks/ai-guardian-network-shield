@@ -72,7 +72,7 @@ async function studentContext(db: Db, userId: string, tz: string, now: number) {
     for (const a of asg ?? []) {
       const s: any = sub.get(a.id);
       const state = !s ? "not submitted" : s.grade !== null && s.grade !== undefined ? `graded ${s.grade}/${s.max_grade}` : s.status === "graded" ? "graded" : "submitted";
-      const line = `- ${fmt(a.due_date, tz)}: "${clip(a.title, 80)}" for ${clip(cName.get(a.class_id), 40)}: ${state}${a.description ? `. Brief: ${clip(a.description, 140)}` : ""}`;
+      const line = `- ${fmt(a.due_date, tz)}: "${clip(a.title, 80)}" [task ${a.id}] for ${clip(cName.get(a.class_id), 40)}: ${state}${a.description ? `. Brief: ${clip(a.description, 140)}` : ""}`;
       if (new Date(a.due_date).getTime() < now) { if (!s) overdue.push(line); } else due.push(line);
     }
     assignmentsCount = due.length + overdue.length;
@@ -167,7 +167,7 @@ async function teacherContext(db: Db, userId: string, tz: string, now: number) {
       const past = a.due_date && new Date(a.due_date).getTime() < now;
       const pct = graded.filter((x: any) => x.grade !== null && x.max_grade).map((x: any) => (x.grade / x.max_grade) * 100);
       const avg = pct.length ? Math.round(pct.reduce((p: number, q: number) => p + q, 0) / pct.length) : null;
-      return `- "${clip(a.title, 70)}" (${clip(cName.get(a.class_id), 40)}, due ${fmt(a.due_date, tz)}): ${s.length}/${roster.length} submitted, ${graded.length} marked, ${waiting} waiting${avg !== null ? `, class average ${avg}%` : ""}${past && missing.length ? `. Missing: ${missing.length <= 12 ? missing.map((id) => name.get(id) ?? "Student").join(", ") : `${missing.length} students`}` : ""}`;
+      return `- "${clip(a.title, 70)}" [task ${a.id}] (${clip(cName.get(a.class_id), 40)}, due ${fmt(a.due_date, tz)}): ${s.length}/${roster.length} submitted, ${graded.length} marked, ${waiting} waiting${avg !== null ? `, class average ${avg}%` : ""}${past && missing.length ? `. Missing: ${missing.length <= 12 ? missing.map((id) => name.get(id) ?? "Student").join(", ") : `${missing.length} students`}` : ""}`;
     });
     assignmentsCount = rows.length;
     if (rows.length) lines.push(`Assignments from the last month and coming up:\n${rows.join("\n")}`);
@@ -232,11 +232,11 @@ INTERACTIVE BLOCKS: the chat turns these blocks into interactive cards. Use one 
 {"items":[{"date":"2026-10-03","time":"17:00","minutes":40,"title":"Cells: flashcards + 10 questions","detail":"Focus on organelle functions","tag":"Biology test"}]}
 <<<END PLAN>>>
 - Action (a button that does something in Refyn after the person checks it and confirms; you never do it yourself). Only these types:
-  ${staff ? `{"type":"assignment","classId":"<id from YOUR REFYN>","title":"...","description":"student-facing brief","due":"YYYY-MM-DDTHH:MM"} creates an assignment for a class.
+  ${staff ? `{"type":"assignment","classId":"<id from YOUR REFYN>","title":"...","instructions":"student-facing: what to do, how long, what to hand in (markdown)","due":"YYYY-MM-DDTHH:MM","attach":["<name of a FILE block in this reply>"],"rubric":{"group":"sciences","year":4,"criteria":["B","C"]}} sets a task for a class: students get a task page with the instructions, the attached worksheet and the rubric. Write the worksheet or brief itself as a FILE block in the same reply and name it in attach; put any answer key or mark scheme in a separate FILE block and never attach it. Include rubric only for MYP-assessed work.
   {"type":"message","to":"<student's name from YOUR REFYN>","text":"..."} sends a Refyn message to one student.
   {"type":"marking_set","title":"...","group":"sciences","year":5,"criteria":["A","B"],"task":"task description"} starts a Marking copilot set (groups: language-acquisition, language-literature, individuals-societies, sciences, mathematics, arts, phe, design).
   ` : `{"type":"message","to":"<teacher's name from YOUR REFYN>","text":"..."} drafts a Refyn message to their teacher (they edit and send it).
-  `}{"type":"open","tool":"${staff ? "marking-copilot|past-papers|decks|grades|marking|personal-project" : "assessment-coach|personal-project|grades|classes"}","label":"..."} a button that opens that Refyn tool.
+  `}{"type":"open","tool":"${staff ? "marking-copilot|past-papers|decks|grades|marking|personal-project" : "assessment-coach|personal-project|grades|classes"}","label":"..."} a button that opens that Refyn tool; {"type":"open","tool":"task","id":"<task id from YOUR REFYN>","label":"Open the lab report task"} opens one task's page (instructions, the task, resources, rubric).
 <<<ACTION>>>
 {"type":"open","tool":"${staff ? "marking-copilot" : "assessment-coach"}","label":"${staff ? "Open Marking copilot" : "Check my lab report"}"}
 <<<END ACTION>>>`;

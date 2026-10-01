@@ -711,6 +711,31 @@ html.lp-light :is(.lp-app, .lp-chrome) .lp-pop { box-shadow: 0 24px 60px -24px r
   }
 }
 
+/* A task's worksheet shown as a white sheet of paper (same in light and dark) */
+@layer components {
+  .paper-md { color: #111827; font-size: 15px; line-height: 1.7; overflow-wrap: anywhere; }
+  .paper-md > :first-child { margin-top: 0; }
+  .paper-md > :last-child { margin-bottom: 0; }
+  .paper-md p { margin: 0.7em 0; }
+  .paper-md h1 { font-size: 1.65em; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; margin: 0 0 0.6em; padding-bottom: 0.4em; border-bottom: 2px solid #E5E7EB; }
+  .paper-md h2 { font-size: 1.22em; font-weight: 650; margin: 1.5em 0 0.5em; color: #1E3A8A; }
+  .paper-md h3, .paper-md h4 { font-size: 1.05em; font-weight: 650; margin: 1.2em 0 0.4em; }
+  .paper-md ul, .paper-md ol { margin: 0.5em 0 0.8em; padding-left: 1.4em; }
+  .paper-md ul { list-style: disc; }
+  .paper-md ol { list-style: decimal; }
+  .paper-md li { margin: 0.25em 0; }
+  .paper-md strong { font-weight: 650; }
+  .paper-md table { width: 100%; border-collapse: collapse; margin: 0.8em 0 1.1em; font-size: 0.93em; display: block; overflow-x: auto; }
+  .paper-md th, .paper-md td { border: 1px solid #CBD5E1; padding: 6px 9px; text-align: left; vertical-align: top; overflow-wrap: normal; min-width: 4.5em; }
+  .paper-md th { background: #EEF2F8; font-weight: 600; white-space: nowrap; }
+  .paper-md blockquote { margin: 0.9em 0; padding: 0.4em 1em; border-left: 3px solid #3B82F6; background: #F5F8FF; color: #374151; }
+  .paper-md code { font-family: "JetBrains Mono", Consolas, monospace; font-size: 0.9em; background: #F3F4F6; padding: 0.1em 0.35em; border-radius: 4px; }
+  .paper-md pre { background: #F3F4F6; padding: 0.8em 1em; border-radius: 8px; overflow-x: auto; }
+  .paper-md pre code { background: none; padding: 0; }
+  .paper-md hr { border: 0; border-top: 1px solid #E5E7EB; margin: 1.4em 0; }
+  .paper-md a { color: #1D4ED8; text-decoration: underline; }
+}
+
 /* Markdown replies in the AI assistant (the typography plugin isn't enabled) */
 @layer components {
   .lp-md { color: rgb(var(--lp-md)); font-size: 15.5px; line-height: 1.75; overflow-wrap: anywhere; }
