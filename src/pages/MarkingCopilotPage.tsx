@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
+import { useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, BarChart3, Check, CheckCircle2, ClipboardList, Download, FileDown, Import, Lightbulb, Loader2, Plus, Sparkles, Square, Trash2, Upload, Users, Wand2, X,
 } from "lucide-react";
@@ -413,9 +414,12 @@ const MarkingCopilotPage = () => {
   const { data } = useTeacherData();
   const [sets, setSets] = useState<(MarkingSet & { count: number })[] | null>(null);
   const [creating, setCreating] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
+  // ?set=<id> opens a set straight away (e.g. one started from the AI chat)
+  const [params, setParams] = useSearchParams();
+  const [openId, setOpenId] = useState<string | null>(() => params.get("set"));
   const refresh = () => listSets().then(setSets, () => setSets([]));
   useEffect(() => { if (user) refresh(); }, [user]);
+  useEffect(() => { if (params.get("set")) { params.delete("set"); setParams(params, { replace: true }); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const back = useMemo(() => () => { setOpenId(null); refresh(); }, []);
 
   if (!user) return null;

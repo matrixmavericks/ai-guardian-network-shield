@@ -134,6 +134,13 @@ const ClassDetailPage = () => {
       setClassTab('live-quiz');
       setQuizView('create');
     }
+    // A live quiz made in the AI chat: open it ready to host
+    const live = searchParams.get('liveQuiz');
+    if (live) {
+      setClassTab('live-quiz');
+      setActiveQuizSessionId(live);
+      setQuizView('play');
+    }
   }, [searchParams]);
 
   useEffect(() => {

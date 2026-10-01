@@ -4,6 +4,7 @@ import { AI_MODELS, BASIC_PLANS, DEFAULT_MODEL, FALLBACK_MODELS, findModel, norm
 import { DECK_INSTRUCTIONS, FILE_INSTRUCTIONS, LIBRARY_RULES, buildLibrary, historyBudget, libraryBudget, type LibraryUse } from "../_shared/chatLibrary.ts";
 import { ASSESSMENT_INTENT, detectGroups, mypGuidance, programmeOf } from "../_shared/myp.ts";
 import { PAST_PAPER_INTENT, pastPaperBlock } from "../_shared/pastPapers.ts";
+import { blockInstructions, liveContext, type LiveSummary } from "../_shared/chatPowers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -330,10 +331,19 @@ serve(async (req) => {
   let libraryEnabled = false;
   let images: string[] = [];
   let describeName = '';
+  // Assistant powers: streamed replies, the person's own Refyn data, interactive blocks
+  let wantStream = false;
+  let wantLive = true;
+  let wantBlocks = true;
+  let timeZone: unknown = null;
 
   try {
     const body = await req.json();
     action = typeof body.action === 'string' ? body.action : null;
+    wantStream = body.stream === true;
+    wantLive = body.live !== false;
+    wantBlocks = body.powers !== false;
+    timeZone = body.tz;
     prompt = (body.prompt || '').trim();
     subject = body.subject || 'general';
     gradeLevel = body.gradeLevel || 'high-school';
@@ -507,6 +517,7 @@ CRITICAL MATH FORMATTING RULES:
 - For equations, write them on their own line in plain text, e.g.: "Area = π × r²"
 - For complex formulas, use code blocks with plain text formatting.`;
   systemMessage += FILE_INSTRUCTIONS;
+  if (wantBlocks) systemMessage += blockInstructions(staff);
 
   const forceProcessMode = !staff && schoolSettings?.process_mode_enabled === true;
   if (staff) {
@@ -613,6 +624,16 @@ IMPORTANT: You are in Process Teaching Mode.
     }
   }
 
+  // The person's own Refyn data: deadlines, grades, classes, marking queue
+  let liveUsed: LiveSummary | null = null;
+  if (wantLive && userId) {
+    const live = await liveContext(getAdminClient(), userId, staff, timeZone);
+    if (live) {
+      liveUsed = live.summary;
+      systemMessage += `\n\n${live.text}`;
+    }
+  }
+
   // Conversation history: as many recent turns as fit the model's budget
   const histBudget = historyBudget(priceIn);
   const kept: typeof history = [];
@@ -638,6 +659,183 @@ IMPORTANT: You are in Process Teaching Mode.
   // (e.g. a model that isn't live yet). School allow-lists still apply.
   const candidates = [usedModel, ...FALLBACK_MODELS.filter(id => id !== usedModel && (!access.schoolModels || access.schoolModels.includes(id)))].slice(0, 3);
 
+  /** Usage and prompt logs for one reply (best-effort). */
+  const logTurn = async (text: string, pt: number, ct: number) => {
+    if (!userId) return;
+    try {
+      const adminClient = getAdminClient();
+      const info = findModel(usedModel);
+      const price = info?.price ?? { input: COST_PER_1M_INPUT, output: COST_PER_1M_OUTPUT };
+      await adminClient.from('ai_usage_logs').insert({
+        user_id: userId,
+        session_id: sessionId || null,
+        prompt_tokens: pt,
+        completion_tokens: ct,
+        total_tokens: pt + ct,
+        estimated_cost_usd: (pt / 1_000_000) * price.input + (ct / 1_000_000) * price.output,
+        model: usedModel,
+      });
+      await adminClient.from('prompt_logs').insert({
+        user_id: userId,
+        original_prompt: prompt,
+        modified_prompt: moderationStatus === 'rewritten' ? effectivePrompt : null,
+        response: text.substring(0, 500),
+        status: moderationStatus as string,
+        severity,
+        subject,
+        grade_level: gradeLevel,
+        process_mode_enabled: processTeaching,
+        flagged_keywords: flaggedKeywords.length > 0 ? flaggedKeywords : null,
+        ai_engine: info?.provider ?? usedModel.split('/')[0] ?? 'google',
+      });
+    } catch (logErr) {
+      console.error('Logging failed (non-fatal):', logErr);
+    }
+  };
+
+  const metaFor = (answered: boolean, pt: number, ct: number) => {
+    const info = findModel(usedModel);
+    return {
+      moderationStatus,
+      severity,
+      flaggedKeywords: flaggedKeywords.length > 0 ? flaggedKeywords : undefined,
+      // Only report a model when one actually produced the reply
+      model: answered ? usedModel : undefined,
+      modelName: answered ? info?.name ?? usedModel : undefined,
+      provider: answered ? info?.provider ?? usedModel.split('/')[0] : undefined,
+      effort: answered ? usedEffort : undefined,
+      requestedModel: requestedModel ? normalizeModel(requestedModel) : null,
+      notice: notice ?? undefined,
+      library: libraryUse ?? undefined,
+      pastPapers: pastPapersUsed.length ? pastPapersUsed : undefined,
+      ibReference: mypRef ? true : undefined,
+      live: liveUsed ?? undefined,
+      usage: answered ? { prompt: pt, completion: ct } : undefined,
+      mode: staff ? 'teacher' : processTeaching || forceProcessMode ? 'guided' : 'direct',
+    };
+  };
+
+  /** A gateway error that ends the request (not worth trying another model). */
+  const fatal = (status: number) =>
+    status === 429
+      ? json({ success: false, reply: 'Rate limit exceeded. Please wait a moment and try again.', error: 'rate_limited', meta: null }, 429)
+      : status === 402
+        ? json({ success: false, reply: 'AI service requires credits. Please contact your administrator.', error: 'payment_required', meta: null }, 402)
+        : null;
+
+  // --- Streamed reply: Server-Sent Events {type: start | delta | done | error} ---
+  if (wantStream) {
+    const open = async (gatewayId: string, effort: Effort | null, msgs: unknown[]) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: gatewayId, messages: msgs, stream: true, stream_options: { include_usage: true }, ...(effort ? { reasoning_effort: effort } : {}) }),
+          signal: controller.signal,
+        });
+        if (!res.ok || !res.body) {
+          clearTimeout(timer);
+          return { ok: false as const, status: res.status, text: await res.text().catch(() => '') };
+        }
+        // Headers arrived: the stream itself may run longer than the connect timeout
+        clearTimeout(timer);
+        return { ok: true as const, res };
+      } catch (e) {
+        clearTimeout(timer);
+        return { ok: false as const, status: 504, text: String(e) };
+      }
+    };
+
+    let upstream: Response | null = null;
+    const firstModel = usedModel;
+    for (const candidate of candidates) {
+      const effort = candidate === firstModel ? usedEffort : null;
+      const gatewayId = access.gatewayIds.get(candidate) ?? candidate;
+      let r = await open(gatewayId, effort, messages);
+      if (!r.ok && r.status === 400 && effort && /reason/i.test(r.text)) {
+        r = await open(gatewayId, null, messages);
+        if (r.ok && candidate === firstModel) usedEffort = null;
+      }
+      if (!r.ok && r.status === 400 && images.length && /image|vision|multimodal|content/i.test(r.text)) {
+        messages = [{ role: 'system', content: systemMessage }, ...kept, { role: 'user', content: effectivePrompt }];
+        r = await open(gatewayId, effort, messages);
+      }
+      if (!r.ok) {
+        console.error('AI gateway error (stream):', candidate, r.status, r.text.slice(0, 300));
+        const stop = fatal(r.status);
+        if (stop) return stop;
+        if (modelMissing(r.status, r.text)) runInBackground(recordAvailability(candidate, false, null, `${r.status} ${r.text}`));
+        continue;
+      }
+      if (candidate !== firstModel) {
+        notice = `${findModel(firstModel)?.name ?? firstModel} isn't available right now, so ${findModel(candidate)?.name ?? candidate} answered.`;
+        usedModel = candidate;
+        usedEffort = null;
+      }
+      if (access.unavailable.has(candidate) || !access.gatewayIds.has(candidate)) runInBackground(recordAvailability(candidate, true, gatewayId, null));
+      upstream = r.res;
+      break;
+    }
+    if (!upstream?.body) return json({ success: false, reply: FALLBACK_REPLY, error: 'AI service unavailable', meta: null }, 502);
+
+    const enc = new TextEncoder();
+    const body = new ReadableStream({
+      async start(controller) {
+        const send = (o: unknown) => controller.enqueue(enc.encode(`data: ${JSON.stringify(o)}\n\n`));
+        const info = findModel(usedModel);
+        send({ type: 'start', model: usedModel, modelName: info?.name ?? usedModel, effort: usedEffort, notice: notice ?? undefined });
+        const reader = upstream!.body!.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        let text = '';
+        let pt = 0;
+        let ct = 0;
+        try {
+          for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = buf.indexOf('\n')) >= 0) {
+              const line = buf.slice(0, nl).trim();
+              buf = buf.slice(nl + 1);
+              if (!line.startsWith('data:')) continue;
+              const data = line.slice(5).trim();
+              if (!data || data === '[DONE]') continue;
+              try {
+                const chunk = JSON.parse(data);
+                const delta = chunk?.choices?.[0]?.delta?.content;
+                if (typeof delta === 'string' && delta) {
+                  text += delta;
+                  send({ type: 'delta', text: delta });
+                }
+                if (chunk?.usage) {
+                  pt = chunk.usage.prompt_tokens || pt;
+                  ct = chunk.usage.completion_tokens || ct;
+                }
+              } catch { /* partial or non-JSON line */ }
+            }
+          }
+          const answered = text.trim().length > 0;
+          if (!pt) pt = Math.ceil((systemMessage.length + effectivePrompt.length + histUsed) / 4);
+          if (!ct) ct = Math.ceil(text.length / 4);
+          if (!answered) send({ type: 'delta', text: FALLBACK_REPLY });
+          send({ type: 'done', meta: metaFor(answered, pt, ct) });
+          runInBackground(logTurn(answered ? text : FALLBACK_REPLY, pt, ct));
+        } catch (e) {
+          console.error('stream failed:', e);
+          send({ type: 'error', message: 'The reply was interrupted. Try again.', partial: text.length > 0 });
+          if (text) runInBackground(logTurn(text, Math.ceil((systemMessage.length + effectivePrompt.length) / 4), Math.ceil(text.length / 4)));
+        } finally {
+          controller.close();
+        }
+      },
+    });
+    return new Response(body, { headers: { ...corsHeaders, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' } });
+  }
+
   try {
     for (const candidate of candidates) {
       const effort = candidate === usedModel ? usedEffort : null;
@@ -658,12 +856,8 @@ IMPORTANT: You are in Process Teaching Mode.
 
       if (!result.ok) {
         console.error('AI gateway error:', candidate, result.status, result.text.slice(0, 500));
-        if (result.status === 429) {
-          return json({ success: false, reply: 'Rate limit exceeded. Please wait a moment and try again.', error: 'rate_limited', meta: null }, 429);
-        }
-        if (result.status === 402) {
-          return json({ success: false, reply: 'AI service requires credits. Please contact your administrator.', error: 'payment_required', meta: null }, 402);
-        }
+        const stop = fatal(result.status);
+        if (stop) return stop;
         if ([400, 404, 422].includes(result.status)) {
           // Model not served: remember it so the picker stops offering it, then try the next one
           if (modelMissing(result.status, result.text)) runInBackground(recordAvailability(candidate, false, null, `${result.status} ${result.text}`));
@@ -701,71 +895,18 @@ IMPORTANT: You are in Process Teaching Mode.
   } catch (err) {
     console.error('AI call failed:', err);
   }
-  const usedInfo = findModel(usedModel);
 
   const answered = !!responseText && responseText.trim().length > 0;
   if (!answered) {
     responseText = FALLBACK_REPLY;
   }
 
-  // --- Log to prompt_logs + ai_usage_logs (best-effort) ---
-  if (userId) {
-    try {
-      const adminClient = getAdminClient();
-      const totalTokens = promptTokens + completionTokens;
-      const price = usedInfo?.price ?? { input: COST_PER_1M_INPUT, output: COST_PER_1M_OUTPUT };
-      const estimatedCost = (promptTokens / 1_000_000) * price.input + (completionTokens / 1_000_000) * price.output;
-
-      // Log usage
-      await adminClient.from('ai_usage_logs').insert({
-        user_id: userId,
-        session_id: sessionId || null,
-        prompt_tokens: promptTokens,
-        completion_tokens: completionTokens,
-        total_tokens: totalTokens,
-        estimated_cost_usd: estimatedCost,
-        model: usedModel,
-      });
-
-      // Log prompt
-      await adminClient.from('prompt_logs').insert({
-        user_id: userId,
-        original_prompt: prompt,
-        modified_prompt: moderationStatus === 'rewritten' ? effectivePrompt : null,
-        response: responseText.substring(0, 500),
-        status: moderationStatus as string,
-        severity,
-        subject,
-        grade_level: gradeLevel,
-        process_mode_enabled: processTeaching,
-        flagged_keywords: flaggedKeywords.length > 0 ? flaggedKeywords : null,
-        ai_engine: usedInfo?.provider ?? usedModel.split('/')[0] ?? 'google',
-      });
-    } catch (logErr) {
-      console.error('Logging failed (non-fatal):', logErr);
-    }
-  }
+  await logTurn(responseText, promptTokens, completionTokens);
 
   return json({
     success: true,
     reply: responseText,
     error: null,
-    meta: {
-      moderationStatus,
-      severity,
-      flaggedKeywords: flaggedKeywords.length > 0 ? flaggedKeywords : undefined,
-      // Only report a model when one actually produced the reply
-      model: answered ? usedModel : undefined,
-      modelName: answered ? usedInfo?.name ?? usedModel : undefined,
-      provider: answered ? usedInfo?.provider ?? usedModel.split('/')[0] : undefined,
-      effort: answered ? usedEffort : undefined,
-      requestedModel: requestedModel ? normalizeModel(requestedModel) : null,
-      notice: notice ?? undefined,
-      library: libraryUse ?? undefined,
-      pastPapers: pastPapersUsed.length ? pastPapersUsed : undefined,
-      ibReference: mypRef ? true : undefined,
-      usage: answered ? { prompt: promptTokens, completion: completionTokens } : undefined,
-      mode: staff ? 'teacher' : processTeaching || forceProcessMode ? 'guided' : 'direct',
-    },
+    meta: metaFor(answered, promptTokens, completionTokens),
   });
 });

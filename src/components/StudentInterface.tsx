@@ -4,7 +4,11 @@ import {
   LayoutGrid, Lightbulb, Loader2, LogOut, Menu, MessageSquare, PanelLeftClose, PanelLeftOpen, PenTool, Plus,
   Puzzle, Route, Search, Sparkles, Terminal, Users, X, Briefcase, Layers, RotateCcw, Paperclip, Library as LibraryIcon,
   AlertCircle, Upload as UploadIcon, Presentation, FileStack,
+  Mic, Square, Volume2, VolumeX, Radar, CalendarClock, ClipboardCheck, LineChart, Radio,
 } from "lucide-react";
+import { BlockView } from "@/components/assistant/powers/BlockView";
+import { streamChat, type StreamResult } from "@/components/assistant/powers/chatStream";
+import { useDictation, useSpeaker } from "@/components/assistant/powers/voice";
 import remarkGfm from "remark-gfm";
 import { useChatLibrary } from "@/components/assistant/files/library";
 import { LibraryPanel, itemIcon } from "@/components/assistant/files/LibraryPanel";
@@ -27,7 +31,7 @@ import { useSchoolCheck } from "@/hooks/useSchoolCheck";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday, differenceInCalendarDays } from "date-fns";
 import { Wordmark } from "@/components/landing/LandingNav";
-import { COMMANDS, Command, parseCommand } from "@/components/assistant/commands";
+import { Command, commandsFor, parseCommand } from "@/components/assistant/commands";
 import { MAX_INSTALLED, SKILLS, skillContext, skillsForMessage } from "@/components/assistant/skills";
 import { NotebookEntry, downloadMarkdown, slugify, useStoredState } from "@/components/assistant/storage";
 import {
@@ -64,6 +68,10 @@ interface ChatMessage {
   pastPapers?: string[];
   /** Arrived in this visit (a presentation in it opens straight away) */
   fresh?: boolean;
+  /** Which of the person's own Refyn data the reply could see */
+  live?: { role: string; classes: number; assignments: number; waiting?: number; events: number };
+  /** Still arriving */
+  streaming?: boolean;
 }
 
 interface ChatSession {
@@ -82,17 +90,17 @@ const SUBJECTS = [
 ];
 
 const STARTERS = [
-  { title: "Plan my essay", body: "Help me build an argument and an outline before I start writing.", subject: "writing", icon: PenTool },
-  { title: "Explain a concept", body: "Break a topic I'm stuck on into steps I can follow.", subject: "general", icon: Lightbulb },
-  { title: "Check my working", body: "Look at how I solved a problem and show me where it went wrong.", subject: "math", icon: Calculator },
-  { title: "Quiz me", body: "Ask me questions to test what I know before a test.", subject: "science", icon: Sparkles },
+  { title: "What's due?", body: "What's due for me in the next two weeks and what should I start first? Make me a plan I can add to my calendar.", subject: "general", icon: CalendarClock },
+  { title: "Quiz me", body: "Quiz me on [topic] with a mix of question types, then tell me what to go over.", subject: "science", icon: Sparkles },
+  { title: "Flashcards", body: "Make me flashcards for [topic] so I can memorise the key terms.", subject: "general", icon: Layers },
+  { title: "Graph it", body: "Show me an interactive graph of y = a(x − h)² + k with sliders, and explain what each letter does.", subject: "math", icon: LineChart },
 ];
 
 const TEACHER_STARTERS = [
-  { title: "Plan a lesson", body: "Plan a 60-minute lesson on [topic] for [year group], with a starter, main activities, differentiation and an exit ticket.", subject: "general", icon: Route },
-  { title: "Make a worksheet", body: "Make a worksheet on [topic] for [year group] with a mix of recall and extended questions, plus an answer key.", subject: "general", icon: FileText },
+  { title: "What needs marking?", body: "What's waiting to be marked across my classes, and who hasn't submitted? Chart the latest class results.", subject: "general", icon: ClipboardCheck },
+  { title: "Live quiz", body: "Make a 10-question quiz on [topic] for [year group] that I can launch live in class.", subject: "general", icon: Radio },
   { title: "Build a presentation", body: "Make a 10-slide presentation on [topic] for [year group], with images, a quick quiz and speaker notes.", subject: "general", icon: Presentation },
-  { title: "Write a rubric", body: "Write an MYP criterion-based rubric for [task], with descriptors for each band.", subject: "general", icon: Layers },
+  { title: "Set an assignment", body: "Write an assignment on [topic] for [class], due next Friday, and set it for me.", subject: "general", icon: FileText },
 ];
 
 const NOTES_PROMPT =
@@ -181,6 +189,12 @@ const StudentInterface = () => {
 
   // Teachers get the planning and content assistant; students the guided tutor
   const teacherMode = user?.role === "teacher" || user?.role === "admin";
+
+  // Assistant powers: streamed replies, the person's own Refyn data, voice
+  const [useLive, setUseLive] = useStoredState<boolean>(storeKey && `${storeKey}:live`, true);
+  const abortRef = useRef<AbortController | null>(null);
+  const dictation = useDictation(t => setPrompt(p => (p && !/\s$/.test(p) ? `${p} ` : p) + t));
+  const speaker = useSpeaker();
 
   // Chat library: files, notes and saved replies Refyn reads on every reply
   const lib = useChatLibrary(user?.id ?? null, currentSessionId);
@@ -294,7 +308,7 @@ const StudentInterface = () => {
       .order('created_at', { ascending: true });
 
     if (data) {
-      type Row = { id: string; role: string; content: string; created_at: string; metadata: { model?: string; effort?: string | null; notice?: string; attachments?: string[]; library?: ChatMessage["library"]; usage?: ChatMessage["usage"]; pastPapers?: string[] } | null };
+      type Row = { id: string; role: string; content: string; created_at: string; metadata: { model?: string; effort?: string | null; notice?: string; attachments?: string[]; library?: ChatMessage["library"]; usage?: ChatMessage["usage"]; pastPapers?: string[]; live?: ChatMessage["live"] } | null };
       setMessages(data.map((m: Row) => ({
         id: m.id,
         role: m.role as "user" | "assistant",
@@ -307,6 +321,7 @@ const StudentInterface = () => {
         library: m.metadata?.library,
         usage: m.metadata?.usage,
         pastPapers: m.metadata?.pastPapers,
+        live: m.metadata?.live,
       })));
     }
     const session = sessions.find(s => s.id === sessionId);
@@ -465,35 +480,74 @@ const StudentInterface = () => {
       // Class resource + any skills, sent as extra context for this reply
       const context = [resourceText(), skillContext(activeSkills)].filter(Boolean).join("\n\n") || null;
 
-      // Call AI
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          prompt: sentPrompt,
-          subject: activeSubject,
-          gradeLevel: "high-school",
-          processTeaching: teacherMode ? false : isProcessTeaching,
-          sessionId,
-          history,
-          resourceContext: context,
-          model,
-          effort,
-          library: true,
-          images: attached.map(u => u.image).filter(Boolean),
-        },
-      });
+      // Call AI: the reply streams in as it's written
+      const assistantId = crypto.randomUUID();
+      let shown = false;
+      let latest: string | null = null;
+      let frame = 0;
+      const show = (patch: Partial<ChatMessage>) => {
+        if (!shown) {
+          shown = true;
+          setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: "", timestamp: new Date(), fresh: true, streaming: true, ...patch }]);
+        } else setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, ...patch } : m)));
+      };
+      const controller = new AbortController();
+      abortRef.current = controller;
+      let result: StreamResult;
+      try {
+        result = await streamChat(
+          {
+            prompt: sentPrompt,
+            subject: activeSubject,
+            gradeLevel: "high-school",
+            processTeaching: teacherMode ? false : isProcessTeaching,
+            sessionId,
+            history,
+            resourceContext: context,
+            model,
+            effort,
+            library: true,
+            images: attached.map(u => u.image).filter(Boolean),
+            live: useLive,
+            tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          },
+          {
+            start: st => { if (st.model) setPendingModel(st.model); show({ model: st.model, effort: st.effort ?? null, notice: st.notice }); },
+            delta: (_, full) => {
+              // Paint at most once a frame, however fast the words arrive
+              latest = full;
+              if (!frame) frame = requestAnimationFrame(() => { frame = 0; if (latest !== null) show({ content: latest }); });
+            },
+          },
+          controller.signal,
+        );
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") throw e;
+        result = { kind: "stream", text: "", meta: {}, interrupted: false, aborted: true };
+      } finally {
+        abortRef.current = null;
+        if (frame) cancelAnimationFrame(frame);
+      }
 
-      if (error) throw new Error(error.message || "Failed to get AI response");
-
-      // Extract reply with guaranteed fallback
-      const reply = data?.reply || data?.response || "I'm sorry, I couldn't generate a response. Please try again.";
-      const meta = data?.meta || {};
-
-      if (data?.error && !data?.success) {
-        toast({ title: "Warning", description: data.error, variant: "destructive" });
+      let reply: string;
+      let meta: Record<string, unknown>;
+      let ok = true;
+      if (result.kind === "json") {
+        const data = result.data ?? {};
+        reply = (typeof data.reply === "string" && data.reply) || (typeof data.response === "string" && data.response) || "I'm sorry, I couldn't generate a response. Please try again.";
+        meta = (data.meta as Record<string, unknown>) || {};
+        ok = data.success !== false;
+        if (data.error && data.success === false) toast({ title: "Warning", description: String(data.error), variant: "destructive" });
+      } else {
+        meta = result.meta;
+        reply = result.text;
+        if (result.aborted) reply = reply ? `${reply}\n\n_Stopped._` : "_Stopped before Refyn replied._";
+        else if (result.interrupted) reply = reply ? `${reply}\n\n_The reply was cut off. Try again for the rest._` : "I'm sorry, the AI is temporarily unavailable. Please try again in a moment.";
+        ok = !!result.text && !result.interrupted && !result.aborted;
       }
 
       const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: assistantId,
         role: "assistant",
         content: reply,
         timestamp: new Date(),
@@ -501,23 +555,27 @@ const StudentInterface = () => {
         model: typeof meta.model === "string" ? meta.model : undefined,
         effort: typeof meta.effort === "string" ? meta.effort : null,
         notice: typeof meta.notice === "string" ? meta.notice : undefined,
-        library: meta.library && typeof meta.library === "object" ? meta.library : undefined,
-        usage: meta.usage && typeof meta.usage === "object" ? meta.usage : undefined,
+        library: meta.library && typeof meta.library === "object" ? (meta.library as ChatMessage["library"]) : undefined,
+        usage: meta.usage && typeof meta.usage === "object" ? (meta.usage as ChatMessage["usage"]) : undefined,
         pastPapers: Array.isArray(meta.pastPapers) ? meta.pastPapers : undefined,
+        live: meta.live && typeof meta.live === "object" ? (meta.live as ChatMessage["live"]) : undefined,
         fresh: true,
+        streaming: false,
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => (prev.some(m => m.id === assistantId) ? prev.map(m => (m.id === assistantId ? assistantMessage : m)) : [...prev, assistantMessage]));
       await saveMessage(sessionId, 'assistant', reply, meta);
       setChatState("idle");
       loadSessions(); // refresh sidebar
 
-      if (opts.saveAs && data?.success !== false) {
+      if (opts.saveAs && ok) {
         saveToNotebook(reply, opts.saveAs);
         toast({ title: "Saved to your Notebook", description: opts.saveAs });
       }
     } catch (error: unknown) {
       console.error("AI Chat error:", error);
+      // A reply that had started arriving stays on screen
+      setMessages(prev => prev.map(m => (m.streaming ? { ...m, streaming: false } : m)));
 
       // Insert fallback assistant message so the user sees something
       const fallbackMsg: ChatMessage = {
@@ -536,6 +594,9 @@ const StudentInterface = () => {
       setChatState("error");
     }
   };
+
+  /** Stop the reply that's arriving (what has arrived is kept). */
+  const stopReply = () => abortRef.current?.abort();
 
   /** Replace the last reply with a fresh one, optionally from another model. */
   const regenerate = (model?: string) => {
@@ -578,6 +639,8 @@ const StudentInterface = () => {
           sessionId: currentSessionId,
           history: buildHistory(list),
           resourceContext: resourceText(),
+          live: false,
+          powers: false,
         },
       });
       const summary = data?.reply || data?.response;
@@ -649,6 +712,38 @@ const StudentInterface = () => {
         if (!arg) { setPrompt("/explain "); textareaRef.current?.focus(); return; }
         await sendPrompt(`Explain ${arg} in plain words, step by step, then check I've understood with one question.`);
         break;
+      case "flashcards":
+        if (!arg && messages.length === 0) { setPrompt("/flashcards "); toast({ title: "What should the cards cover?", description: "Add a topic, e.g. /flashcards cell organelles" }); return; }
+        await sendPrompt(`Make flashcards for ${arg || "the key ideas in this chat"}.`);
+        break;
+      case "graph":
+        if (!arg) { setPrompt("/graph "); textareaRef.current?.focus(); return; }
+        await sendPrompt(`Show an interactive graph: ${arg}. Then explain its key features in two or three sentences.`);
+        break;
+      case "plan":
+        await sendPrompt(`Make me a dated study plan${arg ? ` for ${arg}` : ""} from today, built around my real deadlines, with short sessions I can actually do. Put it in a plan I can add to my calendar.`);
+        break;
+      case "due":
+        await sendPrompt("What's due for me, what's overdue, and what should I do first? Be specific about dates, then suggest how to fit it into this week.");
+        break;
+      case "livequiz":
+        if (!arg) { setPrompt("/livequiz "); textareaRef.current?.focus(); return; }
+        await sendPrompt(`Make a quiz on ${arg} that I can launch live with a class: 8 to 10 multiple-choice and true/false questions with short explanations.`);
+        break;
+      case "assign":
+        if (!arg) { setPrompt("/assign "); textareaRef.current?.focus(); return; }
+        await sendPrompt(`Write an assignment for this: ${arg}. Then give me the action to set it for the right class.`);
+        break;
+      case "marking":
+        await sendPrompt("What's waiting to be marked across my classes, how long has it waited, and who hasn't submitted recent work? Suggest an order to tackle it.");
+        break;
+      case "message":
+        if (!arg) { setPrompt("/message "); textareaRef.current?.focus(); return; }
+        await sendPrompt(`Draft this message: ${arg}. Give it to me as a message action so I can check it and send it.`);
+        break;
+      case "chart":
+        await sendPrompt(`Chart ${arg || "my classes' recent results"} using my real Refyn data, then tell me the one thing that stands out.`);
+        break;
       case "skills": done(); setPanel("skills"); break;
       case "notebook": done(); setNotebookFocus(null); setPanel("notebook"); break;
       case "files": done(); setPanel("files"); break;
@@ -701,7 +796,7 @@ const StudentInterface = () => {
     if (!text && readyUploads.length) { await sendPrompt(""); return; }
     if (!text) return;
     if (text.startsWith("/")) {
-      const parsed = parseCommand(text);
+      const parsed = parseCommand(text, teacherMode);
       if (parsed) await runCommand(parsed.cmd, parsed.arg);
       else toast({ title: "Unknown command", description: "Type /help to see every command." });
       return;
@@ -714,7 +809,7 @@ const StudentInterface = () => {
   const suggestions: Suggestion[] = suggestionsDismissed
     ? []
     : prompt.startsWith("/") && !/\s/.test(prompt)
-      ? COMMANDS.filter(c => c.name.startsWith(prompt.slice(1).toLowerCase())).map(c => ({
+      ? commandsFor(teacherMode).filter(c => c.name.startsWith(prompt.slice(1).toLowerCase())).map(c => ({
           key: c.name, label: `/${c.name}${c.args ? ` ${c.args}` : ""}`, hint: c.description, kind: "command" as const, value: c.name, command: c,
         }))
       : atMatch
@@ -1039,8 +1134,13 @@ const StudentInterface = () => {
           placeholder={readyUploads.length ? "Ask about your files, or send them as they are" : teacherMode && !resourceContext ? "Ask Refyn to plan, write or mark something, or type / for commands" : resourceContext ? `Ask about "${resourceContext.title}"…` : `Ask Refyn about ${activeSubjectData.name.toLowerCase()}, or type / for commands`}
           className="block max-h-[200px] min-h-[48px] w-full resize-none bg-transparent px-3.5 pb-1 pt-3 text-[15.5px] leading-relaxed text-white placeholder:text-lp-mute outline-none"
         />
-        <div className="flex items-center justify-between gap-2 px-1.5 pb-1 pt-1">
-          <div className="flex min-w-0 items-center gap-1.5">
+        {dictation.listening && (
+          <p className="lp-fade flex items-center gap-2 px-3.5 pb-1 text-[13px] text-lp-mute">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-lp-red" /> Listening{dictation.interim ? ":" : "…"} <span className="truncate italic text-lp-soft">{dictation.interim}</span>
+          </p>
+        )}
+        <div className="flex items-end justify-between gap-2 px-1.5 pb-1 pt-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             {/* Attach files */}
             <input
               ref={fileInputRef}
@@ -1059,6 +1159,19 @@ const StudentInterface = () => {
             >
               <Paperclip className="h-[18px] w-[18px]" />
             </button>
+            {dictation.supported && (
+              <button
+                type="button"
+                onClick={() => (dictation.listening ? dictation.stop() : dictation.start())}
+                aria-label={dictation.listening ? "Stop listening" : "Speak your message"}
+                aria-pressed={dictation.listening}
+                title={dictation.listening ? "Stop listening" : "Speak your message"}
+                className={cn("relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors", dictation.listening ? "bg-lp-red/15 text-lp-red" : "text-lp-soft hover:bg-white/[0.06] hover:text-white")}
+              >
+                {dictation.listening && <span className="absolute inset-0 animate-ping rounded-full bg-lp-red/20" />}
+                <Mic className="relative h-[18px] w-[18px]" />
+              </button>
+            )}
             {lib.items.length > 0 && (
               <button
                 type="button"
@@ -1155,6 +1268,20 @@ const StudentInterface = () => {
             </button>
             )}
 
+            {/* The person's own Refyn data: deadlines, grades, classes, marking */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={useLive}
+              onClick={() => setUseLive(!useLive)}
+              title={useLive
+                ? (teacherMode ? "Refyn can see your classes, assignments and marking queue. Click to turn off." : "Refyn can see your classes, deadlines and grades. Click to turn off.")
+                : "Refyn can't see your Refyn data. Click to let it use your deadlines and classes."}
+              className={cn("flex h-9 items-center gap-1.5 rounded-full border px-2.5 text-[13px] font-medium transition-colors sm:px-3", useLive ? "border-lp-sky/40 bg-lp-blue/10 text-lp-sky" : "border-lp-line text-lp-mute hover:text-white")}
+            >
+              <Radar className="h-4 w-4" /> <span className="hidden sm:inline">{useLive ? "My Refyn" : "Private"}</span>
+            </button>
+
             {/* Skills that will shape this message */}
             {previewSkills.map(s => (
               <span key={s.slug} className="lp-fade hidden items-center gap-1 rounded-full border border-lp-cyan/30 bg-lp-cyan/10 px-2.5 py-1 text-[12px] text-lp-cyan md:flex" title={s.description}>
@@ -1163,6 +1290,17 @@ const StudentInterface = () => {
             ))}
           </div>
 
+          {chatState === "sending" && !compacting ? (
+            <button
+              type="button"
+              onClick={stopReply}
+              aria-label="Stop"
+              title="Stop"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#0B1220] shadow-[0_8px_24px_-8px_rgba(255,255,255,0.5)] transition-all hover:bg-white/90"
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </button>
+          ) : (
           <button
             type="submit"
             disabled={chatState === "sending" || compacting || pendingUploads.length > 0 || (!prompt.trim() && !readyUploads.length)}
@@ -1171,6 +1309,7 @@ const StudentInterface = () => {
           >
             {chatState === "sending" || compacting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-[18px] w-[18px]" />}
           </button>
+          )}
         </div>
       </div>
       <p className="mt-2.5 text-center text-[12px] text-lp-mute">
@@ -1327,12 +1466,24 @@ const StudentInterface = () => {
 
                 <div className="lp-fade mt-6 flex flex-wrap items-center gap-2 text-[12.5px] text-lp-mute" style={{ animationDelay: "380ms", animationFillMode: "both" }}>
                   <span>Try</span>
-                  {[
-                    { label: "/quiz photosynthesis", run: () => setPrompt("/quiz photosynthesis") },
-                    { label: "@essay-coach", run: () => setPrompt("@essay-coach ") },
-                    { label: "Browse skills", run: () => setPanel("skills") },
-                    { label: "Add files", run: () => fileInputRef.current?.click() },
-                  ].map(c => (
+                  {(teacherMode
+                    ? [
+                        { label: "/marking", run: () => setPrompt("/marking") },
+                        { label: "/livequiz photosynthesis", run: () => setPrompt("/livequiz photosynthesis") },
+                        { label: "Plan a lesson", run: () => applyStarter("Plan a 60-minute lesson on [topic] for [year group], with a starter, main activities, differentiation and an exit ticket.", "general") },
+                        { label: "Make a worksheet", run: () => applyStarter("Make a worksheet on [topic] for [year group] with a mix of recall and extended questions, plus an answer key.", "general") },
+                        { label: "Write a rubric", run: () => applyStarter("Write an MYP criterion-based rubric for [task], with descriptors for each band.", "general") },
+                        { label: "Add files", run: () => fileInputRef.current?.click() },
+                      ]
+                    : [
+                        { label: "/plan", run: () => setPrompt("/plan ") },
+                        { label: "/graph y = sin(x)", run: () => setPrompt("/graph y = sin(x) and y = cos(x)") },
+                        { label: "Plan my essay", run: () => applyStarter("Help me build an argument and an outline before I start writing.", "writing") },
+                        { label: "Check my working", run: () => applyStarter("Look at how I solved a problem and show me where it went wrong.", "math") },
+                        { label: "@essay-coach", run: () => setPrompt("@essay-coach ") },
+                        { label: "Add files", run: () => fileInputRef.current?.click() },
+                      ]
+                  ).map(c => (
                     <button
                       key={c.label}
                       type="button"
@@ -1349,7 +1500,7 @@ const StudentInterface = () => {
             /* ─── Conversation ─── */
             <div className="relative min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">
               <div className="mx-auto w-full max-w-[800px] space-y-8 py-6">
-                {messages.map((msg, i) => (
+                {messages.map((msg, i) => msg.streaming && !msg.content ? null : (
                   <div key={msg.id} className="space-y-8">
                     {compact && compact.index === i && compactDivider}
                     {msg.role === "user" ? (
@@ -1389,6 +1540,19 @@ const StudentInterface = () => {
                               <div key={k} className="lp-md">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{seg.text}</ReactMarkdown>
                               </div>
+                            ) : seg.type === "block" ? (
+                              <BlockView
+                                key={k}
+                                kind={seg.kind}
+                                attrs={seg.attrs}
+                                body={seg.body}
+                                complete={seg.complete}
+                                teacher={teacherMode}
+                                onAsk={p => { if (chatState !== "sending") sendPrompt(p); }}
+                                onSave={(title, md) => { const id = saveToNotebook(md, title); setNotebookFocus(id); toast({ title: "Saved to your Notebook", description: title }); }}
+                              />
+                            ) : seg.type === "deck" && msg.streaming ? (
+                              <p key={k} className="my-3 flex items-center gap-2 text-[13.5px] text-lp-soft"><Loader2 className="h-4 w-4 animate-spin text-lp-sky" /> Planning your presentation…</p>
                             ) : seg.type === "deck" ? (
                               <DeckCard
                                 key={k}
@@ -1396,7 +1560,7 @@ const StudentInterface = () => {
                                 userId={user?.id}
                                 sessionId={currentSessionId}
                                 canBuild={teacherMode}
-                                autoStart={teacherMode && msg.fresh && i === messages.length - 1}
+                                autoStart={teacherMode && msg.fresh && !msg.streaming && i === messages.length - 1}
                               />
                             ) : (
                               <FileCard
@@ -1408,6 +1572,9 @@ const StudentInterface = () => {
                               />
                             ),
                           )}
+                          {msg.streaming ? (
+                            <span className="lp-dots mt-1 inline-flex items-center gap-1" aria-label="Still writing"><span /><span /><span /></span>
+                          ) : (
                           <div className="mt-2.5 flex flex-wrap items-center gap-x-1 gap-y-1">
                             <div className={cn("flex items-center gap-0.5 transition-opacity focus-within:opacity-100 group-hover:opacity-100", i === messages.length - 1 ? "opacity-100" : "opacity-0")}>
                               <button
@@ -1419,6 +1586,17 @@ const StudentInterface = () => {
                               >
                                 {copiedId === msg.id ? <Check className="h-4 w-4 text-lp-green" /> : <Copy className="h-4 w-4" />}
                               </button>
+                              {speaker.supported && (
+                                <button
+                                  type="button"
+                                  onClick={() => (speaker.speaking === msg.id ? speaker.stop() : speaker.speak(msg.id, msg.content))}
+                                  title={speaker.speaking === msg.id ? "Stop reading" : "Read aloud"}
+                                  aria-label={speaker.speaking === msg.id ? "Stop reading" : "Read aloud"}
+                                  className={cn("flex h-8 w-8 items-center justify-center rounded-lg hover:bg-white/[0.06] hover:text-white", speaker.speaking === msg.id ? "text-lp-sky" : "text-lp-mute")}
+                                >
+                                  {speaker.speaking === msg.id ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                                </button>
+                              )}
                               {i === messages.length - 1 && (
                                 <div className="relative">
                                   <button
@@ -1493,6 +1671,16 @@ const StudentInterface = () => {
                               </button>
                             </div>
                             {msg.model && <PoweredBy model={msg.model} effort={msg.effort} className="ml-1" />}
+                            {msg.live && (
+                              <span
+                                title={msg.live.role === "teacher"
+                                  ? `Read your ${msg.live.classes} class${msg.live.classes === 1 ? "" : "es"}, ${msg.live.assignments} recent assignment${msg.live.assignments === 1 ? "" : "s"}${typeof msg.live.waiting === "number" ? ` and ${msg.live.waiting} waiting to be marked` : ""}`
+                                  : `Read your ${msg.live.classes} class${msg.live.classes === 1 ? "" : "es"}, ${msg.live.assignments} upcoming or late assignment${msg.live.assignments === 1 ? "" : "s"}, recent grades and ${msg.live.events} school event${msg.live.events === 1 ? "" : "s"}`}
+                                className="ml-1 flex items-center gap-1 rounded-full border border-lp-line px-2 py-0.5 text-[11.5px] text-lp-mute"
+                              >
+                                <Radar className="h-3 w-3 text-lp-sky" /> Knew your Refyn
+                              </span>
+                            )}
                             {msg.library && msg.library.used > 0 && (
                               <button
                                 type="button"
@@ -1517,14 +1705,15 @@ const StudentInterface = () => {
                               </Link>
                             )}
                           </div>
-                          {msg.notice && <p className="mt-1 text-[12px] text-[#FBBF24]/90">{msg.notice}</p>}
+                          )}
+                          {msg.notice && !msg.streaming && <p className="mt-1 text-[12px] text-[#FBBF24]/90">{msg.notice}</p>}
                         </div>
                       </div>
                     )}
                   </div>
                 ))}
                 {compact && compact.index >= messages.length && compactDivider}
-                {(chatState === "sending" || compacting) && (
+                {((chatState === "sending" && !messages.some(m => m.streaming && m.content)) || compacting) && (
                   <div className="lp-fade flex items-center gap-4">
                     <RefynMark className="h-9 w-9" />
                     <div className="flex items-center gap-3 text-[14px] text-lp-soft">
@@ -1556,6 +1745,7 @@ const StudentInterface = () => {
         open={panel === "commands"}
         onClose={() => setPanel(null)}
         onPick={c => { setPanel(null); setPrompt(`/${c.name}${c.takesInput ? " " : ""}`); textareaRef.current?.focus(); }}
+        teacher={teacherMode}
       />
       <LibraryPanel
         open={panel === "files"}

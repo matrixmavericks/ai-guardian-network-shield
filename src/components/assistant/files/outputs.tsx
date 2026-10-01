@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { splitSheets, toCsv, writeXlsx, type Sheet } from "./office";
+import type { BlockKind } from "../powers/blocks";
 
 // Files the assistant makes. The model writes each one as
 //   <<<FILE name="Worksheet.docx">>> … <<<END FILE>>>
@@ -12,7 +13,14 @@ import { splitSheets, toCsv, writeXlsx, type Sheet } from "./office";
 export type FileFormat = "docx" | "pdf" | "md" | "xlsx" | "csv";
 export type OutputFile = { name: string; base: string; format: FileFormat; kind: "document" | "sheet"; content: string };
 export type DeckSpec = { title: string; slides: number; audience?: string; brief: string };
-export type Segment = { type: "text"; text: string } | { type: "file"; file: OutputFile; complete: boolean } | { type: "deck"; deck: DeckSpec };
+export type Segment =
+  | { type: "text"; text: string }
+  | { type: "file"; file: OutputFile; complete: boolean }
+  | { type: "deck"; deck: DeckSpec }
+  // Interactive blocks (quiz, flashcards, graph, chart, plan, action): see assistant/powers
+  | { type: "block"; kind: BlockKind; attrs: string; body: string; complete: boolean };
+
+const BLOCK_KINDS: Record<string, BlockKind> = { QUIZ: "quiz", FLASHCARDS: "flashcards", GRAPH: "graph", CHART: "chart", PLAN: "plan", ACTION: "action" };
 
 const FORMATS: FileFormat[] = ["docx", "pdf", "md", "xlsx", "csv"];
 
@@ -27,14 +35,17 @@ export const fileFrom = (rawName: string, content: string): OutputFile => {
 /** Split an assistant reply into prose and file blocks. */
 export const splitReply = (reply: string): Segment[] => {
   const out: Segment[] = [];
-  const re = /<<<\s*(FILE|DECK)\s+([^>]*?)>>>\n?([\s\S]*?)(?:<<<\s*END\s*(?:FILE|DECK)\s*>>>|$)/gi;
+  const re = /<<<\s*(FILE|DECK|QUIZ|FLASHCARDS|GRAPH|CHART|PLAN|ACTION)\b\s*([^>]*?)>>>\n?([\s\S]*?)(?:<<<\s*END\s*(?:FILE|DECK|QUIZ|FLASHCARDS|GRAPH|CHART|PLAN|ACTION)\s*>>>|$)/gi;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(reply))) {
     if (m.index > last) out.push({ type: "text", text: reply.slice(last, m.index) });
     const attrs = m[2];
     const attr = (k: string) => attrs.match(new RegExp(`${k}\\s*=\\s*"([^"]*)"`, "i"))?.[1];
-    if (m[1].toUpperCase() === "DECK") {
+    const kind = BLOCK_KINDS[m[1].toUpperCase()];
+    if (kind) {
+      out.push({ type: "block", kind, attrs, body: m[3].trim(), complete: /<<<\s*END\s*[A-Z]+\s*>>>$/i.test(m[0]) });
+    } else if (m[1].toUpperCase() === "DECK") {
       out.push({ type: "deck", deck: { title: (attr("title") || "Presentation").slice(0, 120), slides: Math.min(20, Math.max(4, Number(attr("slides")) || 10)), audience: attr("audience"), brief: m[3].trim() } });
     } else {
       out.push({ type: "file", file: fileFrom(attr("name") || "Refyn file.docx", m[3]), complete: /<<<\s*END\s*FILE\s*>>>$/i.test(m[0]) });

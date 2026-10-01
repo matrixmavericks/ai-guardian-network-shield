@@ -6,7 +6,7 @@ import {
   Terminal, Trash2, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { COMMANDS, Command } from "./commands";
+import { Command, commandsFor } from "./commands";
 import { MAX_INSTALLED, SKILLS, Skill } from "./skills";
 import { downloadMarkdown, plainText, slugify, type NotebookEntry } from "./storage";
 
@@ -166,8 +166,9 @@ export const SkillsPanel: React.FC<{
 
 /* ---------- Commands ---------- */
 
-export const CommandsPanel: React.FC<{ open: boolean; onClose: () => void; onPick: (c: Command) => void }> = ({ open, onClose, onPick }) => {
-  const groups = ["Chat", "Learning", "Mode", "Go to"] as const;
+export const CommandsPanel: React.FC<{ open: boolean; onClose: () => void; onPick: (c: Command) => void; teacher?: boolean }> = ({ open, onClose, onPick, teacher = false }) => {
+  const groups = ["Chat", "Learning", "Teaching", "Mode", "Go to"] as const;
+  const list = commandsFor(teacher);
   return (
     <SidePanel
       open={open}
@@ -176,11 +177,11 @@ export const CommandsPanel: React.FC<{ open: boolean; onClose: () => void; onPic
       title="Commands"
       intro={<>Type <code className="rounded-md bg-lp-blue/10 px-1.5 py-0.5 text-lp-sky">/</code> in the message box to use these. Pick one here to insert it.</>}
     >
-      {groups.map((g) => (
+      {groups.filter((g) => list.some((c) => c.group === g)).map((g) => (
         <div key={g} className="mb-6">
           <SectionLabel>{g}</SectionLabel>
           <ul className="space-y-1">
-            {COMMANDS.filter((c) => c.group === g).map((c) => (
+            {list.filter((c) => c.group === g).map((c) => (
               <li key={c.name}>
                 <button
                   type="button"

@@ -3,7 +3,9 @@ export type Command = {
   /** Shown after the name, e.g. "<title>" */
   args?: string;
   description: string;
-  group: "Chat" | "Learning" | "Mode" | "Go to";
+  group: "Chat" | "Learning" | "Teaching" | "Mode" | "Go to";
+  /** Only offered to this role */
+  for?: "teacher" | "student";
   /** Needs text after the command, so selecting it waits for typing */
   takesInput?: boolean;
 };
@@ -19,7 +21,16 @@ export const COMMANDS: Command[] = [
   { name: "quiz", args: "[topic]", description: "Quiz me on this chat, or on a topic", group: "Learning", takesInput: true },
   { name: "hint", description: "Just the next hint, nothing more", group: "Learning" },
   { name: "explain", args: "<topic>", description: "Explain a topic in plain words, step by step", group: "Learning", takesInput: true },
+  { name: "flashcards", args: "[topic]", description: "Flip cards to memorise a topic, or this chat", group: "Learning", takesInput: true },
+  { name: "graph", args: "<function or idea>", description: "An interactive graph you can trace and change with sliders", group: "Learning", takesInput: true },
+  { name: "plan", args: "[goal]", description: "A dated study plan around your real deadlines, ready for your calendar", group: "Learning", takesInput: true, for: "student" },
+  { name: "due", description: "What's due, what's late and what to do first", group: "Learning", for: "student" },
   { name: "skills", description: "Browse and install skills", group: "Learning" },
+  { name: "livequiz", args: "<topic>", description: "A quiz you can play live with a class", group: "Teaching", takesInput: true, for: "teacher" },
+  { name: "assign", args: "<task>", description: "Write and set an assignment for one of your classes", group: "Teaching", takesInput: true, for: "teacher" },
+  { name: "marking", description: "What's waiting to be marked and who's missing work", group: "Teaching", for: "teacher" },
+  { name: "message", args: "<who and what>", description: "Draft a message to a student, ready to send", group: "Teaching", takesInput: true, for: "teacher" },
+  { name: "chart", args: "[what]", description: "Chart your classes' results", group: "Teaching", takesInput: true, for: "teacher" },
   { name: "notebook", description: "Open your saved notes and plans", group: "Learning" },
   { name: "guided", description: "Guided mode: help me work it out", group: "Mode" },
   { name: "direct", description: "Direct mode: clear, detailed explanations", group: "Mode" },
@@ -33,12 +44,15 @@ export const COMMANDS: Command[] = [
   { name: "messages", description: "Go to your messages", group: "Go to" },
 ];
 
-export const findCommand = (name: string) => COMMANDS.find((c) => c.name === name.toLowerCase());
+/** The commands this person can use. */
+export const commandsFor = (teacher: boolean) => COMMANDS.filter((c) => !c.for || c.for === (teacher ? "teacher" : "student"));
+
+export const findCommand = (name: string, teacher = false) => commandsFor(teacher).find((c) => c.name === name.toLowerCase());
 
 /** "/rename My chat" -> { cmd, arg: "My chat" } */
-export const parseCommand = (text: string) => {
+export const parseCommand = (text: string, teacher = false) => {
   const m = text.trim().match(/^\/([a-z-]+)\s*([\s\S]*)$/i);
   if (!m) return null;
-  const cmd = findCommand(m[1]);
+  const cmd = findCommand(m[1], teacher);
   return cmd ? { cmd, arg: m[2].trim() } : null;
 };
