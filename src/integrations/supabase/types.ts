@@ -1602,6 +1602,113 @@ export type Database = {
           },
         ]
       }
+      marking_items: {
+        Row: {
+          approved: boolean
+          created_at: string
+          error: string | null
+          file_path: string | null
+          file_type: string | null
+          id: string
+          overrides: Json
+          result: Json
+          set_id: string
+          status: string
+          student_id: string | null
+          student_name: string
+          submission_id: string | null
+          teacher_id: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          approved?: boolean
+          created_at?: string
+          error?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          overrides?: Json
+          result?: Json
+          set_id: string
+          status?: string
+          student_id?: string | null
+          student_name: string
+          submission_id?: string | null
+          teacher_id: string
+          text?: string
+          updated_at?: string
+        }
+        Update: {
+          approved?: boolean
+          created_at?: string
+          error?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          overrides?: Json
+          result?: Json
+          set_id?: string
+          status?: string
+          student_id?: string | null
+          student_name?: string
+          submission_id?: string | null
+          teacher_id?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marking_items_set_id_fkey"
+            columns: ["set_id"]
+            isOneToOne: false
+            referencedRelation: "marking_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marking_sets: {
+        Row: {
+          assignment_id: string | null
+          created_at: string
+          criteria: string[]
+          id: string
+          insights: Json | null
+          subject_group: string
+          task: Json
+          teacher_id: string
+          title: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string
+          criteria: string[]
+          id?: string
+          insights?: Json | null
+          subject_group: string
+          task?: Json
+          teacher_id: string
+          title: string
+          updated_at?: string
+          year?: number
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string
+          criteria?: string[]
+          id?: string
+          insights?: Json | null
+          subject_group?: string
+          task?: Json
+          teacher_id?: string
+          title?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -3162,6 +3269,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      task_reviews: {
+        Row: {
+          created_at: string
+          criteria: string[]
+          file_path: string | null
+          file_type: string | null
+          id: string
+          result: Json
+          subject_group: string
+          task: Json
+          title: string
+          user_id: string
+          words: number | null
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          criteria: string[]
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          result?: Json
+          subject_group: string
+          task?: Json
+          title?: string
+          user_id: string
+          words?: number | null
+          year?: number
+        }
+        Update: {
+          created_at?: string
+          criteria?: string[]
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          result?: Json
+          subject_group?: string
+          task?: Json
+          title?: string
+          user_id?: string
+          words?: number | null
+          year?: number
+        }
+        Relationships: []
       }
       user_plans: {
         Row: {
