@@ -31,6 +31,8 @@ export type PPStrand = {
   lookFor: string[];
   /** Common reasons reports lose marks here */
   pitfalls: string[];
+  /** The separate things the descriptors and examiners check, judged one by one */
+  elements: string[];
   /** Words that usually head this part of a report */
   cues: RegExp;
 };
@@ -67,6 +69,13 @@ export const PP_STRANDS: PPStrand[] = [
       "Describing your interest on its own, then stating a goal, without showing how one led to the other.",
       "Reasons that stay vague about why you settled on this particular goal.",
     ],
+    elements: [
+      "A learning goal is clearly stated",
+      "The goal is about what the student wants to learn, not just making the product",
+      "A personal interest is identified",
+      "The connection between the interest and the goal is explained with reasons (why this interest led to this goal)",
+      "The reasons are specific to the student rather than vague or generic"
+    ],
     cues: /learning goal|personal interest|why i chose|my interest|inspired/i,
   },
   {
@@ -89,6 +98,13 @@ export const PP_STRANDS: PPStrand[] = [
       "Criteria that are process or plan items ('complete it on time', 'do research') rather than qualities of the finished product.",
       "Copying a generic template (cost, safety, customer…) that doesn't fit the product, e.g. a music composition.",
       "Detailed criteria with no explanation of why they are appropriate: examiners usually land at level 5.",
+    ],
+    elements: [
+      "The intended product is clearly stated",
+      "There are multiple success criteria",
+      "Each criterion is detailed: it says what success looks like for this product",
+      "It is made clear why each criterion is appropriate (e.g. justified with research)",
+      "The criteria are qualities of the finished product, not process or plan items"
     ],
     cues: /success criteria|criteria|product|specification|rubric/i,
   },
@@ -113,6 +129,13 @@ export const PP_STRANDS: PPStrand[] = [
       "Steps listed with no detail of what each involves.",
       "Some success criteria never addressed by any step (this alone can cost a level).",
     ],
+    elements: [
+      "The plan is focused on achieving the product",
+      "The plan is detailed: what each step actually involves",
+      "Steps are linked to the success criteria",
+      "The plan allows all of the success criteria to be achieved, not just some",
+      "The plan is clear to follow (sequence and timing)"
+    ],
     cues: /plan|timeline|schedule|steps|gantt|milestone/i,
   },
   {
@@ -136,6 +159,14 @@ export const PP_STRANDS: PPStrand[] = [
       "Describing a skill in general ('research is important') rather than how you used it for your goal.",
       "Relying on hyperlinks: examiners don't follow links, so evidence must be in the report.",
     ],
+    elements: [
+      "This part is clearly about the learning goal, separate from the product (Bii)",
+      "Specific ATL skills are named",
+      "How each skill was applied is described, not just that it was used",
+      "Why the skill, applied that way, helped achieve the learning goal is explained (reasons)",
+      "Detailed examples or evidence support each claim",
+      "The evidence is in the report itself (not only behind links) and matches the claims"
+    ],
     cues: /atl|approaches to learning|skill|research skills|self-management|thinking skills/i,
   },
   {
@@ -158,6 +189,14 @@ export const PP_STRANDS: PPStrand[] = [
       "Claiming a skill (e.g. creative thinking) but writing about something else.",
       "A descriptive account with no reasons: it stays at 5–6 at best.",
     ],
+    elements: [
+      "This part is clearly about the product, separate from the learning goal (Bi)",
+      "Specific ATL skills are named",
+      "How each skill was applied to create the product is described",
+      "Why the skill helped achieve the product is explained (reasons)",
+      "Detailed examples or evidence support each claim",
+      "The evidence is in the report itself (not only behind links) and matches the claims"
+    ],
     cues: /atl|skill|creative thinking|critical thinking|product|making|created|built/i,
   },
   {
@@ -178,6 +217,13 @@ export const PP_STRANDS: PPStrand[] = [
     pitfalls: [
       "Just restating the learning goal ('I learned to crochet in the round').",
       "Listing many impacts briefly instead of explaining one or two well.",
+    ],
+    elements: [
+      "A specific impact on the student or their learning is identified",
+      "The impact goes beyond restating the learning goal or the product",
+      "The impact is described in detail",
+      "Reasons or causes for the impact are explained (why it had this effect)",
+      "Depth over breadth: one or two impacts developed well rather than a list"
     ],
     cues: /impact|reflect|i learned|i have learned|changed|grown|this project taught/i,
   },
@@ -201,6 +247,13 @@ export const PP_STRANDS: PPStrand[] = [
       "Only describing the product against each criterion, with no strengths and limitations weighed up.",
       "Presenting other people's opinions (a survey) as the evaluation.",
       "No evidence: any evaluation against the criteria goes beyond level 4, but weak evidence keeps it low.",
+    ],
+    elements: [
+      "The product is evaluated against the success criteria from Aii",
+      "Every success criterion is addressed",
+      "Strengths and limitations are weighed up to judge quality (not just described)",
+      "The judgement is the student's own (others' opinions are used as input, not as the evaluation)",
+      "Claims are supported with specific evidence or detailed examples"
     ],
     cues: /evaluat|success criteria|strength|limitation|improve|met the criteria|feedback|survey/i,
   },
@@ -253,6 +306,20 @@ export function bestFit(levels: { level: number; weak?: boolean }[]): number {
 export const bandOf = (level: number): Band | null =>
   level >= 7 ? "7-8" : level >= 5 ? "5-6" : level >= 3 ? "3-4" : level >= 1 ? "1-2" : null;
 
+/**
+ * Calibration from the IB examiners' own marking of a sample report (the
+ * "Assessing the MYP personal project" course), paraphrased.
+ */
+export const PP_CALIBRATION: Record<PPStrandId, string> = {
+  Ai: "IB examiners gave 7 (not 8) to a report that stated its goal clearly and gave reasons linking the interest to the goal, because those reasons were slightly vague and not fully explained.",
+  Aii: "IB examiners gave 8 to four detailed criteria in a table whose 'research and justification' column made each criterion's appropriateness clear; a testing column was not needed. Several detailed criteria with no sign of why they are appropriate usually get 5.",
+  Aiii: "IB examiners gave 7 to a detailed product plan with a column linking steps to criteria, because one criterion was not fully mapped in the plan. A generic whole-project timeline adds nothing to Aiii.",
+  Bi: "IB examiners gave 6 where the account of how a skill was applied was a very brief description (close to an outline), lifted by evidence that was closely linked to the claims.",
+  Bii: "IB examiners gave 6 to an account that described how creative thinking was applied but never explained why it helped, and that drifted away from the skill it named.",
+  Ci: "IB examiners gave 4 where the report mostly repeated what had been learned (the learning goal) and only outlined a specific impact.",
+  Cii: "IB examiners gave a weak 5 where the evaluation did use the success criteria but each was addressed briefly, one relied on someone else's opinion, and there was little evidence. Criterion C overall was 4 because Cii was a weak 5.",
+};
+
 /** The rubric as text for the AI (one strand, with its criterion context). */
 export function strandBrief(id: PPStrandId): string {
   const s = strandById(id);
@@ -262,6 +329,8 @@ Objective: ${s.objective}
 Achievement levels (0 = does not reach 1–2): ${(Object.keys(s.bands) as Band[]).map((b) => `${b}: the student ${s.bands[b]}`).join(" | ")}
 How examiners judge it: ${s.lookFor.join(" ")}
 Common pitfalls: ${s.pitfalls.join(" ")}
+Elements to judge one by one: ${s.elements.map((e, i) => `(${i + 1}) ${e}`).join("; ")}
+Calibration: ${PP_CALIBRATION[id]}
 Command terms: state = a specific brief answer; outline = a brief account; describe = a detailed account; explain = a detailed account including reasons or causes; evaluate = an appraisal weighing up strengths and limitations.
 ATL skill clusters: ${ATL_CLUSTERS.join(", ")}.
 Examiners use a best-fit approach, judge only what is in the report (never follow links), take the level from the narrative (evidence supports it), and award the upper mark of a band when the work largely meets it.`;

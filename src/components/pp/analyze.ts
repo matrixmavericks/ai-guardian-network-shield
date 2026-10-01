@@ -2,57 +2,113 @@ import { supabase } from "@/integrations/supabase/client";
 import { ATL_CLUSTERS, PP_CRITERIA, PP_FORMAT, PP_STRANDS, bestFit, type PPCriterionId, type PPStrandId } from "@/lib/personalProject";
 
 // Personal project coach: local checks (format, structure, writing signals,
-// similarity fingerprints) and the AI review, one strand at a time.
+// similarity fingerprints), the examiner-style AI review one strand at a time,
+// and the tutor that explains it.
 
 // The review table is newer than the generated Supabase types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
+const FILES = "pp-files";
 
-export type Quote = { quote: string; note: string };
+export type AnnotationType = "strength" | "weakness" | "missing" | "suggestion";
+export type Annotation = { quote: string; page: number | null; type: AnnotationType; descriptor: string; comment: string; fix: string };
+export type ElementCheck = { element: string; status: "met" | "partly" | "missing"; comment: string; quote: string; page: number | null };
 export type StrandResult = {
   strand: PPStrandId;
   level: number;
   band: string | null;
   weak: boolean;
   confidence: "low" | "medium" | "high";
+  commandTerm?: string;
   summary: string;
-  found: Quote[];
-  gaps: Quote[];
+  whyThisLevel?: string;
+  whyNotHigher?: string;
+  whyNotLower?: string;
+  elements: ElementCheck[];
+  annotations: Annotation[];
   nextBand: { band: string; steps: string[] } | null;
+  topBand?: string;
   questions: string[];
+  model?: string;
+  error?: string;
+};
+export type ReportMap = {
+  learningGoal?: { summary?: string; page?: number | null; isAboutLearning?: boolean };
+  personalInterest?: { summary?: string; page?: number | null };
+  product?: { summary?: string; page?: number | null };
+  successCriteria?: { name: string; detailed?: boolean; justified?: boolean; isProductQuality?: boolean; inPlan?: boolean; evaluated?: "yes" | "partly" | "no"; evaluationEvidence?: boolean; page?: number | null }[];
+  plan?: { page?: number | null; steps?: number; productFocused?: boolean; detailed?: boolean; linksToCriteria?: boolean };
+  atlForGoal?: { skill: string; cluster?: string; how?: string; evidence?: boolean; page?: number | null }[];
+  atlForProduct?: { skill: string; cluster?: string; how?: string; evidence?: boolean; page?: number | null }[];
+  biBiiSeparated?: boolean;
+  impact?: { summary?: string; page?: number | null; isMoreThanGoal?: boolean };
+  evidence?: { kind: string; page?: number | null; supports?: string }[];
+  linksRelied?: number;
+  sections?: { criterion: string; fromPage?: number | null; toPage?: number | null }[];
+};
+export type Overview = {
+  headline: string;
+  strengths: string[];
+  priorities: { title: string; strand: string; gain: string; action: string }[];
+  consistency: { issue: string; strands: string[] }[];
+  examinerNote: string;
   error?: string;
 };
 export type Integrity = {
-  authenticity: { signals: "few" | "some" | "many"; summary: string; passages: { quote: string; why: string; fix: string }[] };
-  citations: { hasBibliography: boolean; inTextCitations: boolean; summary: string; issues: { quote: string; issue: string }[] };
-  checkSources: { quote: string; why: string }[];
+  authenticity: { signals: "few" | "some" | "many"; summary: string; passages: { quote: string; page?: number | null; why: string; fix: string }[] };
+  citations: { hasBibliography: boolean; inTextCitations: boolean; summary: string; issues: { quote: string; page?: number | null; issue: string }[] };
+  checkSources: { quote: string; page?: number | null; why: string }[];
 };
 export type Similarity = { compared: number; template?: number; matches: { overlap: number; shared: number; when: string }[]; note?: string };
 export type Check = { id: string; ok: boolean | null; title: string; detail: string };
 export type Writing = { sentences: number; meanLength: number; variety: number; personal: number; specifics: number; stock: { phrase: string; count: number }[] };
+export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 export type Review = {
   id: string;
   createdAt: string;
   title: string;
   fileName?: string;
+  filePath?: string | null;
+  fileType?: "pdf" | "docx" | null;
   pages?: number;
   words: number;
   minutes: number;
   text: string;
+  map?: ReportMap & { error?: string };
   strands: Partial<Record<PPStrandId, StrandResult>>;
   criteria: Record<PPCriterionId, number>;
   /** Criteria with a strand that couldn't be reviewed (not scored) */
   incomplete?: PPCriterionId[];
   total: number;
+  overview?: Overview;
   integrity?: Integrity & { error?: string };
   similarity?: Similarity & { error?: string };
   format: Check[];
   writing: Writing;
+  chat?: ChatMessage[];
 };
 
 export const wordCount = (t: string) => (t.replace(/^## Page \d+$/gm, "").match(/[\p{L}\p{N}’']+/gu) ?? []).length;
 const plain = (t: string) => t.replace(/^## Page \d+$/gm, "");
+
+/** Older saved reviews used found/gaps lists: turn them into annotations. */
+export function upgrade(review: Review): Review {
+  const strands = { ...review.strands };
+  for (const id of Object.keys(strands) as PPStrandId[]) {
+    const r = strands[id] as StrandResult & { found?: { quote: string; note: string }[]; gaps?: { quote: string; note: string }[] };
+    if (!r || r.annotations) continue;
+    strands[id] = {
+      ...r,
+      elements: r.elements ?? [],
+      annotations: [
+        ...(r.found ?? []).map((f) => ({ quote: f.quote, page: null, type: "strength" as const, descriptor: "", comment: f.note, fix: "" })),
+        ...(r.gaps ?? []).map((g) => ({ quote: g.quote, page: null, type: "weakness" as const, descriptor: "", comment: g.note, fix: "" })),
+      ],
+    };
+  }
+  return { ...review, strands, chat: review.chat ?? [] };
+}
 
 /* ---------- format and structure ---------- */
 
@@ -111,14 +167,7 @@ export function writingSignals(text: string): Writing {
   const lower = body.toLowerCase();
   const stock = STOCK.map((phrase) => ({ phrase, count: lower.split(phrase).length - 1 })).filter((s) => s.count > 0).sort((a, b) => b.count - a.count);
   const per1000 = (n: number) => Math.round((n / Math.max(1, words.length)) * 1000 * 10) / 10;
-  return {
-    sentences: sentences.length,
-    meanLength: Math.round(mean * 10) / 10,
-    variety: Math.round((sd / Math.max(1, mean)) * 100) / 100,
-    personal: per1000(firstPerson),
-    specifics: per1000(specifics),
-    stock,
-  };
+  return { sentences: sentences.length, meanLength: Math.round(mean * 10) / 10, variety: Math.round((sd / Math.max(1, mean)) * 100) / 100, personal: per1000(firstPerson), specifics: per1000(specifics), stock };
 }
 
 /* ---------- similarity fingerprints: hashes of 8-word phrases ---------- */
@@ -135,7 +184,7 @@ export function fingerprints(text: string): number[] {
   return [...out].slice(0, 20_000);
 }
 
-/* ---------- the review ---------- */
+/* ---------- calls ---------- */
 
 const call = async <T,>(body: Record<string, unknown>): Promise<T> => {
   const { data, error } = await supabase.functions.invoke("pp-feedback", { body });
@@ -148,6 +197,15 @@ const call = async <T,>(body: Record<string, unknown>): Promise<T> => {
   return data as T;
 };
 
+const emptyStrand = (id: PPStrandId, error: string): StrandResult => ({ strand: id, level: 0, band: null, weak: false, confidence: "low", summary: "", elements: [], annotations: [], nextBand: null, questions: [], error });
+
+const strandDigest = (r: StrandResult) => ({
+  id: r.strand, level: r.error ? null : r.level, weak: r.weak, summary: r.summary, whyNotHigher: r.whyNotHigher,
+  elements: r.elements.map((e) => `${e.status}: ${e.element}`),
+});
+
+/* ---------- the review ---------- */
+
 export type Progress = { done: number; total: number; label: string };
 
 export async function runReview(opts: {
@@ -155,7 +213,7 @@ export async function runReview(opts: {
   schoolId: string | null;
   text: string;
   title: string;
-  fileName?: string;
+  file?: File;
   pages?: number;
   minutes: number;
   compare: boolean;
@@ -164,18 +222,32 @@ export async function runReview(opts: {
 }): Promise<Review> {
   const { text } = opts;
   const words = wordCount(text);
+  const fileType = opts.file ? (/\.pdf$/i.test(opts.file.name) ? "pdf" : /\.docx$/i.test(opts.file.name) ? "docx" : null) : null;
   const { data: row, error } = await db
     .from("pp_reviews")
-    .insert({ user_id: opts.userId, school_id: opts.schoolId, title: opts.title.slice(0, 200) || "Personal project report", file_name: opts.fileName?.slice(0, 200) ?? null, pages: opts.pages ?? null, words, recording_minutes: opts.minutes })
+    .insert({ user_id: opts.userId, school_id: opts.schoolId, title: opts.title.slice(0, 200) || "Personal project report", file_name: opts.file?.name.slice(0, 200) ?? null, pages: opts.pages ?? null, words, recording_minutes: opts.minutes })
     .select("id, created_at")
     .single();
   if (error || !row) throw new Error("Couldn't start the review.");
+
+  // Keep the original so feedback can be shown on the real document
+  let filePath: string | null = null;
+  if (opts.file && fileType) {
+    const path = `${opts.userId}/${row.id}.${fileType}`;
+    const up = await supabase.storage.from(FILES).upload(path, opts.file, { contentType: opts.file.type || (fileType === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document"), upsert: true });
+    if (!up.error) {
+      filePath = path;
+      await db.from("pp_reviews").update({ file_path: path, file_type: fileType }).eq("id", row.id);
+    }
+  }
 
   const review: Review = {
     id: row.id,
     createdAt: row.created_at,
     title: opts.title,
-    fileName: opts.fileName,
+    fileName: opts.file?.name,
+    filePath,
+    fileType: filePath ? fileType : null,
     pages: opts.pages,
     words,
     minutes: opts.minutes,
@@ -185,31 +257,32 @@ export async function runReview(opts: {
     total: 0,
     format: formatChecks(text, opts.pages, opts.minutes),
     writing: writingSignals(text),
+    chat: [],
   };
 
-  const body = plain(text);
   const jobs: { label: string; run: () => Promise<void> }[] = [
-    ...PP_STRANDS.map((s) => ({
-      label: `Strand ${s.id}: ${s.label}`,
+    {
+      label: "Mapping your report",
       run: async () => {
-        try {
-          const r = await call<StrandResult>({ action: "strand", strand: s.id, text: body });
-          review.strands[s.id] = r;
-        } catch (e) {
-          review.strands[s.id] = { strand: s.id, level: 0, band: null, weak: false, confidence: "low", summary: "", found: [], gaps: [], nextBand: null, questions: [], error: (e as Error).message };
-        }
+        try { review.map = (await call<{ map: ReportMap }>({ action: "map", text })).map; } catch (e) { review.map = { error: (e as Error).message }; }
+      },
+    },
+    ...PP_STRANDS.map((s) => ({
+      label: `Grading ${s.id}: ${s.label}`,
+      run: async () => {
+        try { review.strands[s.id] = await call<StrandResult>({ action: "strand", strand: s.id, text }); } catch (e) { review.strands[s.id] = emptyStrand(s.id, (e as Error).message); }
         opts.onStrand?.(review.strands[s.id]!);
       },
     })),
     {
-      label: "Authenticity and referencing",
+      label: "Checking your voice and referencing",
       run: async () => {
-        try { review.integrity = await call<Integrity>({ action: "integrity", text: body }); } catch (e) { review.integrity = { authenticity: { signals: "some", summary: "", passages: [] }, citations: { hasBibliography: false, inTextCitations: false, summary: "", issues: [] }, checkSources: [], error: (e as Error).message }; }
+        try { review.integrity = await call<Integrity>({ action: "integrity", text }); } catch (e) { review.integrity = { authenticity: { signals: "some", summary: "", passages: [] }, citations: { hasBibliography: false, inTextCitations: false, summary: "", issues: [] }, checkSources: [], error: (e as Error).message }; }
       },
     },
     ...(opts.compare
       ? [{
-          label: "Similarity with other reports",
+          label: "Comparing with other reports",
           run: async () => {
             try { review.similarity = await call<Similarity>({ action: "similarity", reviewId: review.id, hashes: fingerprints(text) }); } catch (e) { review.similarity = { compared: 0, matches: [], error: (e as Error).message }; }
           },
@@ -218,7 +291,7 @@ export async function runReview(opts: {
   ];
 
   let done = 0;
-  const total = jobs.length;
+  const total = jobs.length + 1;
   opts.onProgress({ done, total, label: "Reading your report" });
   const queue = [...jobs];
   const worker = async () => {
@@ -233,9 +306,22 @@ export async function runReview(opts: {
   await Promise.all([worker(), worker(), worker(), worker()]);
 
   score(review);
-  await db.from("pp_reviews").update({ result: review }).eq("id", review.id);
+  opts.onProgress({ done, total, label: "Writing your overall feedback" });
+  review.overview = await overviewFor(review);
+  opts.onProgress({ done: total, total, label: "Done" });
+  await save(review);
   return review;
 }
+
+async function overviewFor(review: Review): Promise<Overview> {
+  try {
+    return await call<Overview>({ action: "overview", map: review.map ?? {}, strands: Object.values(review.strands).filter(Boolean).map((r) => strandDigest(r!)) });
+  } catch (e) {
+    return { headline: "", strengths: [], priorities: [], consistency: [], examinerNote: "", error: (e as Error).message };
+  }
+}
+
+const save = (review: Review) => db.from("pp_reviews").update({ result: review }).eq("id", review.id);
 
 /** Criterion levels (best fit of their strands). A criterion missing a strand isn't scored. */
 function score(review: Review) {
@@ -252,35 +338,67 @@ function score(review: Review) {
   review.total = review.criteria.A + review.criteria.B + review.criteria.C;
 }
 
-/** Review one strand again (after a failure) and save. */
+/** Grade one strand again (after a failure), refresh the overview, and save. */
 export async function retryStrand(review: Review, id: PPStrandId): Promise<Review> {
   const next: Review = { ...review, strands: { ...review.strands }, criteria: { ...review.criteria } };
   try {
-    next.strands[id] = await call<StrandResult>({ action: "strand", strand: id, text: plain(review.text) });
+    next.strands[id] = await call<StrandResult>({ action: "strand", strand: id, text: review.text });
   } catch (e) {
-    next.strands[id] = { ...(review.strands[id] as StrandResult), error: (e as Error).message };
+    next.strands[id] = { ...(review.strands[id] ?? emptyStrand(id, "")), error: (e as Error).message };
   }
   score(next);
-  await db.from("pp_reviews").update({ result: next }).eq("id", review.id);
+  if (!next.strands[id]?.error) next.overview = await overviewFor(next);
+  await save(next);
   return next;
 }
 
-export async function listReviews(): Promise<{ id: string; title: string; created_at: string; words: number | null; result: Partial<Review> }[]> {
-  const { data } = await db.from("pp_reviews").select("id, title, created_at, words, result").order("created_at", { ascending: false }).limit(30);
+/* ---------- the tutor ---------- */
+
+/** A compact summary of the feedback for the tutor. */
+export function digestOf(review: Review): string {
+  const lines = [
+    `Indicative levels: A ${review.criteria.A}/8, B ${review.criteria.B}/8, C ${review.criteria.C}/8, total ${review.total}/24.`,
+    ...PP_STRANDS.map((s) => {
+      const r = review.strands[s.id];
+      if (!r || r.error) return `${s.id}: not reviewed.`;
+      return `${s.id} (${s.label}) level ${r.level}${r.weak ? " (only just)" : ""}. ${r.summary} Why not higher: ${r.whyNotHigher ?? ""} Elements: ${r.elements.map((e) => `${e.status} – ${e.element}`).join("; ")}`;
+    }),
+    review.overview?.priorities.length ? `Priorities: ${review.overview.priorities.map((p) => `${p.title} (${p.strand}, ${p.gain})`).join("; ")}` : "",
+  ];
+  return lines.filter(Boolean).join("\n");
+}
+
+export async function askTutor(review: Review, question: string, focus?: string): Promise<Review> {
+  const history = (review.chat ?? []).slice(-10);
+  const { answer } = await call<{ answer: string }>({ action: "ask", question, history, text: review.text, digest: digestOf(review), focus });
+  const next: Review = { ...review, chat: [...(review.chat ?? []), { role: "user", content: question }, { role: "assistant", content: answer }] };
+  await save(next);
+  return next;
+}
+
+/* ---------- stored reviews and files ---------- */
+
+export async function listReviews(): Promise<{ id: string; title: string; created_at: string; words: number | null; file_path: string | null; file_type: string | null; result: Partial<Review> }[]> {
+  const { data } = await db.from("pp_reviews").select("id, title, created_at, words, file_path, file_type, result").order("created_at", { ascending: false }).limit(30);
   return data ?? [];
 }
 
-export async function deleteReview(id: string) {
+export async function deleteReview(id: string, filePath?: string | null) {
   await db.from("pp_reviews").delete().eq("id", id);
+  if (filePath) await supabase.storage.from(FILES).remove([filePath]);
 }
 
-/* ---------- finding quotes in the report (for highlights) ---------- */
+export async function loadFile(path: string): Promise<Blob | null> {
+  const { data } = await supabase.storage.from(FILES).download(path);
+  return data ?? null;
+}
+
+/* ---------- finding quotes in text (for highlights) ---------- */
 
 const canon = (c: string) => (/[‘’`´]/.test(c) ? "'" : /[“”„]/.test(c) ? '"' : /[–—−]/.test(c) ? "-" : c.toLowerCase());
 
-/** Where a quote appears in the text (tolerant of spacing, quotes and dashes), or null. */
-export function locate(text: string, quote: string): [number, number] | null {
-  if (!quote || quote.length < 4) return null;
+/** Normalized text with a map back to original indices (collapsed spaces, plain quotes and dashes, lower case). */
+export function normalize(text: string): { norm: string; map: number[] } {
   const map: number[] = [];
   let norm = "";
   let space = false;
@@ -295,11 +413,29 @@ export function locate(text: string, quote: string): [number, number] | null {
     norm += canon(ch);
     map.push(i);
   }
-  const q = [...quote.replace(/\s+/g, " ").trim()].map(canon).join("").replace(/^["'.…]+|["'.…]+$/g, "");
+  return { norm, map };
+}
+
+export const normQuote = (quote: string) => [...quote.replace(/\s+/g, " ").trim()].map(canon).join("").replace(/^["'.…]+|["'.…]+$/g, "");
+
+/** Where a quote appears in normalized text, as [start, end) in normalized indices, or null. */
+export function findNorm(norm: string, quote: string): [number, number] | null {
+  const q = normQuote(quote);
+  if (q.length < 4) return null;
   let at = norm.indexOf(q);
-  // Fall back to the first 60 characters when the model trimmed or merged words
-  if (at < 0 && q.length > 60) at = norm.indexOf(q.slice(0, 60));
-  if (at < 0) return null;
-  const len = at + q.length <= norm.length && norm.indexOf(q) === at ? q.length : 60;
-  return [map[at], map[Math.min(map.length - 1, at + len - 1)] + 1];
+  if (at >= 0) return [at, at + q.length];
+  // The model sometimes trims or merges words: fall back to the first 50 characters
+  if (q.length > 50) {
+    at = norm.indexOf(q.slice(0, 50));
+    if (at >= 0) return [at, Math.min(norm.length, at + q.length)];
+  }
+  return null;
+}
+
+/** Where a quote appears in the text, as [start, end) original indices, or null. */
+export function locate(text: string, quote: string): [number, number] | null {
+  const { norm, map } = normalize(text);
+  const hit = findNorm(norm, quote);
+  if (!hit) return null;
+  return [map[hit[0]], map[Math.min(map.length - 1, hit[1] - 1)] + 1];
 }

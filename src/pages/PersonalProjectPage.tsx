@@ -8,7 +8,7 @@ import { StudyShell } from "@/components/subjects/kit";
 import { extractFile, formatSize } from "@/components/assistant/files/extract";
 import { mySchoolId } from "@/components/pastpapers/store";
 import { PP_CRITERIA, PP_STRANDS, type PPCriterionId, type PPStrandId } from "@/lib/personalProject";
-import { deleteReview, listReviews, retryStrand, runReview, wordCount, type Progress, type Review, type StrandResult } from "@/components/pp/analyze";
+import { deleteReview, listReviews, loadFile, retryStrand, runReview, upgrade, wordCount, type Progress, type Review, type StrandResult } from "@/components/pp/analyze";
 import { ReviewView } from "@/components/pp/Review";
 
 type Row = Awaited<ReturnType<typeof listReviews>>[number];
@@ -17,8 +17,8 @@ const input = "h-10 w-full rounded-xl border border-lp-line bg-lp-deep/60 px-3 t
 const Features = () => (
   <div className="grid gap-3 sm:grid-cols-2">
     {[
-      [Target, "Every strand, one at a time", "Ai to Cii, judged against the IB criteria the way examiners do, with the level ladder and what gets you to the next band."],
-      [ScanSearch, "Notes on your own words", "Highlights in your report show what earns credit and what to improve."],
+      [Target, "Graded strand by strand", "Ai to Cii, checked against every part of the IB descriptors the way examiners mark, with why you got each level and exactly what the next band needs."],
+      [ScanSearch, "Notes on your actual document", "Your own PDF or Word file, annotated: highlights and numbered notes on the exact words, and an AI tutor that explains anything you don't understand."],
       [ShieldCheck, "Your own voice and referencing", "Finds generic passages, missing citations and text to check against sources. Nothing is written for you."],
       [Fingerprint, "Similarity check", "Compares your draft anonymously with other reports at your school, ignoring shared template text."],
     ].map(([Icon, title, body]) => {
@@ -34,7 +34,9 @@ const Features = () => (
   </div>
 );
 
-const Start: React.FC<{ onRun: (o: { text: string; title: string; fileName?: string; pages?: number; minutes: number; compare: boolean }) => void }> = ({ onRun }) => {
+type RunOpts = { text: string; title: string; file?: File; pages?: number; minutes: number; compare: boolean };
+
+const Start: React.FC<{ onRun: (o: RunOpts) => void }> = ({ onRun }) => {
   const [mode, setMode] = useState<"upload" | "paste">("upload");
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState("");
@@ -52,7 +54,7 @@ const Start: React.FC<{ onRun: (o: { text: string; title: string; fileName?: str
         setReading("Reading your report");
         const out = await extractFile(file, null, setReading);
         if (wordCount(out.text) < 150) throw new Error("There isn't enough text in this file. If it's a scanned PDF, upload the Word or PDF you wrote instead.");
-        onRun({ text: out.text, title: title.trim() || file.name.replace(/\.[a-z0-9]+$/i, ""), fileName: file.name, pages: out.pages, minutes, compare });
+        onRun({ text: out.text, title: title.trim() || file.name.replace(/\.[a-z0-9]+$/i, ""), file, pages: out.pages, minutes, compare });
       } else {
         if (wordCount(text) < 150) { toast.error("Paste your whole report (at least 150 words)."); return; }
         onRun({ text, title: title.trim() || "Personal project report", minutes, compare });
@@ -120,7 +122,7 @@ const Start: React.FC<{ onRun: (o: { text: string; title: string; fileName?: str
         <span>Check similarity with other reports at my school. <span className="text-lp-mute">Refyn stores an anonymous fingerprint (hashes of 8-word phrases, not your text). Nobody sees your report.</span></span>
       </label>
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-[520px] text-[12.5px] leading-relaxed text-lp-mute">Feedback, not a mark: your supervisor assesses your report and the IB moderates it. Refyn never writes your report for you.</p>
+        <p className="max-w-[520px] text-[12.5px] leading-relaxed text-lp-mute">A thorough review takes 2–3 minutes. It's feedback, not a mark: your supervisor assesses your report and the IB moderates it. Refyn never writes your report for you.</p>
         <button type="button" onClick={go} disabled={!!reading || (mode === "upload" ? !file : !text.trim())} className="flex h-11 items-center gap-2 rounded-xl bg-lp-blue px-5 text-[14.5px] font-medium text-white shadow-[0_10px_30px_-10px_rgba(59,130,246,0.9)] hover:bg-[#2F6FE0] disabled:opacity-50">
           {reading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {reading ?? "Get feedback"}
         </button>
@@ -165,7 +167,7 @@ const PersonalProjectPage = () => {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [working, setWorking] = useState<{ progress: Progress; strands: Partial<Record<PPStrandId, StrandResult>> } | null>(null);
-  const [open, setOpen] = useState<{ review: Review; previous: Review | null } | null>(null);
+  const [open, setOpen] = useState<{ review: Review; previous: Review | null; file: Blob | null } | null>(null);
 
   const refresh = () => listReviews().then(setRows, () => setRows([]));
   useEffect(() => {
@@ -177,10 +179,19 @@ const PersonalProjectPage = () => {
   const previousOf = (id: string, list: Row[]) => {
     const i = list.findIndex((r) => r.id === id);
     const prev = list.slice(i + 1).find((r) => (r.result as Review)?.strands);
-    return prev ? ({ ...(prev.result as Review), id: prev.id } as Review) : null;
+    return prev ? upgrade({ ...(prev.result as Review), id: prev.id } as Review) : null;
   };
 
-  const run = async (o: { text: string; title: string; fileName?: string; pages?: number; minutes: number; compare: boolean }) => {
+  const openRow = async (r: Row, list: Row[]) => {
+    const review = upgrade({ ...(r.result as Review), id: r.id, filePath: r.file_path, fileType: (r.file_type as Review["fileType"]) ?? null });
+    setOpen({ review, previous: previousOf(r.id, list), file: null });
+    if (r.file_path) {
+      const file = await loadFile(r.file_path);
+      setOpen((o) => (o && o.review.id === r.id ? { ...o, file } : o));
+    }
+  };
+
+  const run = async (o: RunOpts) => {
     if (!user) return;
     const strands: Partial<Record<PPStrandId, StrandResult>> = {};
     setWorking({ progress: { done: 0, total: 1, label: "Starting" }, strands });
@@ -194,7 +205,7 @@ const PersonalProjectPage = () => {
       });
       const list = await listReviews();
       setRows(list);
-      setOpen({ review, previous: previousOf(review.id, list) });
+      setOpen({ review, previous: previousOf(review.id, list), file: o.file && review.fileType ? o.file : null });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       toast.error((e as Error).message);
@@ -210,6 +221,8 @@ const PersonalProjectPage = () => {
         <ReviewView
           review={open.review}
           previous={open.previous}
+          file={open.file}
+          onUpdate={(review) => setOpen((o) => (o ? { ...o, review } : o))}
           onBack={() => { setOpen(null); refresh(); }}
           onRetry={async (id) => {
             const next = await retryStrand(open.review, id);
@@ -244,7 +257,7 @@ const PersonalProjectPage = () => {
                       <button
                         type="button"
                         disabled={!done}
-                        onClick={() => setOpen({ review: { ...(res as Review), id: r.id }, previous: previousOf(r.id, rows) })}
+                        onClick={() => openRow(r, rows)}
                         className="flex min-w-0 flex-1 items-center gap-4 text-left disabled:cursor-default"
                       >
                         <div className="flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-lp-blue/15">
@@ -258,7 +271,7 @@ const PersonalProjectPage = () => {
                           </p>
                         </div>
                       </button>
-                      <button type="button" aria-label={`Delete ${r.title}`} onClick={async () => { if (!confirm("Delete this review?")) return; await deleteReview(r.id); refresh(); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-lp-mute hover:bg-white/[0.06] hover:text-lp-red">
+                      <button type="button" aria-label={`Delete ${r.title}`} onClick={async () => { if (!confirm("Delete this review and its file?")) return; await deleteReview(r.id, r.file_path); refresh(); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-lp-mute hover:bg-white/[0.06] hover:text-lp-red">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
