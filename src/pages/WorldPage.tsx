@@ -13,6 +13,7 @@ import { TYPE_META, conceptLayer, linkConcepts, worldGraph } from "@/components/
 import { deleteWorld, draftGem, getWorld, paletteVars, saveGem, saveWorld, type WorldBundle, type WorldDraft } from "@/components/spaces/spaces";
 
 type Tab = "guide" | "library" | "cards" | "scenes" | "tasks" | "map";
+const WorldTabs = Tabs<Tab>;
 
 /** The World as a network, with ideas linking its notes. */
 const WorldMap: React.FC<{ bundle: WorldBundle; onOpen: (href: string) => void }> = ({ bundle, onOpen }) => {
@@ -146,7 +147,7 @@ const WorldPage: React.FC = () => {
 
       {error && <p className="mb-4 rounded-xl border border-lp-red/40 bg-lp-red/10 px-3 py-2 text-[13px] text-lp-red">{error}</p>}
 
-      <Tabs
+      <WorldTabs
         className="mb-5"
         value={tab}
         onChange={setTab}
