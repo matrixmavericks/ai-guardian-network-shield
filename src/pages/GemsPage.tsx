@@ -8,6 +8,7 @@ import { GemOrb, Tabs, field, ghost, primary } from "@/components/spaces/ui";
 import { GEM_TEMPLATES, PALETTE, listGems, paletteVars, type Gem, type GemTemplate } from "@/components/spaces/spaces";
 
 type Tab = "mine" | "classes" | "starters";
+const GemTabs = Tabs<Tab>;
 
 const GemCard: React.FC<{ gem: Gem; mine: boolean }> = ({ gem, mine }) => (
   <div className="group relative">
@@ -95,7 +96,7 @@ const GemsPage: React.FC = () => {
       </section>
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <Tabs<Tab>
+        <GemTabs
           value={tab}
           onChange={setTab}
           tabs={[
