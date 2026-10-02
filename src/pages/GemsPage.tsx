@@ -95,7 +95,7 @@ const GemsPage: React.FC = () => {
       </section>
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <Tabs<Tab>
+        <Tabs
           value={tab}
           onChange={setTab}
           tabs={[

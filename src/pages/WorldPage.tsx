@@ -146,7 +146,7 @@ const WorldPage: React.FC = () => {
 
       {error && <p className="mb-4 rounded-xl border border-lp-red/40 bg-lp-red/10 px-3 py-2 text-[13px] text-lp-red">{error}</p>}
 
-      <Tabs<Tab>
+      <Tabs
         className="mb-5"
         value={tab}
         onChange={setTab}
