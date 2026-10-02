@@ -47,6 +47,13 @@ import MarkingCopilotPage from './pages/MarkingCopilotPage';
 import TaskPage from './pages/TaskPage';
 import TaskEditorPage from './pages/TaskEditorPage';
 import ProgressPage from './pages/ProgressPage';
+import BrainPage from './pages/BrainPage';
+import GemsPage from './pages/GemsPage';
+import GemPage from './pages/GemPage';
+import GemBuilderPage from './pages/GemBuilderPage';
+import WorldsPage from './pages/WorldsPage';
+import WorldPage from './pages/WorldPage';
+import ScenePage from './pages/ScenePage';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as Sonner } from './components/ui/sonner';
 import AppAccountNotice from './components/AppAccountNotice';
@@ -170,6 +177,14 @@ function App() {
           <Route path="/assessment-coach" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><AssessmentCoachPage /></ProtectedRoute>} />
           <Route path="/marking-copilot" element={<ProtectedRoute allowedRoles={['teacher','admin']}><MarkingCopilotPage /></ProtectedRoute>} />
           <Route path="/progress" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><ProgressPage /></ProtectedRoute>} />
+          <Route path="/brain" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><BrainPage /></ProtectedRoute>} />
+          <Route path="/gems" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><GemsPage /></ProtectedRoute>} />
+          <Route path="/gems/new" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><GemBuilderPage /></ProtectedRoute>} />
+          <Route path="/gems/:id/edit" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><GemBuilderPage /></ProtectedRoute>} />
+          <Route path="/gems/:id" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><GemPage /></ProtectedRoute>} />
+          <Route path="/worlds" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><WorldsPage /></ProtectedRoute>} />
+          <Route path="/world/:id/scene/:sceneId" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><ScenePage /></ProtectedRoute>} />
+          <Route path="/world/:id" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><WorldPage /></ProtectedRoute>} />
           <Route path="/task/new" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TaskEditorPage /></ProtectedRoute>} />
           <Route path="/task/:id/edit" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TaskEditorPage /></ProtectedRoute>} />
           <Route path="/task/:id" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><TaskPage /></ProtectedRoute>} />

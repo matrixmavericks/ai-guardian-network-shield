@@ -336,6 +336,10 @@ serve(async (req) => {
   let wantLive = true;
   let wantBlocks = true;
   let timeZone: unknown = null;
+  // A chat with a Gem, inside a World, or playing a World's role-play scene
+  let gemId: string | null = null;
+  let worldId: string | null = null;
+  let sceneId: string | null = null;
 
   try {
     const body = await req.json();
@@ -344,6 +348,10 @@ serve(async (req) => {
     wantLive = body.live !== false;
     wantBlocks = body.powers !== false;
     timeZone = body.tz;
+    const uuid = (v: unknown) => (typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v) ? v : null);
+    gemId = uuid(body.gemId);
+    worldId = uuid(body.worldId);
+    sceneId = uuid(body.sceneId);
     prompt = (body.prompt || '').trim();
     subject = body.subject || 'general';
     gradeLevel = body.gradeLevel || 'high-school';
@@ -524,9 +532,69 @@ CRITICAL MATH FORMATTING RULES:
   systemMessage += FILE_INSTRUCTIONS;
   if (wantBlocks) systemMessage += blockInstructions(staff);
 
+  // Gem, World and scene context, read with the person's own permissions (RLS),
+  // so nobody can chat with a Gem or World they aren't allowed to see. It goes
+  // before the mode rules below, which always take precedence.
+  const spaces: { gem?: string; world?: string; scene?: string } = {};
+  if (userId && (gemId || worldId || sceneId) && authHeader) {
+    try {
+      const asUser = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: authHeader } } });
+      const clip = (t: unknown, n: number) => String(t ?? '').slice(0, n);
+      const [{ data: scene }, { data: world }] = await Promise.all([
+        sceneId ? asUser.from('world_scenes').select('id, world_id, title, setting, role, characters, goals').eq('id', sceneId).maybeSingle() : Promise.resolve({ data: null }),
+        worldId ? asUser.from('worlds').select('id, title, subject, description, guide_gem_id').eq('id', worldId).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+      const gemToLoad = gemId ?? (world && !scene ? world.guide_gem_id : null);
+      const { data: gem } = gemToLoad ? await asUser.from('gems').select('id, name, tagline, instructions, knowledge, kind').eq('id', gemToLoad).maybeSingle() : { data: null };
+      if (gem) {
+        spaces.gem = gem.name;
+        let budget = 60_000;
+        const knowledge = (Array.isArray(gem.knowledge) ? gem.knowledge : []).map((k: any) => {
+          const t = clip(k?.text, Math.max(0, budget));
+          budget -= t.length;
+          return t ? `### ${clip(k?.name, 120)}\n${t}` : '';
+        }).filter(Boolean).join('\n\n');
+        systemMessage += `\n\nGEM: in this chat you are "${gem.name}"${gem.tagline ? ` (${gem.tagline})` : ''}. Follow the Gem's instructions below wherever they fit the rest of this prompt; the rules about academic integrity, guided mode and safety always come first.\n<gem_instructions>\n${clip(gem.instructions, 8000)}\n</gem_instructions>${knowledge ? `\nThe Gem's knowledge (use it as your main source when it is relevant, and say when something isn't in it):\n<gem_knowledge>\n${knowledge}\n</gem_knowledge>` : ''}`;
+        // Popularity for the gallery (best effort)
+        runInBackground((async () => { const db = getAdminClient(); const { data: g } = await db.from('gems').select('uses').eq('id', gem.id).maybeSingle(); if (g) await db.from('gems').update({ uses: (g.uses ?? 0) + 1 }).eq('id', gem.id); })());
+      }
+      if (world) {
+        spaces.world = world.title;
+        const { data: items } = await asUser.from('world_items').select('kind, title, content, data').eq('world_id', world.id).order('position', { ascending: true }).limit(60);
+        let budget = 50_000;
+        const library = (items ?? []).map((it: any) => {
+          const body = it.kind === 'flashcards' && Array.isArray(it.data?.cards)
+            ? it.data.cards.map((c: any) => `- ${clip(c.front, 200)}: ${clip(c.back, 400)}`).join('\n')
+            : it.kind === 'link' ? clip(it.data?.url, 300) : clip(it.content, 12_000);
+          const t = clip(body, Math.max(0, budget));
+          budget -= t.length;
+          return t ? `### ${clip(it.title, 160)} (${it.kind})\n${t}` : '';
+        }).filter(Boolean).join('\n\n');
+        systemMessage += `\n\nWORLD: this chat is inside the World "${clip(world.title, 120)}"${world.subject ? ` (${clip(world.subject, 60)})` : ''}. ${clip(world.description, 1500)}${library ? `\nThe World's materials (draw on them, and stay within this topic unless asked):\n<world_library>\n${library}\n</world_library>` : ''}`;
+      }
+      if (scene) {
+        spaces.scene = scene.title;
+        const chars = (Array.isArray(scene.characters) ? scene.characters : []).map((c: any) => `- ${clip(c.name, 60)} ${clip(c.emoji, 8)}: ${clip(c.persona, 1200)}`).join('\n');
+        const goals = (scene.goals ?? []).map((g: string) => `- ${clip(g, 200)}`).join('\n');
+        systemMessage += `\n\nROLE-PLAY SCENE: "${clip(scene.title, 160)}".
+Setting: ${clip(scene.setting, 4000)}
+The student plays: ${clip(scene.role, 600) || 'themselves'}.
+You play these characters:
+${chars || '- A suitable character for the setting'}
+Learning goals (don't announce them; steer the scene so the student can show them):
+${goals || '- Use the ideas of this topic accurately'}
+How to run it: stay in character. Start each character's line with their name in bold, e.g. **Marie Curie:**. Keep turns short (2-5 sentences) and end each one with something the student must respond to or decide. Keep facts accurate and say when something is invented for the scene; if the student says something factually wrong, the character reacts as they would and you add a short out-of-character note in italics when it matters for learning. Never write the student's lines. If the student writes "debrief" or asks to stop, step out of character and give a debrief: which goals they showed (quote their words), what was strong, one or two things to improve, and any facts to fix. On the first turn, set the scene vividly in 2-3 sentences and give the first prompt.`;
+      }
+    } catch (e) {
+      console.error('Spaces context failed (non-fatal):', e);
+    }
+  }
+
   const forceProcessMode = !staff && schoolSettings?.process_mode_enabled === true;
   if (staff) {
     systemMessage += `\nThis is teacher mode: give complete, direct, finished work.` + DECK_INSTRUCTIONS;
+  } else if (spaces.scene && moderationStatus !== 'rewritten') {
+    systemMessage += `\nRole-play mode: the scene rules above apply. Still never do the student's assessed work for them.`;
   } else if (processTeaching || forceProcessMode || moderationStatus === 'rewritten') {
     systemMessage += `
 IMPORTANT: You are in Process Teaching Mode.
@@ -715,6 +783,7 @@ IMPORTANT: You are in Process Teaching Mode.
       pastPapers: pastPapersUsed.length ? pastPapersUsed : undefined,
       ibReference: mypRef ? true : undefined,
       live: liveUsed ?? undefined,
+      spaces: spaces.gem || spaces.world || spaces.scene ? spaces : undefined,
       usage: answered ? { prompt: pt, completion: ct } : undefined,
       mode: staff ? 'teacher' : processTeaching || forceProcessMode ? 'guided' : 'direct',
     };

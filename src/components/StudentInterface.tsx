@@ -150,6 +150,8 @@ const StudentInterface = () => {
   const [chatState, setChatState] = useState<ChatState>("idle");
   const [activeSubject, setActiveSubject] = useState("general");
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  // A chat started with a Gem, in a World or in a role-play scene keeps that context when reopened here
+  const [space, setSpace] = useState<{ gemId: string | null; worldId: string | null; sceneId: string | null } | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [resourceContext, setResourceContext] = useState<{ title: string; description: string; url?: string } | null>(null);
   const { toast } = useToast();
@@ -312,6 +314,11 @@ const StudentInterface = () => {
   const loadSession = async (sessionId: string) => {
     setCurrentSessionId(sessionId);
     setCompact(null);
+    setSpace(null);
+    db.from('ai_chat_sessions').select('gem_id, world_id, scene_id').eq('id', sessionId).maybeSingle()
+      .then(({ data: row }: { data: { gem_id: string | null; world_id: string | null; scene_id: string | null } | null }) => {
+        if (row && (row.gem_id || row.world_id || row.scene_id)) setSpace({ gemId: row.gem_id, worldId: row.world_id, sceneId: row.scene_id });
+      });
     const { data } = await db
       .from('ai_chat_messages')
       .select('id, role, content, created_at, metadata')
@@ -521,6 +528,9 @@ const StudentInterface = () => {
             images: attached.map(u => u.image).filter(Boolean),
             live: useLive,
             tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            gemId: space?.gemId ?? undefined,
+            worldId: space?.worldId ?? undefined,
+            sceneId: space?.sceneId ?? undefined,
           },
           {
             start: st => { if (st.model) setPendingModel(st.model); show({ model: st.model, effort: st.effort ?? null, notice: st.notice }); },
@@ -623,6 +633,7 @@ const StudentInterface = () => {
   const clearChat = () => {
     setMessages([]);
     setCurrentSessionId(null);
+    setSpace(null);
     setChatState("idle");
     setCompact(null);
     setDrawerOpen(false);

@@ -34,6 +34,9 @@ import {
   ListChecks,
   WandSparkles,
   TrendingUp,
+  Gem,
+  Orbit,
+  Globe2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isStudentId } from "@/lib/studentIds";
@@ -49,6 +52,16 @@ import { getStudioConfig } from "@/lib/mispStudioConfigs";
 type NavItem = { title: string; href: string; icon: React.ElementType; badge?: "marking" };
 type NavGroup = { label: string; items: NavItem[] };
 
+/** Gems, Worlds and the Brain, for students and teachers alike */
+const SPACES: NavGroup = {
+  label: "Spaces",
+  items: [
+    { title: "Brain", href: "/brain", icon: Orbit },
+    { title: "Gems", href: "/gems", icon: Gem },
+    { title: "Worlds", href: "/worlds", icon: Globe2 },
+  ],
+};
+
 const STUDENT_GROUPS: NavGroup[] = [
   {
     label: "Core",
@@ -60,6 +73,7 @@ const STUDENT_GROUPS: NavGroup[] = [
       { title: "Progress", href: "/progress", icon: TrendingUp },
     ],
   },
+  SPACES,
   {
     label: "Learning",
     items: [
@@ -93,6 +107,7 @@ const TEACHER_GROUPS: NavGroup[] = [
       { title: "Classes", href: "/classes", icon: Users },
     ],
   },
+  SPACES,
   {
     label: "Teaching",
     items: [
@@ -152,7 +167,9 @@ const alsoActive = (href: string, pathname: string) =>
   (href === "/classes" && pathname.startsWith("/class/")) ||
   (href === "/learning-paths" && /^\/(learning-path\/|create-learning-path)/.test(pathname)) ||
   (href === "/portfolio" && pathname.startsWith("/portfolio/")) ||
-  (href === "/studio" && pathname.startsWith("/studio/tool/"));
+  (href === "/studio" && pathname.startsWith("/studio/tool/")) ||
+  (href === "/gems" && pathname.startsWith("/gems/")) ||
+  (href === "/worlds" && pathname.startsWith("/world/"));
 
 /** Shows the marking backlog; only mounted for teachers so students never load class data. */
 const MarkingBadge: React.FC = () => {
