@@ -61,29 +61,60 @@ export type Database = {
       ai_chat_sessions: {
         Row: {
           created_at: string
+          gem_id: string | null
           id: string
+          scene_id: string | null
           subject: string | null
           title: string | null
           updated_at: string
           user_id: string
+          world_id: string | null
         }
         Insert: {
           created_at?: string
+          gem_id?: string | null
           id?: string
+          scene_id?: string | null
           subject?: string | null
           title?: string | null
           updated_at?: string
           user_id: string
+          world_id?: string | null
         }
         Update: {
           created_at?: string
+          gem_id?: string | null
           id?: string
+          scene_id?: string | null
           subject?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
+          world_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_sessions_gem_id_fkey"
+            columns: ["gem_id"]
+            isOneToOne: false
+            referencedRelation: "gems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_chat_sessions_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "world_scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_chat_sessions_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_configurations: {
         Row: {
@@ -345,6 +376,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      brain_concepts: {
+        Row: {
+          concepts: string[]
+          hash: string
+          item_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          concepts?: string[]
+          hash: string
+          item_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          concepts?: string[]
+          hash?: string
+          item_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       bypass_attempts: {
         Row: {
@@ -1191,6 +1246,71 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      gems: {
+        Row: {
+          class_ids: string[]
+          color: string
+          created_at: string
+          emoji: string | null
+          id: string
+          instructions: string
+          kind: string
+          knowledge: Json
+          name: string
+          owner_id: string
+          starters: string[]
+          tagline: string | null
+          updated_at: string
+          uses: number
+          visibility: string
+          world_id: string | null
+        }
+        Insert: {
+          class_ids?: string[]
+          color?: string
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          instructions?: string
+          kind?: string
+          knowledge?: Json
+          name: string
+          owner_id: string
+          starters?: string[]
+          tagline?: string | null
+          updated_at?: string
+          uses?: number
+          visibility?: string
+          world_id?: string | null
+        }
+        Update: {
+          class_ids?: string[]
+          color?: string
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          instructions?: string
+          kind?: string
+          knowledge?: Json
+          name?: string
+          owner_id?: string
+          starters?: string[]
+          tagline?: string | null
+          updated_at?: string
+          uses?: number
+          visibility?: string
+          world_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gems_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       grading_systems: {
         Row: {
@@ -3438,11 +3558,173 @@ export type Database = {
         }
         Relationships: []
       }
+      world_items: {
+        Row: {
+          content: string
+          created_at: string
+          data: Json
+          id: string
+          kind: string
+          owner_id: string
+          position: number
+          title: string
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          kind: string
+          owner_id: string
+          position?: number
+          title: string
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          kind?: string
+          owner_id?: string
+          position?: number
+          title?: string
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_items_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_scenes: {
+        Row: {
+          characters: Json
+          created_at: string
+          goals: string[]
+          id: string
+          owner_id: string
+          position: number
+          role: string
+          setting: string
+          title: string
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          characters?: Json
+          created_at?: string
+          goals?: string[]
+          id?: string
+          owner_id: string
+          position?: number
+          role?: string
+          setting?: string
+          title: string
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          characters?: Json
+          created_at?: string
+          goals?: string[]
+          id?: string
+          owner_id?: string
+          position?: number
+          role?: string
+          setting?: string
+          title?: string
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_scenes_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worlds: {
+        Row: {
+          class_ids: string[]
+          color: string
+          created_at: string
+          description: string | null
+          emoji: string | null
+          guide_gem_id: string | null
+          id: string
+          owner_id: string
+          subject: string | null
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          class_ids?: string[]
+          color?: string
+          created_at?: string
+          description?: string | null
+          emoji?: string | null
+          guide_gem_id?: string | null
+          id?: string
+          owner_id: string
+          subject?: string | null
+          title: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          class_ids?: string[]
+          color?: string
+          created_at?: string
+          description?: string | null
+          emoji?: string | null
+          guide_gem_id?: string | null
+          id?: string
+          owner_id?: string
+          subject?: string | null
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worlds_guide_gem_fkey"
+            columns: ["guide_gem_id"]
+            isOneToOne: false
+            referencedRelation: "gems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      brain_snippets: {
+        Args: never
+        Returns: {
+          at: string
+          key: string
+          kind: string
+          parent: string
+          snippet: string
+          title: string
+        }[]
+      }
+      can_view_world: { Args: { _world: string }; Returns: boolean }
       find_class_by_join_code: {
         Args: { _code: string }
         Returns: {
@@ -3548,6 +3830,7 @@ export type Database = {
         Args: { _submission: string; _text: string }
         Returns: string
       }
+      teaches_all: { Args: { _classes: string[] }; Returns: boolean }
       validate_discount_code: {
         Args: { _code: string }
         Returns: {
