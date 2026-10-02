@@ -56,6 +56,7 @@ import WorldPage from './pages/WorldPage';
 import ScenePage from './pages/ScenePage';
 import SimsPage from './pages/SimsPage';
 import SimPage from './pages/SimPage';
+import FocusPage from './pages/FocusPage';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as Sonner } from './components/ui/sonner';
 import AppAccountNotice from './components/AppAccountNotice';
@@ -189,6 +190,7 @@ function App() {
           <Route path="/world/:id" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><WorldPage /></ProtectedRoute>} />
           <Route path="/sims" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><SimsPage /></ProtectedRoute>} />
           <Route path="/sims/:id" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><SimPage /></ProtectedRoute>} />
+          <Route path="/focus" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><FocusPage /></ProtectedRoute>} />
           <Route path="/task/new" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TaskEditorPage /></ProtectedRoute>} />
           <Route path="/task/:id/edit" element={<ProtectedRoute allowedRoles={['teacher','admin']}><TaskEditorPage /></ProtectedRoute>} />
           <Route path="/task/:id" element={<ProtectedRoute allowedRoles={['student','teacher','admin']}><TaskPage /></ProtectedRoute>} />

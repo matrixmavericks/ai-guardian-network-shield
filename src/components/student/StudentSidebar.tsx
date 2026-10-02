@@ -38,6 +38,7 @@ import {
   Orbit,
   Globe2,
   FlaskConical,
+  Timer,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isStudentId } from "@/lib/studentIds";
@@ -49,6 +50,7 @@ import { needsMarking, useTeacherData, waited } from "@/components/teacher/data"
 import { Wordmark } from "@/components/landing/LandingNav";
 import { NotificationBell, UnreadDot } from "@/components/notifications/NotificationBell";
 import { getStudioConfig } from "@/lib/mispStudioConfigs";
+import FocusIsland from "@/components/focus/FocusIsland";
 
 type NavItem = { title: string; href: string; icon: React.ElementType; badge?: "marking" };
 type NavGroup = { label: string; items: NavItem[] };
@@ -79,6 +81,7 @@ const STUDENT_GROUPS: NavGroup[] = [
     label: "Learning",
     items: [
       { title: "Simulations", href: "/sims", icon: FlaskConical },
+      { title: "Focus room", href: "/focus", icon: Timer },
       { title: "Learning Paths", href: "/learning-paths", icon: Book },
       { title: "Portfolio", href: "/portfolio", icon: Briefcase },
       { title: "Personal Project", href: "/personal-project", icon: Target },
@@ -115,6 +118,7 @@ const TEACHER_GROUPS: NavGroup[] = [
     items: [
       { title: "Planner", href: "/teacher-plan-generator", icon: NotebookPen },
       { title: "Simulations", href: "/sims", icon: FlaskConical },
+      { title: "Class timer", href: "/focus", icon: Timer },
       { title: "Presentations", href: "/decks", icon: Presentation },
       { title: "Past papers", href: "/past-papers", icon: FileStack },
       { title: "Personal Project", href: "/personal-project", icon: Target },
@@ -449,6 +453,7 @@ const StudentSidebar = () => {
       </aside>
 
       <CommandPalette nav={paletteNav} role={teacher ? "teacher" : "student"} open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <FocusIsland />
     </>
   );
 };

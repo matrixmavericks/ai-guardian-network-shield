@@ -10,7 +10,7 @@ import ClaimGoogleAccountCard from '@/components/ClaimGoogleAccountCard';
 import { useSchoolCheck } from '@/hooks/useSchoolCheck';
 import {
   ArrowRight, ArrowUpRight, Book, Brain, Check, CheckCircle2, ChevronRight, Clock, FileText, GraduationCap,
-  LayoutGrid, MessageSquare, Search, Send, Shield, Sparkles, Trophy, TrendingUp, AlertTriangle,
+  LayoutGrid, MessageSquare, Search, Send, Shield, Sparkles, Trophy, TrendingUp, AlertTriangle, Flame, Timer,
 } from 'lucide-react';
 import AdaptiveLearningProfile from '@/components/AdaptiveLearningProfile';
 import StudentPlanCard from '@/components/StudentPlanCard';
@@ -29,6 +29,10 @@ import {
   Bar, EmptyState, Panel, PanelHead, Ring, chip, ghostBtn, gradeLabel, gradeText, gradeTone, useCountUp,
 } from '@/components/student/ui';
 import { friendlyFirstName } from "@/lib/studentIds";
+import SkyHero, { skyBtn, skyChip } from '@/components/portal/SkyHero';
+import { skyMood } from '@/components/portal/sky';
+import { streak, useStudy } from '@/components/subjects/store';
+import { todayStats, useFocus } from '@/components/focus/store';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 interface ClassAssignment {
@@ -164,6 +168,8 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
   const displayName = user?.fullName || user?.email?.split('@')[0] || 'Student';
   const [practiceSessionId, setPracticeSessionId] = useState<string | null>(null);
+  const { state: study } = useStudy();
+  const focusState = useFocus();
 
   // ─── Data state ──────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
@@ -390,6 +396,8 @@ const StudentDashboard = () => {
   const firstName = friendlyFirstName(displayName, '');
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const studyStreak = streak(study);
+  const focusToday = todayStats(focusState);
   const summary = overdueOpen.length > 0
     ? `You have ${overdueOpen.length} overdue assignment${overdueOpen.length > 1 ? 's' : ''}. Start there, then keep going.`
     : weekAssignments.length - weekDone > 0
@@ -446,29 +454,47 @@ const StudentDashboard = () => {
   return shell(
     <>
       {/* ═══════════ HEADER ═══════════ */}
-      <header className="lp-fade flex flex-wrap items-end justify-between gap-6">
-        <div>
-          <p className="text-[13px] font-medium text-lp-mute">{format(now, 'EEEE, d MMMM')}</p>
-          <h1 className="mt-2 text-[36px] font-normal leading-[1] tracking-[-0.045em] text-white sm:text-[48px]">
+      <SkyHero
+        eyebrow={`${format(now, 'EEEE, d MMMM')} · ${skyMood(hour + now.getMinutes() / 60)}`}
+        title={
+          <>
             {firstName ? `${greeting}, ` : greeting}
-            {firstName && <span className="bg-gradient-to-r from-lp-sky via-[#A5CCFF] to-lp-cyan bg-clip-text text-transparent">{firstName}</span>}
-          </h1>
-          <p className="mt-3 max-w-[40rem] text-[15.5px] text-lp-soft">{summary}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" className={cn(ghostBtn, 'relative h-12 rounded-2xl px-5')} onClick={() => setTab('messages')}>
-            <MessageSquare className="h-4 w-4" /> Messages
-            {totalUnread > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-lp-red px-1 text-[11px] font-semibold text-white">
-                {totalUnread}
+            {firstName && <span className="bg-gradient-to-r from-[#ffffff] via-[#dbeafe] to-[#a5f3fc] bg-clip-text text-transparent">{firstName}</span>}
+          </>
+        }
+        summary={summary}
+        chips={
+          <>
+            <span className={skyChip} title="Days in a row you've studied">
+              <Flame className="h-3.5 w-3.5 text-[#fdba74]" />
+              {studyStreak > 0 ? `${studyStreak}-day streak` : 'Start a streak today'}
+            </span>
+            {focusToday.minutes > 0 && (
+              <span className={skyChip}>
+                <Timer className="h-3.5 w-3.5 text-[#a5f3fc]" /> {focusToday.minutes} min focused today
               </span>
             )}
-          </button>
-          <GlowButton to="/ai-learning-assistant">
-            <Sparkles className="h-4 w-4" /> Ask Refyn
-          </GlowButton>
-        </div>
-      </header>
+          </>
+        }
+        actions={
+          <>
+            <button type="button" className={cn(skyBtn, 'relative')} onClick={() => setTab('messages')}>
+              <MessageSquare className="h-4 w-4" /> Messages
+              {totalUnread > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-lp-red px-1 text-[11px] font-semibold text-white">
+                  {totalUnread}
+                </span>
+              )}
+            </button>
+            <Link to="/focus" className={skyBtn}>
+              <Timer className="h-4 w-4" /> Focus
+            </Link>
+            <GlowButton to="/ai-learning-assistant">
+              <Sparkles className="h-4 w-4" /> Ask Refyn
+            </GlowButton>
+          </>
+        }
+      />
 
       <div className="mt-6 empty:hidden">
         <ClaimGoogleAccountCard />

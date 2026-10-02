@@ -25,9 +25,12 @@ import {
   Sparkles,
   Table2,
   TrendingUp,
+  Timer,
   Users,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import SkyHero, { skyBtn } from "@/components/portal/SkyHero";
+import { skyMood } from "@/components/portal/sky";
 import { StudyShell, primaryBtn } from "@/components/subjects/kit";
 import { EmptyState, Panel, PanelHead, Ring, chip, ghostBtn, useCountUp } from "@/components/student/ui";
 import { Sparkline } from "@/components/grades/parts";
@@ -193,27 +196,28 @@ const TeacherDashboard = () => {
   return (
     <StudyShell wide>
       {/* Header */}
-      <header className="lp-fade flex flex-wrap items-end justify-between gap-5" style={{ animationFillMode: "both" }}>
-        <div className="min-w-0">
-          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-lp-sky">
-            {format(now, "EEEE, d MMMM")} · Week {format(now, "w")}
-          </p>
-          <h1 className="mt-2 text-[32px] font-semibold leading-tight tracking-[-0.035em] text-white sm:text-[38px]">
-            {greeting()}, <span className="bg-gradient-to-r from-lp-sky via-[#A5CCFF] to-lp-cyan bg-clip-text text-transparent">{name}</span>
-          </h1>
-          <p className="mt-2 max-w-[640px] text-[15px] text-lp-soft">
-            You have {summary[0]}, {summary[1]} and {summary[2]}.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link to="/grades" className={ghostBtn}>
-            <Table2 className="h-4 w-4" /> Gradebook
-          </Link>
-          <Link to="/marking" className={primaryBtn}>
-            <ClipboardCheck className="h-4 w-4" /> {queue.length ? `Start marking (${queue.length})` : "Open marking"}
-          </Link>
-        </div>
-      </header>
+      <SkyHero
+        eyebrow={`${format(now, "EEEE, d MMMM")} · Week ${format(now, "w")} · ${skyMood()}`}
+        title={
+          <>
+            {greeting()}, <span className="bg-gradient-to-r from-[#ffffff] via-[#dbeafe] to-[#a5f3fc] bg-clip-text text-transparent">{name}</span>
+          </>
+        }
+        summary={`You have ${summary[0]}, ${summary[1]} and ${summary[2]}.`}
+        actions={
+          <>
+            <Link to="/grades" className={skyBtn}>
+              <Table2 className="h-4 w-4" /> Gradebook
+            </Link>
+            <Link to="/focus" className={skyBtn}>
+              <Timer className="h-4 w-4" /> Class timer
+            </Link>
+            <Link to="/marking" className={cn(primaryBtn, "h-11 rounded-2xl")}>
+              <ClipboardCheck className="h-4 w-4" /> {queue.length ? `Start marking (${queue.length})` : "Open marking"}
+            </Link>
+          </>
+        }
+      />
 
       {/* Ask Refyn */}
       <form

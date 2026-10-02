@@ -248,6 +248,12 @@ const bump = (s: StudyState): StudyState => {
   return { ...s, activity: { ...s.activity, [d]: (s.activity[d] || 0) + 1 } };
 };
 
+/** Count today towards the streak from outside a component (e.g. a finished focus session). */
+export const logActivity = (userId?: string | null) => {
+  const key = `refyn:${userId ?? "guest"}:study`;
+  save(key, bump(load(key)));
+};
+
 export const useStudy = () => {
   const { user } = useAuth();
   const key = `refyn:${user?.id ?? "guest"}:study`;
