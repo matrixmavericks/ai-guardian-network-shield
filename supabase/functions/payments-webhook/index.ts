@@ -71,9 +71,10 @@ async function handleCheckoutCompleted(session: any, env: StripeEnv) {
 
     // Increment discount code usage
     if (discountCode) {
-      await supabase.rpc("increment_discount_uses" as any, { _code: discountCode })
-        .then(() => {})
-        .catch(async () => {
+      try {
+        const { error } = await supabase.rpc("increment_discount_uses" as any, { _code: discountCode });
+        if (error) throw error;
+      } catch {
           // fallback if RPC not present
           const { data } = await supabase.from("discount_codes")
             .select("uses_count").eq("code", discountCode).maybeSingle();
@@ -82,7 +83,7 @@ async function handleCheckoutCompleted(session: any, env: StripeEnv) {
               .update({ uses_count: (data.uses_count || 0) + 1 })
               .eq("code", discountCode);
           }
-        });
+      }
     }
   }
 }
