@@ -936,3 +936,16 @@ html.lp-light .sp-cover, html.lp-light .sp-keep { --lp-white: 255 255 255; --lp-
   .sp-orb::before, .sp-float, .sp-pulse, .sp-typing span, .sp-shimmer { animation: none; }
   .sp-flip > div { transition: none; }
 }
+
+/* ---------- Simulations ---------- */
+.sim-range { -webkit-appearance: none; appearance: none; height: 22px; background: transparent; cursor: pointer; }
+.sim-range::-webkit-slider-runnable-track { height: 6px; border-radius: 9999px; background: linear-gradient(to right, var(--c) var(--p), rgb(var(--lp-line)) var(--p)); }
+.sim-range::-moz-range-track { height: 6px; border-radius: 9999px; background: rgb(var(--lp-line)); }
+.sim-range::-moz-range-progress { height: 6px; border-radius: 9999px; background: var(--c); }
+.sim-range::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 9999px; background: #ffffff; border: 3px solid var(--c); box-shadow: 0 2px 8px rgba(0,0,0,0.35); transition: transform 0.15s; }
+.sim-range::-moz-range-thumb { width: 12px; height: 12px; border-radius: 9999px; background: #ffffff; border: 3px solid var(--c); box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
+.sim-range:active::-webkit-slider-thumb { transform: scale(1.15); }
+.sim-range:focus-visible { outline: none; }
+.sim-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgb(var(--lp-blue) / 0.35); }
+.sim-present .sim-readouts { zoom: 1.3; }
+.sim-present .sim-learn { font-size: 15px; }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
+  FlaskConical,
   AlertTriangle,
   ArrowRight,
   BookOpen,
@@ -39,6 +40,8 @@ import { extractJson } from "@/components/studio/worksheet";
 import { STATUS_META, examScore, isSaved, latest, topicScore, topicStatus, useStudy, type StudyState } from "@/components/subjects/store";
 import { loadClassProgress, useCourseLinks, type StudentProgress } from "@/components/subjects/classCourses";
 import { SubjectMissing } from "./SubjectPage";
+import { SimStrip } from "@/components/sims/SimCards";
+import { simsForTopic } from "@/components/sims/registry";
 
 /* ---------- Path ---------- */
 
@@ -519,6 +522,19 @@ const TopicPage = () => {
               </div>
             ) : null}
           </Panel>
+
+          {/* Simulations for this topic */}
+          {simsForTopic(topic.id).length > 0 && (
+            <Panel className="p-5 sm:p-6" delay={55} as="section">
+              <PanelHead
+                title="See it move"
+                icon={FlaskConical}
+                meta={<Link to="/sims" className="inline-flex items-center gap-1 text-lp-sky hover:text-white">All simulations <ArrowRight className="h-3.5 w-3.5" /></Link>}
+              />
+              <p className="mt-1 text-[13px] text-lp-mute">Interactive simulations for this topic: change one thing, watch what happens, and record your results.</p>
+              <SimStrip sims={simsForTopic(topic.id)} className="mt-4" />
+            </Panel>
+          )}
 
           {/* Worked example */}
           {d?.worked && (

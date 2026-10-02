@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { AlertTriangle, ArrowRight, CalendarDays, ClipboardCheck, ClipboardList, FileText, Layers, Library, Loader2, Shapes, Sparkles, Ticket, Wand2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, FlaskConical, CalendarDays, ClipboardCheck, ClipboardList, FileText, Layers, Library, Loader2, Shapes, Sparkles, Ticket, Wand2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import PilotFeedbackPrompt from "@/components/PilotFeedbackPrompt";
 import { StudyShell, primaryBtn } from "@/components/subjects/kit";
@@ -11,6 +11,8 @@ import { CATALOG, DiagramView } from "@/components/studio/diagrams";
 import { useLibrary, useStudio } from "@/components/studio/studio";
 import type { PrintKind } from "@/components/studio/worksheet";
 import { needsMarking, startOfWeek, studentRows, useTeacherData, weekLoad } from "@/components/teacher/data";
+import { SimStrip } from "@/components/sims/SimCards";
+import { SIMS } from "@/components/sims/registry";
 
 const MAKE: { id: PrintKind; label: string; icon: React.ElementType }[] = [
   { id: "worksheet", label: "Worksheet", icon: FileText },
@@ -37,6 +39,8 @@ const StudioHome = () => {
   const flagged = useMemo(() => studentRows(data).filter((r) => r.reasons.length).length, [data]);
   const due = useMemo(() => weekLoad(data, startOfWeek()).reduce((n, d) => n + d.items.length, 0), [data]);
   const showcase = useMemo(() => (look ? CATALOG.filter((c) => c.subjects.includes(look.subject)).slice(0, 3) : []), [look]);
+  // Simulations for this Studio's subject, to present in class or set as a task
+  const sims = useMemo(() => (look ? SIMS.filter((s) => (look.subject === "math" ? s.subject === "maths" : look.subject === "physics" ? s.subject === "physics" : s.subject === "economics" || s.subject === "geography")).slice(0, 4) : []), [look]);
 
   if (isLoading) return null;
   if (!config || !look) return <Navigate to="/dashboard" replace />;
@@ -203,6 +207,19 @@ const StudioHome = () => {
               ))}
             </div>
           </Panel>
+
+          {/* Simulation lab */}
+          {sims.length > 0 && (
+            <Panel className="p-5" delay={165}>
+              <PanelHead
+                title="Simulation lab"
+                icon={FlaskConical}
+                meta={<Link to="/sims" className="inline-flex items-center gap-1 text-lp-sky hover:text-white">All <ArrowRight className="h-3.5 w-3.5" /></Link>}
+              />
+              <p className="mt-1 text-[12.5px] text-lp-mute">Present full screen, or set one up and send it as a task with your settings.</p>
+              <SimStrip sims={sims} className="mt-3" />
+            </Panel>
+          )}
 
           {/* Recent */}
           <Panel className="p-5" delay={180}>

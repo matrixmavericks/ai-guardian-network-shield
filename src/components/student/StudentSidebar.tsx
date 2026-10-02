@@ -37,6 +37,7 @@ import {
   Gem,
   Orbit,
   Globe2,
+  FlaskConical,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isStudentId } from "@/lib/studentIds";
@@ -77,6 +78,7 @@ const STUDENT_GROUPS: NavGroup[] = [
   {
     label: "Learning",
     items: [
+      { title: "Simulations", href: "/sims", icon: FlaskConical },
       { title: "Learning Paths", href: "/learning-paths", icon: Book },
       { title: "Portfolio", href: "/portfolio", icon: Briefcase },
       { title: "Personal Project", href: "/personal-project", icon: Target },
@@ -112,6 +114,7 @@ const TEACHER_GROUPS: NavGroup[] = [
     label: "Teaching",
     items: [
       { title: "Planner", href: "/teacher-plan-generator", icon: NotebookPen },
+      { title: "Simulations", href: "/sims", icon: FlaskConical },
       { title: "Presentations", href: "/decks", icon: Presentation },
       { title: "Past papers", href: "/past-papers", icon: FileStack },
       { title: "Personal Project", href: "/personal-project", icon: Target },
@@ -169,7 +172,8 @@ const alsoActive = (href: string, pathname: string) =>
   (href === "/portfolio" && pathname.startsWith("/portfolio/")) ||
   (href === "/studio" && pathname.startsWith("/studio/tool/")) ||
   (href === "/gems" && pathname.startsWith("/gems/")) ||
-  (href === "/worlds" && pathname.startsWith("/world/"));
+  (href === "/worlds" && pathname.startsWith("/world/")) ||
+  (href === "/sims" && pathname.startsWith("/sims/"));
 
 /** Shows the marking backlog; only mounted for teachers so students never load class data. */
 const MarkingBadge: React.FC = () => {

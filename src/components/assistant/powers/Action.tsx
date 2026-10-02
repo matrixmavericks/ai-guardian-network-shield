@@ -38,6 +38,16 @@ type Done = { done: boolean; link?: string; note?: string };
 const STUDENT_TOOLS = ["assessment-coach", "personal-project", "grades", "classes"];
 
 const OpenTool: React.FC<{ spec: Extract<ActionSpec, { type: "open" }>; teacher: boolean }> = ({ spec, teacher }) => {
+  // A simulation, optionally with settings (e.g. "projectile?a=30&v=20")
+  if (spec.tool === "sim" && /^[a-z]+(\?[\w=&.%-]*)?$/.test(spec.id)) {
+    return (
+      <Link to={`/sims/${spec.id}`} className="my-3 flex items-center gap-3 rounded-2xl border border-lp-line bg-lp-surface px-4 py-3 transition-colors hover:border-lp-blue/50">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-lp-blue/15 text-lp-sky"><WandSparkles className="h-[18px] w-[18px]" /></span>
+        <span className="min-w-0 flex-1"><span className="block text-[14px] font-medium text-white">{spec.label || "Open the simulation"}</span><span className="block text-[12px] text-lp-mute">Interactive simulation</span></span>
+        <ArrowRight className="h-4 w-4 text-lp-sky" />
+      </Link>
+    );
+  }
   // One task's page (students and teachers), by its id from YOUR REFYN
   if (spec.tool === "task" && /^[0-9a-f-]{36}$/i.test(spec.id)) {
     return (

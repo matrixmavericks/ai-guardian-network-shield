@@ -223,6 +223,16 @@ const TaskEditorPage = () => {
     });
   }, [existingId, user, navigate]);
 
+  // Opened from a simulation's "Set as task": title, steps and a link to that exact set-up
+  useEffect(() => {
+    if (existingId) return;
+    const t = params.get("title"), ins = params.get("instructions"), url = params.get("linkUrl");
+    if (t) setTitle(t.slice(0, 200));
+    if (ins) setInstructions(ins.slice(0, 4000));
+    if (url && /^https?:\/\//.test(url)) setResources((r) => (r.some((x) => x.kind === "link" && x.url === url) ? r : [...r, { kind: "link", id: newId(), title: (params.get("linkTitle") || "Simulation").slice(0, 120), url }]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // A class with a single option picks itself
   useEffect(() => { if (!classId && data.classes.length === 1) setClassId(data.classes[0].id); }, [data.classes, classId]);
 
