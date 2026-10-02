@@ -422,10 +422,10 @@ Do not answer, solve or grade anything in the image: only transcribe and describ
       const p = info?.price ?? { input: COST_PER_1M_INPUT, output: COST_PER_1M_OUTPUT };
       const pt = usage?.prompt_tokens ?? 1500 * images.length;
       const ct = usage?.completion_tokens ?? Math.ceil(text.length / 4);
-      runInBackground(getAdminClient().from('ai_usage_logs').insert({
+      runInBackground(Promise.resolve(getAdminClient().from('ai_usage_logs').insert({
         user_id: userId, session_id: sessionId, prompt_tokens: pt, completion_tokens: ct, total_tokens: pt + ct,
         estimated_cost_usd: (pt / 1e6) * p.input + (ct / 1e6) * p.output, model,
-      }));
+      })));
       return json({ success: true, text });
     } catch (e) {
       console.error('describe failed:', e);

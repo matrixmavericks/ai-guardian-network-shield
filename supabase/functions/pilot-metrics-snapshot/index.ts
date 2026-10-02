@@ -2,7 +2,10 @@
 // Primary caller: pg_cron via net.http_post (service role).
 // Optional body: { school_subdomain?: string } to snapshot one school.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 // ---- Tunable teacher_hours_saved factors (editable assumptions) ----
 const HOURS_PER_LEARNING_PATH = 2.0;   // hours saved per AI-generated learning path (drafting + scaffolding)
