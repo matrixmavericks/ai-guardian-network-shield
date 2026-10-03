@@ -123,7 +123,7 @@ export const IntelHeader: React.FC<{ icon: React.ElementType; gradient: string; 
 
 export const RunButton: React.FC<{ loading: boolean; hasRun: boolean; label: string; onClick: () => void; at: number | null; className?: string }> = ({ loading, hasRun, label, onClick, at, className }) => (
   <div className={cn("flex flex-wrap items-center gap-3", className)}>
-    <button type="button" onClick={onClick} disabled={loading} className={primaryBtn}>
+    <button type="button" data-tour="run" onClick={onClick} disabled={loading} className={primaryBtn}>
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : hasRun ? <RefreshCw className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
       {loading ? "Analysing…" : hasRun ? "Run again" : label}
     </button>

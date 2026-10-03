@@ -640,7 +640,7 @@ const ClassDetailPage = () => {
           <div className="mt-6">
           {isTeacher ? (
             <Tabs value={classTab} onValueChange={setClassTab}>
-              <TabsList className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 rounded-2xl border border-lp-line bg-lp-surface/60 p-1.5">
+              <TabsList data-tour="class-tabs" className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 rounded-2xl border border-lp-line bg-lp-surface/60 p-1.5">
                 <TabsTrigger value="students" className="rounded-xl px-3.5 py-2 text-[13.5px] font-medium text-lp-soft hover:text-white data-[state=active]:bg-lp-blue data-[state=active]:text-white data-[state=active]:shadow-[0_8px_24px_-10px_rgba(59,130,246,0.8)]">
                   <Users className="mr-2 h-4 w-4" /> Students
                 </TabsTrigger>

@@ -12,6 +12,7 @@ const columns = [
       { label: "Platform", href: "#product" },
       { label: "Guided tour", to: "/tour" },
       { label: "Live demo", to: "/demo" },
+      { label: "Help centre", to: "/help" },
     ],
   },
   {

@@ -130,8 +130,12 @@ const TourPage = () => {
                 Questions, answered.
               </SectionTitle>
               <p className="mt-5 max-w-[24rem] text-[15.5px] leading-relaxed text-lp-soft">
-                Anything else? The walkthroughs cover the rest, or get in touch when you request access.
+                Anything else? The help centre answers the small questions, with a clip or a quick demo for each.
               </p>
+              <QuietLink to="/help" className="mt-5">
+                Open the help centre
+                <ArrowRight aria-hidden className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </QuietLink>
             </div>
             <div className="lp-reveal divide-y divide-lp-line rounded-[24px] border border-lp-line bg-lp-surface/40">
               {FAQ.map(({ q, a }) => (

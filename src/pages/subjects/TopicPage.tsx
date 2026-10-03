@@ -465,7 +465,7 @@ const TopicPage = () => {
         </div>
 
         {/* Path */}
-        <ol className="relative mt-6 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <ol data-tour="topic-steps" className="relative mt-6 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {steps.map((s, i) => (
             <li key={s.id}>
               <button type="button" onClick={() => scrollTo(s.id)} className={cn("group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors", s.done ? "border-lp-green/40 bg-lp-green/10" : "border-lp-line bg-lp-deep/40 hover:border-lp-sky/40")}>

@@ -93,7 +93,7 @@ const Hero = () => (
 
       {/* Bottom-right tour link */}
       <Link
-        to="/tour"
+        to="/tour#videos"
         className="group absolute bottom-8 right-6 z-10 hidden items-center gap-2 text-sm text-white/90 sm:flex md:bottom-10 md:right-10"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm transition-all group-hover:scale-110 group-hover:bg-white/25">

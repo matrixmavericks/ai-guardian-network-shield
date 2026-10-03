@@ -4,6 +4,7 @@ import { SUBJECTS as MYP } from "@/content/myp";
 import { createQuery } from "./query";
 import { buildTables, contactsFor } from "./fixtures";
 import { demoReply, demoStream } from "./ai";
+import { demoIntel, demoPlan } from "./intel";
 import { DEMO_USERS, exitDemo, type DemoRole } from "./session";
 
 // Swap the Supabase client for an in-memory one before the app renders, so the
@@ -74,6 +75,17 @@ export function installDemo(role: DemoRole) {
       const reply = demoReply(opts.body ?? {}, role);
       return { data: { success: true, reply, response: reply, meta: {} }, error: null };
     }
+    if (name === "refyn-intelligence") {
+      const reply = demoIntel(tables, String(opts.body?.feature ?? ""), opts.body?.params ?? {});
+      if (reply) {
+        await new Promise((r) => setTimeout(r, 900));
+        return { data: { success: true, reply }, error: null };
+      }
+    }
+    if (name === "generate-teaching-plan") {
+      await new Promise((r) => setTimeout(r, 900));
+      return { data: { plan: demoPlan(opts.body ?? {}) }, error: null };
+    }
     return { data: null, error: { name: "FunctionsHttpError", message: NOT_IN_DEMO, context: null } };
   };
   Object.defineProperty(sb, "functions", { value: { invoke }, configurable: true });
@@ -102,7 +114,8 @@ export function installDemo(role: DemoRole) {
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    if (base && url.startsWith(`${base}/functions/v1/`)) {
+    // The public help assistant is real even in the demo
+    if (base && url.startsWith(`${base}/functions/v1/`) && !url.endsWith("/help-assistant")) {
       if (url.endsWith("/ai-chat")) {
         let body = {};
         try {

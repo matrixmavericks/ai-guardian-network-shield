@@ -1,0 +1,1269 @@
+{
+  "categories": [
+    {
+      "id": "start",
+      "title": "Getting started",
+      "blurb": "Signing in, finding your way and trying Refyn.",
+      "items": [
+        {
+          "id": "what-is-refyn",
+          "q": "What is Refyn?",
+          "a": "Refyn is a learning platform for schools, built around the IB MYP. Students get an AI tutor that helps them think instead of handing out answers, notes and practice for every subject, simulations and a focus room. Teachers get classes, assignments, AI-assisted marking, planning tools and a clear view of who needs help.",
+          "who": "everyone",
+          "keywords": [
+            "about",
+            "overview",
+            "platform",
+            "what does it do"
+          ],
+          "video": {
+            "id": "students",
+            "from": 0,
+            "to": 36
+          }
+        },
+        {
+          "id": "sign-in",
+          "q": "How do I sign in?",
+          "a": "Choose **Log in** and use your email, or the student ID on your card if your school gave you one (it starts MIS-). Student ID accounts sign in with a password, not Google.",
+          "who": "everyone",
+          "keywords": [
+            "login",
+            "log in",
+            "password",
+            "student id",
+            "account"
+          ],
+          "video": {
+            "id": "students",
+            "from": 0,
+            "to": 36
+          }
+        },
+        {
+          "id": "get-access",
+          "q": "How do I get Refyn for my school or class?",
+          "a": "Choose **Get started** to request access for yourself, a class or a whole school. Refyn has paid plans for students, teachers and schools, and you'll see the options there.",
+          "who": "everyone",
+          "keywords": [
+            "sign up",
+            "register",
+            "buy",
+            "subscribe",
+            "school",
+            "access"
+          ]
+        },
+        {
+          "id": "try-demo",
+          "q": "Can I try Refyn without an account?",
+          "a": "Yes. The live demo runs the real portal on sample data in your browser, as a student or a teacher, with a guided tour. Nothing you do is saved.",
+          "who": "everyone",
+          "keywords": [
+            "demo",
+            "trial",
+            "test",
+            "preview",
+            "tour"
+          ]
+        },
+        {
+          "id": "search",
+          "q": "How do I find things quickly?",
+          "a": "Press **Ctrl K** (⌘K on a Mac) on any page, or click the search box at the top of the sidebar. Type a topic, simulation, tool or page and press Enter. It does quick sums too.",
+          "who": "everyone",
+          "keywords": [
+            "search",
+            "find",
+            "shortcut",
+            "command palette",
+            "ctrl k",
+            "jump"
+          ],
+          "video": {
+            "id": "students",
+            "from": 0,
+            "to": 36
+          },
+          "demo": {
+            "role": "student",
+            "path": "/student-dashboard",
+            "steps": [
+              {
+                "target": "search",
+                "title": "Search everything",
+                "body": "Click here, or press Ctrl K (⌘K on a Mac) on any page.",
+                "hint": "Try it: press Ctrl K and type “forces”."
+              }
+            ]
+          }
+        },
+        {
+          "id": "dark-mode",
+          "q": "Can I switch between light and dark?",
+          "a": "Yes. Use the sun and moon button at the bottom of the sidebar. Refyn remembers your choice on that device.",
+          "who": "everyone",
+          "keywords": [
+            "theme",
+            "light mode",
+            "dark mode",
+            "appearance",
+            "colours"
+          ],
+          "video": {
+            "id": "students",
+            "from": 266,
+            "to": 280
+          }
+        },
+        {
+          "id": "phones",
+          "q": "Does Refyn work on phones and tablets?",
+          "a": "Yes. Refyn works in any modern browser and every page adapts to small screens. On a phone, the menu button sits at the bottom right.",
+          "who": "everyone",
+          "keywords": [
+            "mobile",
+            "ipad",
+            "tablet",
+            "phone",
+            "app",
+            "android",
+            "iphone"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tutor",
+      "title": "The AI tutor",
+      "blurb": "How Refyn helps students think, and what it can see.",
+      "items": [
+        {
+          "id": "give-answer",
+          "q": "Will Refyn just give me the answer?",
+          "a": "Not in guided mode, which is on by default. Ask for an answer and Refyn breaks the problem into steps, asks what you'd do next and checks your working, so you can do it yourself next time.",
+          "who": "student",
+          "keywords": [
+            "cheat",
+            "homework",
+            "answers",
+            "guided",
+            "solve",
+            "guided mode",
+            "what is guided mode",
+            "do my homework"
+          ],
+          "video": {
+            "id": "students",
+            "from": 36,
+            "to": 84
+          },
+          "demo": {
+            "role": "student",
+            "path": "/ai-learning-assistant?prompt=Can%20you%20just%20give%20me%20the%20answer%20to%203x%20%2B%207%20%3D%2022%3F",
+            "steps": [
+              {
+                "target": "composer",
+                "title": "Ask for the answer",
+                "body": "We've typed the question for you. Press send and see what happens.",
+                "hint": "Then reply with your next step, like 3x = 15, or type hint."
+              }
+            ]
+          }
+        },
+        {
+          "id": "direct-mode",
+          "q": "Can I get a straight explanation instead?",
+          "a": "Yes. Switch **Guided** off under the message box, or type /direct, and Refyn explains things clearly and directly. Switch it back on, or type /guided, whenever you like.",
+          "who": "student",
+          "keywords": [
+            "direct",
+            "explain",
+            "mode",
+            "switch off guided",
+            "turn off guided",
+            "switch off guided",
+            "turn off guided mode"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/ai-learning-assistant",
+            "steps": [
+              {
+                "target": "guided",
+                "title": "Guided or direct",
+                "body": "Guided mode is on by default. Switch it off for clear, direct explanations."
+              }
+            ]
+          }
+        },
+        {
+          "id": "my-refyn",
+          "q": "What is “My Refyn” in the assistant?",
+          "a": "When **My Refyn** is on, the tutor can see your classes, deadlines and grades, so questions like “what should I do first?” get answers about your real week. Turn it off to keep a chat general.",
+          "who": "everyone",
+          "keywords": [
+            "context",
+            "deadlines",
+            "grades",
+            "personal",
+            "my refyn",
+            "what can it see"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/ai-learning-assistant",
+            "steps": [
+              {
+                "target": "context",
+                "title": "My Refyn",
+                "body": "With this on, the tutor knows your classes, deadlines and grades."
+              }
+            ]
+          }
+        },
+        {
+          "id": "chat-subject",
+          "q": "Can I tell the tutor which subject I'm working on?",
+          "a": "Yes. Pick the subject from the menu under the message box, so explanations use the right terms and examples.",
+          "who": "student",
+          "keywords": [
+            "subject",
+            "topic",
+            "maths",
+            "science"
+          ]
+        },
+        {
+          "id": "attach",
+          "q": "Can I ask about a photo or a file?",
+          "a": "Yes. Use the paperclip to attach a photo, PDF or document, then ask your question about it.",
+          "who": "everyone",
+          "keywords": [
+            "upload",
+            "image",
+            "picture",
+            "pdf",
+            "document",
+            "attach",
+            "photo"
+          ]
+        },
+        {
+          "id": "ai-mistakes",
+          "q": "Can the AI make mistakes?",
+          "a": "Yes. AI can get things wrong, so double-check important facts and working, especially for assessed work. Your teacher's feedback always comes first.",
+          "who": "everyone",
+          "keywords": [
+            "wrong",
+            "accuracy",
+            "trust",
+            "reliable",
+            "error"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "study",
+      "title": "Studying",
+      "blurb": "Subjects, practice, flashcards, simulations and your world.",
+      "items": [
+        {
+          "id": "change-subjects",
+          "q": "How do I choose my subjects?",
+          "a": "Open **My Subjects** and press **Change subjects**. Tick the ones you study and the rest stay out of the way.",
+          "who": "student",
+          "keywords": [
+            "subjects",
+            "courses",
+            "add subject",
+            "remove subject"
+          ],
+          "video": {
+            "id": "students",
+            "from": 84,
+            "to": 144
+          },
+          "demo": {
+            "role": "student",
+            "path": "/my-courses",
+            "steps": [
+              {
+                "target": "text:Change subjects",
+                "title": "Change subjects",
+                "body": "Press this and tick the subjects you study.",
+                "hint": "Try it: press Change subjects."
+              }
+            ]
+          }
+        },
+        {
+          "id": "topic-steps",
+          "q": "How should I study a topic?",
+          "a": "Open a subject, pick a topic and work through its steps: learn, worked example, key terms, quick check and exam practice. Each step ticks off as you finish it.",
+          "who": "student",
+          "keywords": [
+            "revise",
+            "revision",
+            "topic",
+            "learn",
+            "notes",
+            "how to study"
+          ],
+          "video": {
+            "id": "students",
+            "from": 84,
+            "to": 144
+          },
+          "demo": {
+            "role": "student",
+            "path": "/subjects/physics/topic/phy-newton",
+            "steps": [
+              {
+                "target": "topic-steps",
+                "title": "Five steps per topic",
+                "body": "Learn it, see a worked example, learn the key terms, check yourself, then try exam questions."
+              }
+            ]
+          }
+        },
+        {
+          "id": "flashcards",
+          "q": "How do flashcards work?",
+          "a": "Flip a card, then rate yourself honestly. Cards you're still learning keep coming back, and **Still learning only** lets you review just those.",
+          "who": "student",
+          "keywords": [
+            "flashcards",
+            "cards",
+            "memorise",
+            "remember",
+            "spaced"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/subjects/physics/flashcards",
+            "steps": [
+              {
+                "target": "css:button[aria-label='Show answer']",
+                "title": "Flip the card",
+                "body": "Click the card to see the answer, then say whether you knew it.",
+                "hint": "Try it: click the card."
+              }
+            ]
+          }
+        },
+        {
+          "id": "exam-builder",
+          "q": "How do I make a practice exam?",
+          "a": "In a subject, open **Exam builder**. Pick topics, how many questions and a time limit, then start. It's marked when you submit, and anything you got wrong goes into your mistakes log.",
+          "who": "student",
+          "keywords": [
+            "exam",
+            "test",
+            "practice paper",
+            "mock",
+            "timed"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/subjects/physics/exam",
+            "steps": [
+              {
+                "target": "text:Start exam|card",
+                "title": "Build it",
+                "body": "Choose the number of questions and a time limit, then start.",
+                "hint": "Try it: press Start exam."
+              }
+            ]
+          }
+        },
+        {
+          "id": "my-world",
+          "q": "What is “Your world” on my Overview?",
+          "a": "A floating island where each building is one of your subjects, built up as far as you've mastered it. Practise to add floors; your streak adds fireflies. Click a building to open that subject.",
+          "who": "student",
+          "keywords": [
+            "world",
+            "island",
+            "buildings",
+            "3d",
+            "level",
+            "floors",
+            "dashboard",
+            "overview"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/student-dashboard",
+            "steps": [
+              {
+                "target": "world",
+                "title": "Your world",
+                "body": "Each building is a subject, built up to your mastery.",
+                "hint": "Try it: drag to turn the island, or click a building."
+              },
+              {
+                "target": "next-floor",
+                "title": "Your next floor",
+                "body": "The subject closest to its next level, so practice always moves something forward."
+              }
+            ]
+          }
+        },
+        {
+          "id": "streak",
+          "q": "How does my streak work?",
+          "a": "Any day you practise, read a topic or finish a focus session counts. Keep going on consecutive days to grow your streak.",
+          "who": "student",
+          "keywords": [
+            "streak",
+            "days",
+            "fire",
+            "daily"
+          ]
+        },
+        {
+          "id": "learning-paths",
+          "q": "What are learning paths?",
+          "a": "Step-by-step routes through a topic, with lessons, quizzes and a capstone at the end. Pick one up in **Learning Paths**, or have Refyn build one with you.",
+          "who": "everyone",
+          "keywords": [
+            "path",
+            "course",
+            "route",
+            "capstone",
+            "lessons"
+          ],
+          "video": {
+            "id": "students",
+            "from": 144,
+            "to": 176
+          }
+        },
+        {
+          "id": "simulations",
+          "q": "How do the simulations work?",
+          "a": "Open **Simulations**, pick one and change the controls, like angle, speed or temperature, and watch what happens. Each one has challenges, a data tab and a short explanation.",
+          "who": "everyone",
+          "keywords": [
+            "sims",
+            "simulation",
+            "interactive",
+            "physics",
+            "experiment",
+            "virtual lab"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/sims/projectile",
+            "steps": [
+              {
+                "target": "sim-controls",
+                "title": "Change one thing",
+                "body": "Move a slider and watch the path change. The tabs hold challenges, data and an explanation.",
+                "hint": "Try it: find the angle that throws the furthest."
+              }
+            ]
+          }
+        },
+        {
+          "id": "focus-room",
+          "q": "What is the focus room?",
+          "a": "A timer with calm scenes and sounds for revision. Pick a length, choose a soundscape and press start. Finished sessions count towards your streak.",
+          "who": "student",
+          "keywords": [
+            "focus",
+            "timer",
+            "pomodoro",
+            "revision",
+            "concentrate",
+            "music"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/focus",
+            "steps": [
+              {
+                "title": "The focus room",
+                "body": "Pick a length, choose a scene and sound, then press play. Space starts and pauses."
+              }
+            ]
+          }
+        },
+        {
+          "id": "brain",
+          "q": "What is the Brain?",
+          "a": "A map of everything you've studied, asked and made, linked by idea. Click a star to see what it connects to.",
+          "who": "everyone",
+          "keywords": [
+            "brain",
+            "map",
+            "graph",
+            "connections"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/brain",
+            "steps": [
+              {
+                "title": "Your brain",
+                "body": "Every star is something you've studied or made. Click one to see what it links to."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "classwork",
+      "title": "Classes and assignments",
+      "blurb": "Joining classes, handing in work and getting feedback.",
+      "items": [
+        {
+          "id": "join-class",
+          "q": "How do I join a class?",
+          "a": "Open **Classes**, type the six-character code from your teacher into **Join a class** and press Join.",
+          "who": "student",
+          "keywords": [
+            "join",
+            "code",
+            "class code",
+            "enrol",
+            "teacher code"
+          ],
+          "video": {
+            "id": "students",
+            "from": 176,
+            "to": 192
+          },
+          "demo": {
+            "role": "student",
+            "path": "/classes",
+            "steps": [
+              {
+                "target": "text:Join a class|card",
+                "title": "Join a class",
+                "body": "Type the six-character code your teacher gave you, then press Join."
+              }
+            ]
+          }
+        },
+        {
+          "id": "whats-due",
+          "q": "Where do I see what's due?",
+          "a": "Your Overview shows what's due this week, and each card on **Classes** shows that class's next deadline. Reminders also appear under the bell at the top of the sidebar.",
+          "who": "student",
+          "keywords": [
+            "due",
+            "deadline",
+            "homework",
+            "assignments",
+            "reminder",
+            "notifications"
+          ],
+          "video": {
+            "id": "students",
+            "from": 176,
+            "to": 192
+          },
+          "demo": {
+            "role": "student",
+            "path": "/classes",
+            "steps": [
+              {
+                "title": "What's due",
+                "body": "Each class card shows what's due next. Click one to see the class."
+              }
+            ]
+          }
+        },
+        {
+          "id": "hand-in",
+          "q": "How do I hand in an assignment?",
+          "a": "Open the assignment and press **Hand in**. Write your answer or attach a file, then send it. You can resubmit until your teacher marks it.",
+          "who": "student",
+          "keywords": [
+            "submit",
+            "hand in",
+            "upload work",
+            "turn in",
+            "assignment"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/task/demo-a1",
+            "steps": [
+              {
+                "target": "text:Hand in",
+                "title": "Hand in",
+                "body": "Press here, then write your answer or attach your file.",
+                "hint": "Try it: press Hand in."
+              }
+            ]
+          }
+        },
+        {
+          "id": "feedback",
+          "q": "Where is my teacher's feedback?",
+          "a": "Open **Grades**. Each marked piece shows your mark, your teacher's comments and your next step, grouped by subject.",
+          "who": "student",
+          "keywords": [
+            "feedback",
+            "marks",
+            "grades",
+            "comments",
+            "results",
+            "report"
+          ],
+          "video": {
+            "id": "students",
+            "from": 192,
+            "to": 210
+          },
+          "demo": {
+            "role": "student",
+            "path": "/grades",
+            "steps": [
+              {
+                "target": "grades",
+                "title": "Marks by subject",
+                "body": "Each subject's average and trend. Scroll down for your teachers' comments."
+              }
+            ]
+          }
+        },
+        {
+          "id": "progress",
+          "q": "How do I see my progress?",
+          "a": "**Progress** shows your level on each MYP criterion over time, so you can see which skill to work on next.",
+          "who": "student",
+          "keywords": [
+            "progress",
+            "criteria",
+            "levels",
+            "improve",
+            "myp criteria"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/progress",
+            "steps": [
+              {
+                "title": "Your progress",
+                "body": "Your levels on each MYP criterion, task by task."
+              }
+            ]
+          }
+        },
+        {
+          "id": "message-teacher",
+          "q": "How do I message my teacher?",
+          "a": "Open **Messages**, pick your teacher and type. A badge shows when they reply.",
+          "who": "student",
+          "keywords": [
+            "message",
+            "chat",
+            "contact teacher",
+            "ask teacher",
+            "inbox"
+          ],
+          "video": {
+            "id": "students",
+            "from": 226,
+            "to": 236
+          },
+          "demo": {
+            "role": "student",
+            "path": "/messages",
+            "steps": [
+              {
+                "target": "text:Maya Rao|item",
+                "title": "Your teachers",
+                "body": "Pick a teacher to open the conversation.",
+                "hint": "Try it: open it and reply."
+              }
+            ]
+          }
+        },
+        {
+          "id": "portfolio",
+          "q": "How do I build a portfolio?",
+          "a": "Open **Portfolio** and press **New project**. Add your process, reflections and media, then share a link when you're ready.",
+          "who": "student",
+          "keywords": [
+            "portfolio",
+            "project",
+            "showcase",
+            "share"
+          ],
+          "video": {
+            "id": "students",
+            "from": 210,
+            "to": 226
+          },
+          "demo": {
+            "role": "student",
+            "path": "/portfolio",
+            "steps": [
+              {
+                "target": "text:New project",
+                "title": "Start a project",
+                "body": "Each project holds your process, reflections and media."
+              }
+            ]
+          }
+        },
+        {
+          "id": "assessment-coach",
+          "q": "Can I get feedback before I hand in?",
+          "a": "Yes. **Assessment coach** reads your draft and adds notes on your own document, strand by strand against the MYP criteria. Your teacher still does the marking.",
+          "who": "student",
+          "keywords": [
+            "draft",
+            "check my work",
+            "before submitting",
+            "criteria",
+            "coach"
+          ],
+          "demo": {
+            "role": "student",
+            "path": "/assessment-coach",
+            "steps": [
+              {
+                "target": "text:Drop your lab report, essay or task|card",
+                "title": "Drop in a draft",
+                "body": "Upload or paste it, choose the criteria, and get notes on your own document."
+              }
+            ]
+          }
+        },
+        {
+          "id": "future-self",
+          "q": "What is Future Self?",
+          "a": "Pick a career and Refyn builds a three-year roadmap from your subjects and marks, including what to do this month.",
+          "who": "student",
+          "keywords": [
+            "career",
+            "future",
+            "roadmap",
+            "university",
+            "job"
+          ],
+          "video": {
+            "id": "students",
+            "from": 236,
+            "to": 266
+          },
+          "demo": {
+            "role": "student",
+            "path": "/intel/future-self",
+            "steps": [
+              {
+                "target": "run",
+                "title": "Build your roadmap",
+                "body": "Pick a career above, then press this.",
+                "hint": "Try it: choose Doctor, then build."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "teaching",
+      "title": "Teaching",
+      "blurb": "Classes, tasks, marking, planning and insights.",
+      "items": [
+        {
+          "id": "create-class",
+          "q": "How do I create a class?",
+          "a": "Open **Classes** and press **Create class**. Add a name and subject, then share the six-character join code; students join themselves.",
+          "who": "teacher",
+          "keywords": [
+            "new class",
+            "create",
+            "join code",
+            "add students",
+            "roster"
+          ],
+          "video": {
+            "id": "teachers",
+            "from": 254,
+            "to": 292
+          },
+          "demo": {
+            "role": "teacher",
+            "path": "/classes",
+            "steps": [
+              {
+                "target": "text:Create class",
+                "title": "Create a class",
+                "body": "Name it, pick the subject and share the join code."
+              }
+            ]
+          }
+        },
+        {
+          "id": "set-task",
+          "q": "How do I set an assignment?",
+          "a": "Open a class, go to **Assignments** and press **Set a task**. Add instructions, the task itself, resources, a due date and how it's marked, including MYP criteria with your own clarifications.",
+          "who": "teacher",
+          "keywords": [
+            "assignment",
+            "homework",
+            "task",
+            "set work",
+            "rubric",
+            "due date"
+          ],
+          "demo": {
+            "role": "teacher",
+            "path": "/task/new",
+            "steps": [
+              {
+                "target": "text:The basics|card",
+                "title": "The basics",
+                "body": "Pick the class, the due date and a title, then add instructions and how it's marked."
+              }
+            ]
+          }
+        },
+        {
+          "id": "ai-feedback",
+          "q": "How does AI-drafted feedback work?",
+          "a": "Open **Marking**, pick a submission and choose a tone. Refyn drafts feedback and a suggested mark from the student's own work. Edit it, set the mark and return it; nothing reaches the student until you do.",
+          "who": "teacher",
+          "keywords": [
+            "marking",
+            "feedback",
+            "grade",
+            "ai marking",
+            "draft",
+            "comments"
+          ],
+          "video": {
+            "id": "teachers",
+            "from": 292,
+            "to": 316
+          },
+          "demo": {
+            "role": "teacher",
+            "path": "/marking",
+            "steps": [
+              {
+                "target": "draft",
+                "dock": "left",
+                "title": "Draft with Refyn",
+                "body": "Pick a tone and Refyn writes feedback from this student's work.",
+                "hint": "Try it: click Encouraging."
+              }
+            ]
+          }
+        },
+        {
+          "id": "marking-keys",
+          "q": "Are there keyboard shortcuts for marking?",
+          "a": "Yes. J and K (or the arrow keys) move between students, F jumps to the feedback box, Alt+1 to 9 inserts a saved comment and Ctrl+Enter returns the work. Press ? to see them all.",
+          "who": "teacher",
+          "keywords": [
+            "shortcuts",
+            "keyboard",
+            "fast marking",
+            "hotkeys"
+          ],
+          "video": {
+            "id": "teachers",
+            "from": 292,
+            "to": 316
+          }
+        },
+        {
+          "id": "marking-copilot",
+          "q": "Can Refyn mark a whole class set?",
+          "a": "Yes. **Marking copilot** takes a stack of PDF or Word files and pre-marks each one against the MYP criteria and your clarifications. You moderate, approve and send.",
+          "who": "teacher",
+          "keywords": [
+            "bulk marking",
+            "class set",
+            "batch",
+            "copilot",
+            "pdf"
+          ],
+          "demo": {
+            "role": "teacher",
+            "path": "/marking-copilot",
+            "steps": [
+              {
+                "target": "text:New marking set",
+                "title": "New marking set",
+                "body": "Choose the subject and criteria, add your clarifications, then drop in the files."
+              }
+            ]
+          }
+        },
+        {
+          "id": "gradebook",
+          "q": "Where is the gradebook?",
+          "a": "**Gradebook** shows every student and every piece of work in one grid, with averages, hand-in rates and missing work. Export it to CSV whenever you need to.",
+          "who": "teacher",
+          "keywords": [
+            "gradebook",
+            "marks",
+            "spreadsheet",
+            "export",
+            "csv",
+            "grades"
+          ],
+          "demo": {
+            "role": "teacher",
+            "path": "/grades",
+            "steps": [
+              {
+                "target": "css:table",
+                "title": "One grid for the class",
+                "body": "Click any mark to open that piece of work."
+              }
+            ]
+          }
+        },
+        {
+          "id": "who-needs-help",
+          "q": "How do I see who needs help?",
+          "a": "On your Overview, the **Class galaxy** colours every student by how they're doing, and **Students to check on** lists missing work, falling marks and quiet spells, with the reason. **At-risk radar** looks across all your classes.",
+          "who": "teacher",
+          "keywords": [
+            "at risk",
+            "struggling",
+            "check in",
+            "missing work",
+            "galaxy",
+            "wellbeing"
+          ],
+          "video": {
+            "id": "teachers",
+            "from": 254,
+            "to": 292
+          },
+          "demo": {
+            "role": "teacher",
+            "path": "/dashboard",
+            "steps": [
+              {
+                "target": "galaxy",
+                "title": "Class galaxy",
+                "body": "Each moon is a student, coloured by how they're doing.",
+                "hint": "Try it: hover a red moon."
+              },
+              {
+                "target": "text:Students to check on|card",
+                "title": "Who to check on",
+                "body": "The reasons are spelled out, with a one-click message."
+              }
+            ]
+          }
+        },
+        {
+          "id": "planner",
+          "q": "Can Refyn plan my lessons?",
+          "a": "Yes. Describe the unit in **Planner** and Refyn drafts a full plan with objectives, lessons, activities and checks, which you can edit and save.",
+          "who": "teacher",
+          "keywords": [
+            "lesson plan",
+            "unit plan",
+            "scheme of work",
+            "planning",
+            "week"
+          ],
+          "video": {
+            "id": "teachers",
+            "from": 316,
+            "to": 338
+          },
+          "demo": {
+            "role": "teacher",
+            "path": "/teacher-plan-generator",
+            "steps": [
+              {
+                "target": "text:Plan Parameters|card",
+                "title": "Describe the plan",
+                "body": "Pick a subject, grade and length, say what to teach, then generate.",
+                "hint": "Try it: pick a subject and press Generate plan."
+              }
+            ]
+          }
+        },
+        {
+          "id": "teacher-mode",
+          "q": "Does the assistant give teachers complete answers?",
+          "a": "Yes. For teachers, Refyn works in teacher mode and writes complete materials, answers included: exit tickets, rubrics, worked solutions and more.",
+          "who": "teacher",
+          "keywords": [
+            "teacher mode",
+            "exit ticket",
+            "rubric",
+            "worksheet",
+            "resources"
+          ],
+          "video": {
+            "id": "teachers",
+            "from": 350,
+            "to": 406
+          },
+          "demo": {
+            "role": "teacher",
+            "path": "/ai-learning-assistant?prompt=Make%20a%203-question%20exit%20ticket%20on%20Newton's%20second%20law",
+            "steps": [
+              {
+                "target": "composer",
+                "dock": "left",
+                "title": "Ask for a resource",
+                "body": "We've typed a request. Press send to get the full exit ticket with answers."
+              }
+            ]
+          }
+        },
+        {
+          "id": "differentiate",
+          "q": "Can Refyn differentiate a lesson?",
+          "a": "Yes. In **Differentiate**, choose a class and a topic, and Refyn writes support, core and stretch versions for each student from their marks.",
+          "who": "teacher",
+          "keywords": [
+            "differentiation",
+            "support",
+            "stretch",
+            "sen",
+            "iep",
+            "mixed ability"
+          ],
+          "demo": {
+            "role": "teacher",
+            "path": "/intel/auto-iep",
+            "steps": [
+              {
+                "target": "run",
+                "title": "Differentiate",
+                "body": "Choose a class and a topic above, then press this.",
+                "hint": "Try it: choose MYP 4 Sciences."
+              }
+            ]
+          }
+        },
+        {
+          "id": "parent-briefs",
+          "q": "Can Refyn help with notes to parents?",
+          "a": "Yes. **Parent briefs** drafts a short note for each family: one win, one thing to grow and one way to help at home. Nothing is sent from Refyn; you copy or email it after checking.",
+          "who": "teacher",
+          "keywords": [
+            "parents",
+            "families",
+            "letter",
+            "email home",
+            "report"
+          ],
+          "demo": {
+            "role": "teacher",
+            "path": "/intel/parent-brief",
+            "steps": [
+              {
+                "target": "run",
+                "title": "Draft the notes",
+                "body": "Choose a class above, then press this."
+              }
+            ]
+          }
+        },
+        {
+          "id": "presentations",
+          "q": "Can Refyn make slides?",
+          "a": "Yes. In **Presentations**, describe the lesson and get designed slides with images and speaker notes. Edit them in Refyn or export to PowerPoint or PDF.",
+          "who": "teacher",
+          "keywords": [
+            "slides",
+            "powerpoint",
+            "presentation",
+            "deck",
+            "pptx"
+          ],
+          "demo": {
+            "role": "teacher",
+            "path": "/decks",
+            "steps": [
+              {
+                "target": "css:textarea",
+                "title": "Describe the lesson",
+                "body": "Say what it's about and who it's for; pick a theme and length."
+              }
+            ]
+          }
+        },
+        {
+          "id": "printables",
+          "q": "Can I make printable worksheets and tests?",
+          "a": "Schools with Refyn Studio have **Create printables**: choose a worksheet, test, exit ticket or flashcards, describe the topic and get a titled, timed and marked page, ready to print.",
+          "who": "teacher",
+          "keywords": [
+            "worksheet",
+            "print",
+            "test",
+            "studio",
+            "printables",
+            "paper"
+          ],
+          "video": {
+            "id": "teachers",
+            "from": 32,
+            "to": 122
+          }
+        },
+        {
+          "id": "diagrams",
+          "q": "How do I make a diagram?",
+          "a": "In Refyn Studio's **Diagram lab**, start from a template, like a lens ray diagram or a free-body diagram, or describe one, and Refyn draws it accurately, ready to add to a worksheet.",
+          "who": "teacher",
+          "keywords": [
+            "diagram",
+            "drawing",
+            "graph",
+            "studio",
+            "figure"
+          ],
+          "video": {
+            "id": "teachers",
+            "from": 122,
+            "to": 156
+          }
+        },
+        {
+          "id": "past-papers",
+          "q": "Can I use our school's past papers?",
+          "a": "Yes. Add past papers and mark schemes in **Past papers**, and Refyn cites them when it writes tests, revision and practice.",
+          "who": "teacher",
+          "keywords": [
+            "past papers",
+            "mark scheme",
+            "exam papers",
+            "revision"
+          ],
+          "demo": {
+            "role": "teacher",
+            "path": "/past-papers",
+            "steps": [
+              {
+                "title": "Past papers",
+                "body": "Add papers and mark schemes here; Refyn cites them in what it writes."
+              }
+            ]
+          }
+        },
+        {
+          "id": "class-timer",
+          "q": "Is there a class timer?",
+          "a": "Yes. **Class timer** is a full-screen countdown with calm visuals for silent work, tests or tidy-up time.",
+          "who": "teacher",
+          "keywords": [
+            "timer",
+            "countdown",
+            "clock",
+            "board"
+          ],
+          "demo": {
+            "role": "teacher",
+            "path": "/focus",
+            "steps": [
+              {
+                "title": "Class timer",
+                "body": "Pick a length and a scene, then press play. F goes full screen."
+              }
+            ]
+          }
+        },
+        {
+          "id": "ai-usage",
+          "q": "Can I see how my students use AI?",
+          "a": "Yes. **AI usage** shows each student's requests and usage this month, with quotas you can adjust.",
+          "who": "teacher",
+          "keywords": [
+            "usage",
+            "monitor",
+            "tokens",
+            "quota",
+            "how students use ai"
+          ],
+          "demo": {
+            "role": "teacher",
+            "path": "/ai-usage",
+            "steps": [
+              {
+                "title": "AI usage",
+                "body": "Requests and usage per student, with a quota button on each row."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "account",
+      "title": "Plans, accounts and safety",
+      "blurb": "Paying, limits, Google sign-in and how AI is kept safe.",
+      "items": [
+        {
+          "id": "cost",
+          "q": "How much does Refyn cost?",
+          "a": "Refyn has paid plans for individual students, for teachers and for whole schools. Choose **Get started** to see the plans and request access.",
+          "who": "everyone",
+          "keywords": [
+            "price",
+            "pricing",
+            "cost",
+            "pay",
+            "plans",
+            "free"
+          ]
+        },
+        {
+          "id": "ai-limit",
+          "q": "Is there a limit on AI use?",
+          "a": "Each plan includes a monthly AI allowance, shown at the top of the assistant. Schools can set their own limits too.",
+          "who": "everyone",
+          "keywords": [
+            "limit",
+            "allowance",
+            "tokens",
+            "credits",
+            "quota",
+            "run out"
+          ]
+        },
+        {
+          "id": "school-rules",
+          "q": "Can schools control how AI is used?",
+          "a": "Yes. School admins set AI rules for their school, such as blocked topics and usage limits, and teachers can see how their students use AI.",
+          "who": "everyone",
+          "keywords": [
+            "safety",
+            "rules",
+            "control",
+            "admin",
+            "blocked",
+            "moderation",
+            "safe"
+          ]
+        },
+        {
+          "id": "google",
+          "q": "Can I sign in with Google?",
+          "a": "If your account uses a school email, you can link it to Google from your Overview and use Google to sign in after that. Student ID accounts don't use Google.",
+          "who": "everyone",
+          "keywords": [
+            "google",
+            "sso",
+            "gmail",
+            "link account"
+          ]
+        }
+      ]
+    }
+  ]
+}

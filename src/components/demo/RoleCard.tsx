@@ -10,7 +10,8 @@ import { TOURS } from "@/demo/tours";
 const RoleCard: React.FC<{ role: DemoRole; variant?: "demo" | "tour"; className?: string }> = ({ role, variant = "demo", className }) => {
   const info = ROLE_INFO[role];
   const spot = useSpotlight();
-  const steps = TOURS[role];
+  const chapters = TOURS[role];
+  const stops = chapters.reduce((n, c) => n + c.steps.length, 0);
 
   return (
     <article
@@ -42,14 +43,21 @@ const RoleCard: React.FC<{ role: DemoRole; variant?: "demo" | "tour"; className?
             ))}
           </ul>
         ) : (
-          <ol className="mt-5 grid gap-x-5 gap-y-2 sm:grid-cols-2">
-            {steps.map((s, i) => (
-              <li key={s.title} className="flex gap-2.5 text-[14px] leading-snug text-lp-text">
-                <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-lp-line text-[11px] tabular-nums text-lp-sky">{i + 1}</span>
-                {s.title}
-              </li>
-            ))}
-          </ol>
+          <>
+            <p className="mt-5 text-[12.5px] font-medium uppercase tracking-[0.16em] text-lp-mute">
+              {chapters.length} chapters · {stops} stops · skip to any chapter
+            </p>
+            <ol className="mt-3 grid gap-x-5 gap-y-2 sm:grid-cols-2">
+              {chapters.map((c, i) => (
+                <li key={c.title} className="flex gap-2.5 text-[14px] leading-snug text-lp-text">
+                  <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-lp-line text-[11px] tabular-nums text-lp-sky">{i + 1}</span>
+                  <span>
+                    {c.title} <span className="text-lp-mute">· {c.steps.length}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </>
         )}
 
         <div className="mt-auto flex flex-wrap items-center gap-x-6 gap-y-3 pt-7">

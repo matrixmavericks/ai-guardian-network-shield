@@ -1,54 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { GraduationCap, Play, School } from "lucide-react";
-import type HlsType from "hls.js";
 import { cn } from "@/lib/utils";
 import { useNear } from "@/components/landing/three/scroll";
+import { useWalkthrough } from "./useWalkthrough";
+import { VIDEOS, type Video } from "./walkthroughs";
 
-// The two recorded walkthroughs, with chapters you can jump between. They're
-// streamed in short pieces (HLS, public/media/videos/<id>/hls) because the host
-// doesn't answer byte-range requests, which seeking needs and Safari requires.
-
-type Chapter = { at: number; title: string; sub: string };
-type Video = { id: "students" | "teachers"; label: string; length: string; chapters: Chapter[] };
-
-const VIDEOS: Video[] = [
-  {
-    id: "students",
-    label: "For students",
-    length: "4 min 40 s",
-    chapters: [
-      { at: 0, title: "Getting started", sub: "Signing in, your overview and search" },
-      { at: 36, title: "Your AI tutor", sub: "Guided help that makes you think" },
-      { at: 84, title: "My subjects", sub: "Choose your subjects and study by topic" },
-      { at: 144, title: "Learning paths", sub: "Step-by-step routes through a topic" },
-      { at: 176, title: "Classes and assignments", sub: "Join a class and see what's due" },
-      { at: 192, title: "Grades", sub: "Marks and goals for every subject" },
-      { at: 210, title: "Portfolio", sub: "Projects that show what you can do" },
-      { at: 226, title: "Messages", sub: "Chat with your teachers and classmates" },
-      { at: 236, title: "Refyn Intelligence", sub: "Replay your thinking and plan ahead" },
-      { at: 266, title: "Your way", sub: "Light or dark, and your settings" },
-    ],
-  },
-  {
-    id: "teachers",
-    label: "For teachers",
-    length: "7 min",
-    chapters: [
-      { at: 0, title: "Your Studio", sub: "Where you land every morning" },
-      { at: 32, title: "Printables", sub: "Worksheets, tests and exit tickets, ready to print" },
-      { at: 122, title: "Diagram lab", sub: "Accurate diagrams from a description" },
-      { at: 156, title: "Your toolkit", sub: "Subject tools like the lab procedure designer" },
-      { at: 188, title: "Library", sub: "Everything you've made, searchable" },
-      { at: 202, title: "Every subject", sub: "Ideas and tools for each subject" },
-      { at: 254, title: "Your classes", sub: "Hand-in queue, check-ins and class pulse" },
-      { at: 292, title: "Marking", sub: "Keyboard-fast marking with saved comments" },
-      { at: 316, title: "Planning", sub: "A full week's plan in one go" },
-      { at: 338, title: "Your students", sub: "Messages with students and colleagues" },
-      { at: 350, title: "AI and insights", sub: "Ask Refyn anything" },
-      { at: 406, title: "Tell us", sub: "Send feedback straight from your Studio" },
-    ],
-  },
-];
+// The two recorded walkthroughs, with chapters you can jump between.
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
@@ -59,10 +16,6 @@ const VideoWalkthrough: React.FC<{ initial?: Video["id"] }> = ({ initial = "stud
   const box = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
   const near = useNear(box, "60% 0px");
-  const hls = useRef<HlsType | null>(null);
-  const ready = useRef(false);
-  const streaming = useRef(false);
-  const pending = useRef<number | null>(null);
   const [time, setTime] = useState(0);
   const [started, setStarted] = useState(false);
   const active = video.chapters.reduce((a, c, i) => (time >= c.at ? i : a), 0);
@@ -81,68 +34,15 @@ const VideoWalkthrough: React.FC<{ initial?: Video["id"] }> = ({ initial = "stud
     if (top < ol.scrollTop || top + li.offsetHeight > ol.scrollTop + ol.clientHeight) ol.scrollTo({ top: top - 8, behavior: "smooth" });
   }, [active, started]);
 
-  /** Play from `at` (or from where it is). Stays synchronous when it can, so phones count it as the tap that started playback. */
+  // The stream gets ready once the player is close to the screen (just the playlist; pieces load on play)
+  const stream = useWalkthrough(player, video.id, near);
   const start = (at: number | null) => {
-    const v = player.current;
-    if (!v) return;
     setStarted(true);
     if (at !== null) setTime(at);
-    if (!ready.current) {
-      pending.current = at ?? 0;
-      return;
-    }
-    if (at !== null) v.currentTime = at;
-    if (hls.current && !streaming.current) {
-      streaming.current = true;
-      hls.current.startLoad(at ?? v.currentTime);
-    }
-    void v.play().catch(() => {});
+    stream(at);
   };
   const play = () => start(null);
   const jump = (at: number) => start(at);
-
-  // Get the stream ready once the player is close to the screen (just the playlist; pieces load on play)
-  useEffect(() => {
-    const v = player.current;
-    if (!near || !v) return;
-    let cancelled = false;
-    const src = `/media/videos/${video.id}/hls/index.m3u8`;
-    const go = () => {
-      ready.current = true;
-      if (pending.current !== null) {
-        const at = pending.current;
-        pending.current = null;
-        start(at);
-      }
-    };
-    (async () => {
-      try {
-        const { default: Hls } = await import("hls.js");
-        if (cancelled) return;
-        if (Hls.isSupported()) {
-          const h = new Hls({ autoStartLoad: false, maxBufferLength: 30 });
-          hls.current = h;
-          h.on(Hls.Events.MANIFEST_PARSED, go);
-          h.loadSource(src);
-          h.attachMedia(v);
-          return;
-        }
-      } catch {
-        /* fall back to the browser's own player */
-      }
-      if (cancelled) return;
-      v.src = v.canPlayType("application/vnd.apple.mpegurl") ? src : `/media/videos/${video.id}.mp4`;
-      go();
-    })();
-    return () => {
-      cancelled = true;
-      hls.current?.destroy();
-      hls.current = null;
-      ready.current = false;
-      streaming.current = false;
-      pending.current = null;
-    };
-  }, [near, video.id]);
 
   return (
     <div>

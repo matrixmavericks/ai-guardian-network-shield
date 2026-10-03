@@ -502,7 +502,7 @@ const StudentDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setTab} className="mt-8">
-        <TabsList className="lp-fade h-auto w-full justify-start gap-1 overflow-x-auto rounded-2xl border border-lp-line bg-lp-surface/60 p-1.5 [scrollbar-width:none]" style={{ animationDelay: '60ms', animationFillMode: 'both' }}>
+        <TabsList data-tour="dash-tabs" className="lp-fade h-auto w-full justify-start gap-1 overflow-x-auto rounded-2xl border border-lp-line bg-lp-surface/60 p-1.5 [scrollbar-width:none]" style={{ animationDelay: '60ms', animationFillMode: 'both' }}>
           {TABS.map(t => {
             const Icon = t.icon;
             return (

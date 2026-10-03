@@ -1276,6 +1276,7 @@ const StudentInterface = () => {
               type="button"
               role="switch"
               aria-checked={isProcessTeaching}
+              data-tour="guided"
               onClick={() => setIsProcessTeaching(v => !v)}
               title={isProcessTeaching ? "Guided mode: Refyn helps you work it out" : "Direct mode: clear, detailed explanations"}
               className={cn(
@@ -1295,6 +1296,7 @@ const StudentInterface = () => {
               type="button"
               role="switch"
               aria-checked={useLive}
+              data-tour="context"
               onClick={() => setUseLive(!useLive)}
               title={useLive
                 ? (teacherMode ? "Refyn can see your classes, assignments and marking queue. Click to turn off." : "Refyn can see your classes, deadlines and grades. Click to turn off.")

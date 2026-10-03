@@ -106,6 +106,7 @@ const LearnerProfilePortfolioPage = page(() => import('./pages/intelligence/Lear
 const RecipeMarketplacePage = page(() => import('./pages/RecipeMarketplacePage'));
 const DemoPage = page(() => import('./pages/DemoPage'));
 const TourPage = page(() => import('./pages/TourPage'));
+const HelpPage = page(() => import('./pages/HelpPage'));
 const StudioHome = page(() => import('./pages/studio/StudioHome'));
 const PrintableMaker = page(() => import('./pages/studio/PrintableMaker'));
 const DiagramLab = page(() => import('./pages/studio/DiagramLab'));
@@ -171,7 +172,7 @@ const DemoLayer = lazy(() => import('./demo/DemoLayer'));
 const PREFETCH: Record<string, Page[]> = {
   student: [StudentDashboard, StudentInterface, MyCoursesPage, SubjectPage, TopicPage, GradesPage, ClassesPage, SimsPage, SimPage, FocusPage],
   teacher: [TeacherDashboard, MarkingPage, ClassesPage, ClassDetailPage, StudentInterface, GradesPage, SimsPage, FocusPage],
-  visitor: [DemoPage, TourPage],
+  visitor: [DemoPage, TourPage, HelpPage],
 };
 const Prefetch = () => {
   const { user, isLoading } = useAuth();
@@ -237,6 +238,7 @@ function App() {
           <Route path="/" element={IN_ANDROID_APP ? <Navigate to="/login" replace /> : <Index />} />
           <Route path="/demo" element={<DemoPage />} />
           <Route path="/tour" element={<TourPage />} />
+          <Route path="/help" element={<HelpPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route path="/signup" element={<Signup />} />

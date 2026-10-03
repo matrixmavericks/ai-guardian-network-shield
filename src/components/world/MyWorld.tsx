@@ -140,7 +140,7 @@ const MyWorld: React.FC = () => {
   if (!buildings.length) return null;
   const hovered = rows.find((r) => r.slug === hover);
   const goalCard = goal ? (
-    <div className="fx-glass pointer-events-auto max-w-[22rem] rounded-2xl p-4">
+    <div data-tour="next-floor" className="fx-glass pointer-events-auto max-w-[22rem] rounded-2xl p-4">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">Next floor</p>
       <p className="mt-1 text-[15px] font-medium leading-snug text-white">
         Take the {SHORT[goal.slug]} {BUILDING[goal.slug]} from {goal.progress}% to {goal.next}%

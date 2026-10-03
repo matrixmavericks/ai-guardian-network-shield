@@ -208,7 +208,9 @@ export const BrainCanvas = forwardRef<BrainHandle, Props>(function BrainCanvas({
     const stars = Array.from({ length: 140 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.2 + 0.2, p: Math.random() * Math.PI * 2 }));
     const still = reduced();
     const resize = () => {
-      const el = wrap.current!;
+      // The observer can fire once more as the page unmounts
+      const el = wrap.current;
+      if (!el) return;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       size.current = { w: el.clientWidth, h: el.clientHeight, dpr };
       cv.width = Math.round(el.clientWidth * dpr);
