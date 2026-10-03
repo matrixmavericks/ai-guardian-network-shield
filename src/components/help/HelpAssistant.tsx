@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowUp, Bot, Loader2, MousePointerClick, PlayCircle, Sparkles, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { confidentMatch, matchHelp } from "@/help/match";
@@ -10,6 +11,30 @@ import type { HelpData, HelpItem } from "@/help/types";
 // FAQ, capped per visitor) for anything else.
 
 type Msg = { role: "user" | "assistant"; text: string; items?: HelpItem[]; kind?: "instant" | "ai" | "fallback" };
+
+const PAGE_NAMES: Record<string, string> = { "/demo": "the live demo", "/tour": "the guided tour", "/register": "Get started", "/help": "the help centre" };
+
+/**
+ * Replies can point to /demo, /tour, /register or /help, either as
+ * [label](/path) or as a bare path (often in brackets): make those links.
+ */
+const Reply: React.FC<{ text: string }> = ({ text }) => (
+  <>
+    {text.split(/(\[[^\]]+\]\(\/(?:demo|tour|register|help)[^)]*\)|\(?\/(?:demo|tour|register|help)(?:#[\w-]+)?\)?)/g).map((part, i) => {
+      if (i % 2 === 0) return <Rich key={i} text={part} />;
+      const md = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+      const to = md ? md[2] : part.replace(/[()]/g, "");
+      const label = md ? md[1] : PAGE_NAMES[to.split("#")[0]] ?? to;
+      // A bare "(/demo)" after the page's name adds nothing but the link
+      const bare = !md && part.startsWith("(");
+      return (
+        <Link key={i} to={to} className="font-medium text-lp-sky underline-offset-2 hover:underline">
+          {bare ? "↗" : label}
+        </Link>
+      );
+    })}
+  </>
+);
 
 const FN = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/help-assistant`;
 const SUGGEST = ["How do I join a class?", "Will it just give students the answers?", "How does AI marking work?", "Can I try it without an account?"];
@@ -126,7 +151,7 @@ const HelpAssistant: React.FC<{ data: HelpData | null; onWatch: (i: HelpItem) =>
                 </p>
               )}
               <p className="whitespace-pre-line">
-                <Rich text={m.text} />
+                <Reply text={m.text} />
               </p>
               {!!m.items?.length && (
                 <div className="mt-2.5 space-y-2">
