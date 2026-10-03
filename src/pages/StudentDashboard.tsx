@@ -33,6 +33,7 @@ import SkyHero, { skyBtn, skyChip } from '@/components/portal/SkyHero';
 import { skyMood } from '@/components/portal/sky';
 import { streak, useStudy } from '@/components/subjects/store';
 import { todayStats, useFocus } from '@/components/focus/store';
+import MyWorld from '@/components/world/MyWorld';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 interface ClassAssignment {
@@ -524,6 +525,7 @@ const StudentDashboard = () => {
 
         {/* ═══════════ OVERVIEW ═══════════ */}
         <TabsContent value="overview" className="mt-6 space-y-5 focus-visible:ring-0">
+          <MyWorld />
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
             {/* This week */}
             <Panel delay={80} className="p-6 sm:p-7 lg:col-span-7">

@@ -51,8 +51,14 @@ export const usePinnedProgress = (ref: React.RefObject<HTMLElement>, onProgress:
 /** True once the element has come within `margin` of the viewport (stays true). */
 export const useNear = (ref: React.RefObject<HTMLElement>, margin = "150% 0px") => {
   const [near, setNear] = useState(false);
+  // Pick up the element whenever it appears (components may render nothing until their data loads)
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  // Runs after every render on purpose; it only sets state when the element changes, so it can't loop
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const el = ref.current;
+    if (ref.current !== el) setEl(ref.current);
+  });
+  useEffect(() => {
     if (!el || near) return;
     if (!("IntersectionObserver" in window)) return setNear(true);
     const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: margin });
@@ -69,7 +75,7 @@ export const useNear = (ref: React.RefObject<HTMLElement>, margin = "150% 0px") 
       io.disconnect();
       window.removeEventListener("scroll", check);
     };
-  }, [ref, margin, near]);
+  }, [el, margin, near]);
   return near;
 };
 

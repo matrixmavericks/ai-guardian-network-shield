@@ -31,6 +31,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import SkyHero, { skyBtn } from "@/components/portal/SkyHero";
 import { skyMood } from "@/components/portal/sky";
+import ClassGalaxy from "@/components/world/ClassGalaxy";
 import { StudyShell, primaryBtn } from "@/components/subjects/kit";
 import { EmptyState, Panel, PanelHead, Ring, chip, ghostBtn, useCountUp } from "@/components/student/ui";
 import { Sparkline } from "@/components/grades/parts";
@@ -249,6 +250,10 @@ const TeacherDashboard = () => {
           ))}
         </div>
       </form>
+
+      <div className="lp-fade mt-6" style={{ animationDelay: "80ms", animationFillMode: "both" }}>
+        <ClassGalaxy data={data} />
+      </div>
 
       {/* KPIs */}
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
