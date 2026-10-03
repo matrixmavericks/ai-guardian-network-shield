@@ -8,6 +8,9 @@ import ProductShowcase from "@/components/landing/ProductShowcase";
 import NetworkSection from "@/components/landing/NetworkSection";
 import ClosingCta from "@/components/landing/ClosingCta";
 import LandingFooter from "@/components/landing/LandingFooter";
+import DiveSection from "@/components/landing/three/DiveSection";
+import ThoughtParticles from "@/components/landing/three/ThoughtParticles";
+import WorldsIsland from "@/components/landing/three/WorldsIsland";
 import { useReveal } from "@/components/landing/primitives";
 
 const Index = () => {
@@ -19,9 +22,12 @@ const Index = () => {
       <LandingNav />
       <main>
         <Hero />
+        <DiveSection />
         <WhySection />
+        <ThoughtParticles />
         <HowItWorks />
         <ClassroomSection />
+        <WorldsIsland />
         <ProductShowcase />
         <NetworkSection />
         <ClosingCta />

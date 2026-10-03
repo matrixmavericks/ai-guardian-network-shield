@@ -1,9 +1,12 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
+import horizon from "@/assets/landing/cta-horizon.webp";
 import { Container, GlowButton, QuietLink } from "./primitives";
 
 const ClosingCta = () => (
   <section aria-labelledby="cta-title" className="relative overflow-hidden border-t border-lp-line">
+    <img src={horizon} alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover object-[60%_50%] opacity-80" />
+    <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-lp-bg via-lp-bg/30 to-lp-bg" />
     <div
       aria-hidden
       className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60 blur-[120px]"

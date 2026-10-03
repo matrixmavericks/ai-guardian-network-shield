@@ -1,6 +1,6 @@
 import React from "react";
-import teacherGroup from "@/assets/photos/teacher-group.webp";
-import studentPresenting from "@/assets/photos/student-presenting.jpg";
+import teacherGroup from "@/assets/landing/teacher-loop.webp";
+import studentPresenting from "@/assets/landing/student-presenting.webp";
 import { cn } from "@/lib/utils";
 import { Container, Eyebrow, SectionTitle } from "./primitives";
 
@@ -53,23 +53,23 @@ const ClassroomSection = () => (
       <div className="mt-12 grid grid-cols-1 gap-5 lg:mt-14 lg:grid-cols-12">
         <PhotoCard
           src={teacherGroup}
-          alt="A teacher working with a small group of students around a table"
-          width={900}
-          height={514}
+          alt="Illustration: a teacher talks a group of students through their work on laptops"
+          width={1344}
+          height={752}
           title="Teachers stay in the loop"
           body="See how AI is being used in each class, and step in where a student needs a nudge."
           className="aspect-[4/3] sm:aspect-[16/10] lg:col-span-7 lg:aspect-auto lg:h-[360px]"
-          imgClassName="object-[50%_80%]"
+          imgClassName="object-[50%_40%]"
         />
         <PhotoCard
           src={studentPresenting}
-          alt="A student presenting his work to the class"
-          width={474}
-          height={316}
+          alt="Illustration: a student presents a solar system project to the class"
+          width={1168}
+          height={880}
           title="Students show their own work"
           body="Capstones and portfolios give every student something real to present."
           className="aspect-[4/3] lg:col-span-5 lg:aspect-auto lg:h-[360px]"
-          imgClassName="object-[60%_50%]"
+          imgClassName="object-[50%_35%]"
           delay={100}
         />
       </div>

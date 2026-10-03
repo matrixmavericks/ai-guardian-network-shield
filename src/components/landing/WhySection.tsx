@@ -1,6 +1,6 @@
 import React from "react";
 import { Sparkles } from "lucide-react";
-import studentAi from "@/assets/photos/student-ai.jpg";
+import studentAi from "@/assets/landing/why-ai-essay.webp";
 import { Container, Eyebrow, SectionTitle, useSpotlight } from "./primitives";
 
 const rewrites = [
@@ -113,9 +113,9 @@ const WhySection = () => (
           <figure className="lp-reveal group relative overflow-hidden rounded-3xl border border-lp-line">
             <img
               src={studentAi}
-              alt="A student using ChatGPT on a laptop in class"
-              width={830}
-              height={468}
+              alt="Illustration: late at night, a chatbot writes a whole essay on a student's laptop"
+              width={1344}
+              height={752}
               loading="lazy"
               className="aspect-[16/10] w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
             />
