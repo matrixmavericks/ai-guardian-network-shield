@@ -160,7 +160,7 @@ export const SimShell: React.FC<{
             </div>
             {below}
           </div>
-          <aside className="flex min-h-0 flex-col border-t border-lp-line/60 lg:border-l lg:border-t-0">
+          <aside data-tour="sim-controls" className="flex min-h-0 flex-col border-t border-lp-line/60 lg:border-l lg:border-t-0">
             <div role="tablist" className="flex shrink-0 gap-1 overflow-x-auto border-b border-lp-line/60 px-3 py-2">
               {tabs.map((t) => (
                 <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={cn("inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-[13px] transition-colors", tab === t.id ? "bg-lp-raised text-white" : "text-lp-mute hover:text-white")}>

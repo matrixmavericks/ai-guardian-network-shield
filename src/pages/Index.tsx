@@ -12,9 +12,11 @@ import DiveSection from "@/components/landing/three/DiveSection";
 import ThoughtParticles from "@/components/landing/three/ThoughtParticles";
 import WorldsIsland from "@/components/landing/three/WorldsIsland";
 import { useReveal } from "@/components/landing/primitives";
+import { useSmoothScroll } from "@/components/landing/useSmoothScroll";
 
 const Index = () => {
   useReveal();
+  useSmoothScroll();
 
   return (
     // `relative z-[1]` lifts the page above the app's fixed grain/glow layers

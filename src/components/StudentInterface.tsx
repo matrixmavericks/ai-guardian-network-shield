@@ -1106,7 +1106,7 @@ const StudentInterface = () => {
         </div>
       )}
 
-      <div className="lp-pop rounded-[26px] border border-lp-line bg-lp-surface/90 p-2 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl transition-[border-color,box-shadow] focus-within:border-lp-blue/60 focus-within:shadow-[0_0_0_4px_rgba(59,130,246,0.12),0_20px_60px_-30px_rgba(0,0,0,0.9)]">
+      <div data-tour="composer" className="lp-pop rounded-[26px] border border-lp-line bg-lp-surface/90 p-2 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl transition-[border-color,box-shadow] focus-within:border-lp-blue/60 focus-within:shadow-[0_0_0_4px_rgba(59,130,246,0.12),0_20px_60px_-30px_rgba(0,0,0,0.9)]">
         {lib.uploads.length > 0 && (
           <div className="flex flex-wrap gap-1.5 px-1.5 pt-1.5">
             {lib.uploads.map(u => {

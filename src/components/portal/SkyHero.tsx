@@ -25,6 +25,7 @@ const SkyHero: React.FC<{
   const make = useMemo(() => makeSky(hour), [hour]);
   return (
     <header
+      data-tour="hero"
       className={cn(
         "sky-hero lp-keep lp-fade relative flex min-h-[230px] flex-col justify-end overflow-hidden rounded-[28px] border border-white/10 bg-[#0a1530] shadow-[0_30px_80px_-40px_rgba(2,6,23,0.9)] sm:min-h-[260px]",
         className,

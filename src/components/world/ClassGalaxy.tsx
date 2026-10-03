@@ -99,7 +99,7 @@ const ClassGalaxy: React.FC<{ data: TeacherData }> = ({ data }) => {
   if (!planets.length) return null;
 
   return (
-    <section ref={wrap} aria-labelledby="galaxy-title" className="lp-keep relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(ellipse_at_50%_30%,#0e1d44,#03060f_70%)] text-white">
+    <section ref={wrap} data-tour="galaxy" aria-labelledby="galaxy-title" className="lp-keep relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(ellipse_at_50%_30%,#0e1d44,#03060f_70%)] text-white">
       <div className="relative h-[640px] sm:h-[460px]">
         <canvas
           ref={canvas}

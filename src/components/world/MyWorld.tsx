@@ -157,6 +157,7 @@ const MyWorld: React.FC = () => {
   return (
     <section
       ref={wrap}
+      data-tour="world"
       aria-labelledby="world-title"
       className={cn(
         "lp-keep overflow-hidden border border-white/10 bg-[#050b1c] text-white shadow-[0_30px_80px_-40px_rgba(2,6,23,0.9)]",

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import { toLoginEmail } from "@/lib/studentIds";
 import { consentReturnPath } from "@/lib/oauthReturn";
+import { demoUser, exitDemo } from "@/demo/session";
 
 interface AuthUser {
   id: string;
@@ -315,9 +316,11 @@ async function buildAuthUser(supabaseUser: User): Promise<AuthUser> {
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  // In the live demo the user is made up and the backend is in memory (see src/demo)
+  const [demo] = useState(demoUser);
+  const [user, setUser] = useState<AuthUser | null>(demo);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!demo);
 
   const syncAuthState = async (nextSession: Session | null) => {
     setSession(nextSession);
@@ -337,6 +340,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    if (demo) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, newSession) => {
       void syncAuthState(newSession).finally(() => {
         setIsLoading(false);
@@ -353,6 +357,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const handleLogout = async () => {
+    if (demo) return exitDemo();
     try {
       await supabase.auth.signOut();
     } catch (error) {

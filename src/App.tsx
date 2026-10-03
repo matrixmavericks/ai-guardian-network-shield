@@ -1,114 +1,118 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect, useLayoutEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import Dashboard from './pages/Dashboard';
-import StudentDashboard from './pages/StudentDashboard';
-import StudentInterface from './components/StudentInterface';
-import GradesPage from './pages/GradesPage';
-import SecurityKeysPage from './pages/SecurityKeysPage';
 import Login from './pages/Login';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
-import Signup from './pages/Signup';
-import Register from './pages/Register';
-import LearningPathsPage from './pages/LearningPathsPage';
-import LearningPathDetail from './pages/LearningPathDetail';
-import TeacherPlanGenerator from './components/TeacherPlanGenerator';
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
-import MarkingPage from './pages/teacher/MarkingPage';
-import UserManagement from './components/UserManagement';
-import MessagesPage from './pages/MessagesPage';
-import SettingsPage from './pages/SettingsPage';
-import CreateLearningPathPage from './pages/CreateLearningPathPage';
-import ParentDashboard from './pages/ParentDashboard';
-import AdminMonitoring from './pages/AdminMonitoring';
-import AIConfigurationPage from './pages/AIConfigurationPage';
-import ModelTrainingPage from './pages/ModelTrainingPage';
-import ClassesPage from './pages/ClassesPage';
-import ClassDetailPage from './pages/ClassDetailPage';
-import AIUsagePage from './pages/AIUsagePage';
-import PortfolioPage from './pages/PortfolioPage';
-import PortfolioProjectPage from './pages/PortfolioProjectPage';
-import SharedPortfolioPage from './pages/SharedPortfolioPage';
-import TeacherPortfolioReviewPage from './pages/TeacherPortfolioReviewPage';
-import AdminOverviewPage from './pages/AdminOverviewPage';
-import SchoolManagementPage from './pages/SchoolManagementPage';
-import RegistrationRequestsPage from './pages/RegistrationRequestsPage';
-import PlatformWorkflowPage from './pages/PlatformWorkflowPage';
-import SchoolRoutes from './pages/SchoolRoutes';
-import ContentLibraryPage from './pages/ContentLibraryPage';
-import MyCoursesPage from './pages/MyCoursesPage';
-import DecksPage from './pages/DecksPage';
-import PastPapersPage from './pages/PastPapersPage';
-import PersonalProjectPage from './pages/PersonalProjectPage';
-import AssessmentCoachPage from './pages/AssessmentCoachPage';
-import MarkingCopilotPage from './pages/MarkingCopilotPage';
-import TaskPage from './pages/TaskPage';
-import TaskEditorPage from './pages/TaskEditorPage';
-import ProgressPage from './pages/ProgressPage';
-import BrainPage from './pages/BrainPage';
-import GemsPage from './pages/GemsPage';
-import GemPage from './pages/GemPage';
-import GemBuilderPage from './pages/GemBuilderPage';
-import WorldsPage from './pages/WorldsPage';
-import WorldPage from './pages/WorldPage';
-import ScenePage from './pages/ScenePage';
-import SimsPage from './pages/SimsPage';
-import SimPage from './pages/SimPage';
-import FocusPage from './pages/FocusPage';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as Sonner } from './components/ui/sonner';
 import AppAccountNotice from './components/AppAccountNotice';
 import { IN_ANDROID_APP } from './lib/appShell';
-import CourseStudyPage from './pages/CourseStudyPage';
-import CreateCoursePage from './pages/CreateCoursePage';
-import SubjectPage from './pages/subjects/SubjectPage';
-import SubjectTool from './pages/subjects/SubjectTool';
-import DocViewer from './pages/subjects/DocViewer';
-import LessonPlayer from './pages/subjects/LessonPlayer';
-import TopicPage from './pages/subjects/TopicPage';
-import PayPage from './pages/PayPage';
-import CheckoutReturn from './pages/CheckoutReturn';
-import PlatformDocsPage from './pages/PlatformDocsPage';
-import PilotAnalysisPage from './pages/PilotAnalysisPage';
-import PilotMahindraConsole from './pages/PilotMahindraConsole';
-import PilotMahindraReport from './pages/PilotMahindraReport';
-import PilotStudentImportPage from './pages/PilotStudentImportPage';
-import PilotStudentIdsPage from './pages/PilotStudentIdsPage';
-import CreateUserAccountPage from './pages/CreateUserAccountPage';
-import SecurityOverviewPage from './pages/SecurityOverviewPage';
-import LegalDocPage from './pages/LegalDocPage';
-import LegalAdminPage from './pages/LegalAdminPage';
-import SourceCodeDownloadPage from './pages/SourceCodeDownloadPage';
-import ProjectNeloAdminPage from './pages/ProjectNeloAdminPage';
-import ProjectNeloPublicPage from './pages/ProjectNeloPublicPage';
-import ThinkingReplayPage from './pages/intelligence/ThinkingReplayPage';
-import FutureSelfPage from './pages/intelligence/FutureSelfPage';
-import PeerComparePage from './pages/intelligence/PeerComparePage';
-import AutoIEPPage from './pages/intelligence/AutoIEPPage';
-import CurriculumConflictPage from './pages/intelligence/CurriculumConflictPage';
-import ParentBriefPage from './pages/intelligence/ParentBriefPage';
-import AtRiskRadarPage from './pages/intelligence/AtRiskRadarPage';
-import PolicySandboxPage from './pages/intelligence/PolicySandboxPage';
-import BudgetOptimizerPage from './pages/intelligence/BudgetOptimizerPage';
-import RefynGraphPage from './pages/intelligence/RefynGraphPage';
-import IBStandardsMapperPage from './pages/intelligence/IBStandardsMapperPage';
-import SubjectLabsPage from './pages/intelligence/SubjectLabsPage';
-import PYPUnitGeneratorPage from './pages/intelligence/PYPUnitGeneratorPage';
-import LearnerProfilePortfolioPage from './pages/intelligence/LearnerProfilePortfolioPage';
-import RecipeMarketplacePage from './pages/RecipeMarketplacePage';
-import DemoShowcasePage from './pages/DemoShowcasePage';
-import GuidedTourPage from './pages/GuidedTourPage';
-import StudioHome from './pages/studio/StudioHome';
-import PrintableMaker from './pages/studio/PrintableMaker';
-import DiagramLab from './pages/studio/DiagramLab';
-import StudioToolPage from './pages/studio/StudioToolPage';
-import StudioLibrary from './pages/studio/StudioLibrary';
-import PrimaryPlayground from './pages/PrimaryPlayground';
 import { getStudioConfig } from './lib/mispStudioConfigs';
 import { getPrimaryConfig } from './lib/mispPrimaryConfig';
-import OAuthConsent from './pages/OAuthConsent';
+import { page, type Page } from './lib/lazyPage';
+import { demoRole, DEMO_HOME } from './demo/session';
+
+// Pages load on first visit (see lib/lazyPage)
+const Dashboard = page(() => import('./pages/Dashboard'));
+const StudentDashboard = page(() => import('./pages/StudentDashboard'));
+const StudentInterface = page(() => import('./components/StudentInterface'));
+const GradesPage = page(() => import('./pages/GradesPage'));
+const SecurityKeysPage = page(() => import('./pages/SecurityKeysPage'));
+const Signup = page(() => import('./pages/Signup'));
+const Register = page(() => import('./pages/Register'));
+const LearningPathsPage = page(() => import('./pages/LearningPathsPage'));
+const LearningPathDetail = page(() => import('./pages/LearningPathDetail'));
+const TeacherPlanGenerator = page(() => import('./components/TeacherPlanGenerator'));
+const TeacherDashboard = page(() => import('./pages/teacher/TeacherDashboard'));
+const MarkingPage = page(() => import('./pages/teacher/MarkingPage'));
+const UserManagement = page(() => import('./components/UserManagement'));
+const MessagesPage = page(() => import('./pages/MessagesPage'));
+const SettingsPage = page(() => import('./pages/SettingsPage'));
+const CreateLearningPathPage = page(() => import('./pages/CreateLearningPathPage'));
+const ParentDashboard = page(() => import('./pages/ParentDashboard'));
+const AdminMonitoring = page(() => import('./pages/AdminMonitoring'));
+const AIConfigurationPage = page(() => import('./pages/AIConfigurationPage'));
+const ModelTrainingPage = page(() => import('./pages/ModelTrainingPage'));
+const ClassesPage = page(() => import('./pages/ClassesPage'));
+const ClassDetailPage = page(() => import('./pages/ClassDetailPage'));
+const AIUsagePage = page(() => import('./pages/AIUsagePage'));
+const PortfolioPage = page(() => import('./pages/PortfolioPage'));
+const PortfolioProjectPage = page(() => import('./pages/PortfolioProjectPage'));
+const SharedPortfolioPage = page(() => import('./pages/SharedPortfolioPage'));
+const TeacherPortfolioReviewPage = page(() => import('./pages/TeacherPortfolioReviewPage'));
+const AdminOverviewPage = page(() => import('./pages/AdminOverviewPage'));
+const SchoolManagementPage = page(() => import('./pages/SchoolManagementPage'));
+const RegistrationRequestsPage = page(() => import('./pages/RegistrationRequestsPage'));
+const PlatformWorkflowPage = page(() => import('./pages/PlatformWorkflowPage'));
+const SchoolRoutes = page(() => import('./pages/SchoolRoutes'));
+const ContentLibraryPage = page(() => import('./pages/ContentLibraryPage'));
+const MyCoursesPage = page(() => import('./pages/MyCoursesPage'));
+const DecksPage = page(() => import('./pages/DecksPage'));
+const PastPapersPage = page(() => import('./pages/PastPapersPage'));
+const PersonalProjectPage = page(() => import('./pages/PersonalProjectPage'));
+const AssessmentCoachPage = page(() => import('./pages/AssessmentCoachPage'));
+const MarkingCopilotPage = page(() => import('./pages/MarkingCopilotPage'));
+const TaskPage = page(() => import('./pages/TaskPage'));
+const TaskEditorPage = page(() => import('./pages/TaskEditorPage'));
+const ProgressPage = page(() => import('./pages/ProgressPage'));
+const BrainPage = page(() => import('./pages/BrainPage'));
+const GemsPage = page(() => import('./pages/GemsPage'));
+const GemPage = page(() => import('./pages/GemPage'));
+const GemBuilderPage = page(() => import('./pages/GemBuilderPage'));
+const WorldsPage = page(() => import('./pages/WorldsPage'));
+const WorldPage = page(() => import('./pages/WorldPage'));
+const ScenePage = page(() => import('./pages/ScenePage'));
+const SimsPage = page(() => import('./pages/SimsPage'));
+const SimPage = page(() => import('./pages/SimPage'));
+const FocusPage = page(() => import('./pages/FocusPage'));
+const CourseStudyPage = page(() => import('./pages/CourseStudyPage'));
+const CreateCoursePage = page(() => import('./pages/CreateCoursePage'));
+const SubjectPage = page(() => import('./pages/subjects/SubjectPage'));
+const SubjectTool = page(() => import('./pages/subjects/SubjectTool'));
+const DocViewer = page(() => import('./pages/subjects/DocViewer'));
+const LessonPlayer = page(() => import('./pages/subjects/LessonPlayer'));
+const TopicPage = page(() => import('./pages/subjects/TopicPage'));
+const PayPage = page(() => import('./pages/PayPage'));
+const CheckoutReturn = page(() => import('./pages/CheckoutReturn'));
+const PlatformDocsPage = page(() => import('./pages/PlatformDocsPage'));
+const PilotAnalysisPage = page(() => import('./pages/PilotAnalysisPage'));
+const PilotMahindraConsole = page(() => import('./pages/PilotMahindraConsole'));
+const PilotMahindraReport = page(() => import('./pages/PilotMahindraReport'));
+const PilotStudentImportPage = page(() => import('./pages/PilotStudentImportPage'));
+const PilotStudentIdsPage = page(() => import('./pages/PilotStudentIdsPage'));
+const CreateUserAccountPage = page(() => import('./pages/CreateUserAccountPage'));
+const SecurityOverviewPage = page(() => import('./pages/SecurityOverviewPage'));
+const LegalDocPage = page(() => import('./pages/LegalDocPage'));
+const LegalAdminPage = page(() => import('./pages/LegalAdminPage'));
+const SourceCodeDownloadPage = page(() => import('./pages/SourceCodeDownloadPage'));
+const ProjectNeloAdminPage = page(() => import('./pages/ProjectNeloAdminPage'));
+const ProjectNeloPublicPage = page(() => import('./pages/ProjectNeloPublicPage'));
+const ThinkingReplayPage = page(() => import('./pages/intelligence/ThinkingReplayPage'));
+const FutureSelfPage = page(() => import('./pages/intelligence/FutureSelfPage'));
+const PeerComparePage = page(() => import('./pages/intelligence/PeerComparePage'));
+const AutoIEPPage = page(() => import('./pages/intelligence/AutoIEPPage'));
+const CurriculumConflictPage = page(() => import('./pages/intelligence/CurriculumConflictPage'));
+const ParentBriefPage = page(() => import('./pages/intelligence/ParentBriefPage'));
+const AtRiskRadarPage = page(() => import('./pages/intelligence/AtRiskRadarPage'));
+const PolicySandboxPage = page(() => import('./pages/intelligence/PolicySandboxPage'));
+const BudgetOptimizerPage = page(() => import('./pages/intelligence/BudgetOptimizerPage'));
+const RefynGraphPage = page(() => import('./pages/intelligence/RefynGraphPage'));
+const IBStandardsMapperPage = page(() => import('./pages/intelligence/IBStandardsMapperPage'));
+const SubjectLabsPage = page(() => import('./pages/intelligence/SubjectLabsPage'));
+const PYPUnitGeneratorPage = page(() => import('./pages/intelligence/PYPUnitGeneratorPage'));
+const LearnerProfilePortfolioPage = page(() => import('./pages/intelligence/LearnerProfilePortfolioPage'));
+const RecipeMarketplacePage = page(() => import('./pages/RecipeMarketplacePage'));
+const DemoPage = page(() => import('./pages/DemoPage'));
+const TourPage = page(() => import('./pages/TourPage'));
+const StudioHome = page(() => import('./pages/studio/StudioHome'));
+const PrintableMaker = page(() => import('./pages/studio/PrintableMaker'));
+const DiagramLab = page(() => import('./pages/studio/DiagramLab'));
+const StudioToolPage = page(() => import('./pages/studio/StudioToolPage'));
+const StudioLibrary = page(() => import('./pages/studio/StudioLibrary'));
+const PrimaryPlayground = page(() => import('./pages/PrimaryPlayground'));
+const OAuthConsent = page(() => import('./pages/OAuthConsent'));
 
 // Auto-route Mahindra spotlight teachers to their custom surface
 const DashboardRouter = () => {
@@ -134,33 +138,105 @@ const ProtectedRoute = ({
   redirectTo?: string;
 }) => {
   const { user, isLoading } = useAuth();
-  
+
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return <PageLoading />;
   }
-  
+
   if (!user) {
     return <Navigate to={redirectTo} replace />;
   }
-  
+
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to="/login" replace />;
+    // In the live demo, a page for the other role sends you home instead of to sign in
+    const demo = demoRole();
+    return <Navigate to={demo ? DEMO_HOME[demo] : "/login"} replace />;
   }
-  
+
   return <>{children}</>;
+};
+
+/** A quiet spinner that only appears if loading takes a moment. */
+const PageLoading = () => (
+  <div role="status" aria-label="Loading" className="flex h-screen items-center justify-center">
+    <span className="opacity-0" style={{ animation: 'lp-fade 0.3s ease-out 0.35s forwards' }}>
+      <span className="block h-6 w-6 animate-spin rounded-full border-2 border-white/15 border-t-[#7ff3ff]" />
+    </span>
+  </div>
+);
+
+const DemoLayer = lazy(() => import('./demo/DemoLayer'));
+
+// Fetch the pages someone is most likely to open next while the browser is idle
+const PREFETCH: Record<string, Page[]> = {
+  student: [StudentDashboard, StudentInterface, MyCoursesPage, SubjectPage, TopicPage, GradesPage, ClassesPage, SimsPage, SimPage, FocusPage],
+  teacher: [TeacherDashboard, MarkingPage, ClassesPage, ClassDetailPage, StudentInterface, GradesPage, SimsPage, FocusPage],
+  visitor: [DemoPage, TourPage],
+};
+const Prefetch = () => {
+  const { user, isLoading } = useAuth();
+  const role = isLoading ? null : user?.role ?? 'visitor';
+  useEffect(() => {
+    const list = role ? PREFETCH[role] ?? [] : [];
+    if (!list.length) return;
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+    let cancelled = false;
+    const run = async () => {
+      // One at a time, so it never competes with what they're doing
+      for (const p of list) {
+        if (cancelled) return;
+        await p.preload();
+      }
+    };
+    const id = w.requestIdleCallback ? w.requestIdleCallback(run, { timeout: 4000 }) : window.setTimeout(run, 2500);
+    return () => {
+      cancelled = true;
+      if (w.cancelIdleCallback) w.cancelIdleCallback(id);
+      else window.clearTimeout(id);
+    };
+  }, [role]);
+  return null;
+};
+
+/** New pages start at the top and fade in; back and forward keep the browser's own scroll. */
+const RouteFade: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { pathname, hash } = useLocation();
+  const type = useNavigationType();
+  const ref = useRef<HTMLDivElement>(null);
+  const first = useRef(true);
+  useLayoutEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (type !== 'POP' && !hash) window.scrollTo(0, 0);
+    if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      ref.current?.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+  return <div ref={ref}>{children}</div>;
 };
 
 function App() {
   return (
     <ThemeProvider>
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true }}>
         <Toaster />
         <Sonner position="top-center" />
+        <Prefetch />
+        {demoRole() && (
+          <Suspense fallback={null}>
+            <DemoLayer />
+          </Suspense>
+        )}
+        <Suspense fallback={<PageLoading />}>
+        <RouteFade>
         <Routes>
           <Route path="/" element={IN_ANDROID_APP ? <Navigate to="/login" replace /> : <Index />} />
-          <Route path="/demo" element={<DemoShowcasePage />} />
-          <Route path="/tour" element={<GuidedTourPage />} />
+          <Route path="/demo" element={<DemoPage />} />
+          <Route path="/tour" element={<TourPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route path="/signup" element={<Signup />} />
@@ -271,6 +347,8 @@ function App() {
 
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </RouteFade>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
     </ThemeProvider>

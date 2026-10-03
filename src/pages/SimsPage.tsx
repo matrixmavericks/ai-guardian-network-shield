@@ -37,7 +37,7 @@ const SimsPage: React.FC = () => {
 
   return (
     <StudyShell wide>
-      <section className="sp-cover relative mb-7 overflow-hidden rounded-[28px] px-6 py-10 sm:px-10 sm:py-12" style={paletteVars("aqua")}>
+      <section data-tour="sims" className="sp-cover relative mb-7 overflow-hidden rounded-[28px] px-6 py-10 sm:px-10 sm:py-12" style={paletteVars("aqua")}>
         <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 hidden w-[46%] opacity-90 md:block">
           <SimThumb meta={SIMS.find((s) => s.id === "interference")!} className="[mask-image:linear-gradient(to_left,black_55%,transparent)]" />
         </div>

@@ -222,6 +222,7 @@ const TeacherDashboard = () => {
 
       {/* Ask Refyn */}
       <form
+        data-tour="ask"
         onSubmit={(e) => {
           e.preventDefault();
           askRefyn(ask);

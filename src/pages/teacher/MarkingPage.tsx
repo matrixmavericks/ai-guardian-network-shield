@@ -536,7 +536,7 @@ const MarkingPage = () => {
                   placeholder="What went well, and the next step…"
                   className="mt-2 w-full resize-y rounded-2xl border border-lp-line bg-lp-deep/40 p-3.5 text-[14px] leading-relaxed text-white placeholder:text-lp-mute focus:border-lp-sky/60 focus:outline-none"
                 />
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <div data-tour="draft" className="mt-2 flex flex-wrap items-center gap-1.5">
                   <span className="mr-1 inline-flex items-center gap-1 text-[12px] text-lp-mute">
                     <Wand2 className="h-3.5 w-3.5 text-lp-cyan" /> Draft with Refyn
                   </span>

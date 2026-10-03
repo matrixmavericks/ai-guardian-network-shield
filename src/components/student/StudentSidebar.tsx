@@ -262,6 +262,7 @@ const SidebarBody: React.FC<{ onNavigate?: () => void; onSearch: () => void }> =
       <div className="px-3 pb-3">
         <button
           type="button"
+          data-tour="search"
           onClick={onSearch}
           className="flex h-9 w-full items-center gap-2 rounded-xl border border-lp-line bg-lp-surface/60 px-3 text-[13px] text-lp-mute transition-colors hover:border-lp-sky/40 hover:text-lp-soft"
         >

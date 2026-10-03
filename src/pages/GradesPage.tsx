@@ -646,7 +646,7 @@ const StudentGrades = () => {
 
       {/* Subjects */}
       {stats.length > 0 && (
-        <section className="mt-8">
+        <section data-tour="grades" className="mt-8">
           <h2 className="mb-3 flex items-center gap-2 text-[15px] font-medium text-white">
             <BookOpen className="h-4 w-4 text-lp-sky" /> By subject
           </h2>

@@ -75,6 +75,7 @@ const SubjectHero: React.FC<{ subject: Subject; state: StudyState }> = ({ subjec
   const s = subjectSummary(subject, state);
   return (
     <section
+      data-tour="subject"
       className="lp-fade relative mt-4 overflow-hidden rounded-3xl border border-lp-line bg-lp-surface p-5 sm:p-7"
       style={{ animationFillMode: "both" }}
     >
