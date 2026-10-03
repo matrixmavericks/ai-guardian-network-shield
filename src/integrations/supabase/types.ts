@@ -1342,6 +1342,24 @@ export type Database = {
         }
         Relationships: []
       }
+      help_assistant_requests: {
+        Row: {
+          created_at: string
+          id: number
+          visitor: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          visitor: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          visitor?: string
+        }
+        Relationships: []
+      }
       learning_path_activities: {
         Row: {
           activity_key: string
