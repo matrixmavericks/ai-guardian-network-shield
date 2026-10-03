@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { GraduationCap, Play, School } from "lucide-react";
+import type HlsType from "hls.js";
 import { cn } from "@/lib/utils";
+import { useNear } from "@/components/landing/three/scroll";
 
-// The two recorded walkthroughs, with chapters you can jump between.
+// The two recorded walkthroughs, with chapters you can jump between. They're
+// streamed in short pieces (HLS, public/media/videos/<id>/hls) because the host
+// doesn't answer byte-range requests, which seeking needs and Safari requires.
 
 type Chapter = { at: number; title: string; sub: string };
 type Video = { id: "students" | "teachers"; label: string; length: string; chapters: Chapter[] };
@@ -52,7 +56,13 @@ const VideoWalkthrough: React.FC<{ initial?: Video["id"] }> = ({ initial = "stud
   const [which, setWhich] = useState<Video["id"]>(initial);
   const video = VIDEOS.find((v) => v.id === which)!;
   const player = useRef<HTMLVideoElement>(null);
+  const box = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
+  const near = useNear(box, "60% 0px");
+  const hls = useRef<HlsType | null>(null);
+  const ready = useRef(false);
+  const streaming = useRef(false);
+  const pending = useRef<number | null>(null);
   const [time, setTime] = useState(0);
   const [started, setStarted] = useState(false);
   const active = video.chapters.reduce((a, c, i) => (time >= c.at ? i : a), 0);
@@ -71,17 +81,68 @@ const VideoWalkthrough: React.FC<{ initial?: Video["id"] }> = ({ initial = "stud
     if (top < ol.scrollTop || top + li.offsetHeight > ol.scrollTop + ol.clientHeight) ol.scrollTo({ top: top - 8, behavior: "smooth" });
   }, [active, started]);
 
-  const play = () => {
-    setStarted(true);
-    void player.current?.play().catch(() => {});
-  };
-  const jump = (at: number) => {
+  /** Play from `at` (or from where it is). Stays synchronous when it can, so phones count it as the tap that started playback. */
+  const start = (at: number | null) => {
     const v = player.current;
     if (!v) return;
-    v.currentTime = at;
-    setTime(at);
-    play();
+    setStarted(true);
+    if (at !== null) setTime(at);
+    if (!ready.current) {
+      pending.current = at ?? 0;
+      return;
+    }
+    if (at !== null) v.currentTime = at;
+    if (hls.current && !streaming.current) {
+      streaming.current = true;
+      hls.current.startLoad(at ?? v.currentTime);
+    }
+    void v.play().catch(() => {});
   };
+  const play = () => start(null);
+  const jump = (at: number) => start(at);
+
+  // Get the stream ready once the player is close to the screen (just the playlist; pieces load on play)
+  useEffect(() => {
+    const v = player.current;
+    if (!near || !v) return;
+    let cancelled = false;
+    const src = `/media/videos/${video.id}/hls/index.m3u8`;
+    const go = () => {
+      ready.current = true;
+      if (pending.current !== null) {
+        const at = pending.current;
+        pending.current = null;
+        start(at);
+      }
+    };
+    (async () => {
+      try {
+        const { default: Hls } = await import("hls.js");
+        if (cancelled) return;
+        if (Hls.isSupported()) {
+          const h = new Hls({ autoStartLoad: false, maxBufferLength: 30 });
+          hls.current = h;
+          h.on(Hls.Events.MANIFEST_PARSED, go);
+          h.loadSource(src);
+          h.attachMedia(v);
+          return;
+        }
+      } catch {
+        /* fall back to the browser's own player */
+      }
+      if (cancelled) return;
+      v.src = v.canPlayType("application/vnd.apple.mpegurl") ? src : `/media/videos/${video.id}.mp4`;
+      go();
+    })();
+    return () => {
+      cancelled = true;
+      hls.current?.destroy();
+      hls.current = null;
+      ready.current = false;
+      streaming.current = false;
+      pending.current = null;
+    };
+  }, [near, video.id]);
 
   return (
     <div>
@@ -107,13 +168,12 @@ const VideoWalkthrough: React.FC<{ initial?: Video["id"] }> = ({ initial = "stud
         })}
       </div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div ref={box} className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="relative self-start overflow-hidden rounded-[24px] border border-lp-line bg-[#060b18] shadow-[0_40px_120px_-50px_rgba(29,78,216,0.6)]">
           <video
             key={video.id}
             ref={player}
             className="block aspect-video w-full bg-black"
-            src={`/media/videos/${video.id}.mp4`}
             poster={`/media/videos/${video.id}-poster.webp`}
             controls
             playsInline
